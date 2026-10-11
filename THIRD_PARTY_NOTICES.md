@@ -7,6 +7,7 @@ First-party game code, schemas, and created assets are licensed under MIT. This 
 | Asset | Creator and provenance | License |
 |---|---|---|
 | `icon.svg` | Frontier Systems project; original geometric artwork created for this repository | MIT |
+| `docs/community/indiedb/cards/*.svg`, `*.png` | Valithor / Frontier Systems project; hand-authored vector diagrams and raster renders, no imported source artwork or gameplay captures; PNGs rendered with Microsoft Edge | MIT |
 
 ## Planned dependencies
 
@@ -34,3 +35,4 @@ Before adding an external art, audio, font, model, texture, or code asset, recor
 ## Procedural habitat visual details
 
 The resource clusters/prism, workbench supports/surfaces, tray rims/pedestals and terrain outlines in src/presentation/habitat/habitat_visual_details.gd are independently authored first-party MIT GDScript/Godot primitive geometry and materials. Creation tools: text editing and ordinary Godot 4.7.2 engine rendering. No imported source artwork, new fonts, third-party creative assets, AI image generation or generative intermediate assets are used. Internal graphical captures are ignored local diagnostics and are not shipped or uploaded.
+| `docs/community/indiedb/cards/*.svg` | Valithor / Frontier Systems project; hand-authored vector diagrams, no imported source artwork or gameplay captures | MIT |
