@@ -53,6 +53,7 @@ func verify() -> void:
 	var boxes: Array[AABB] = []
 	var first_mesh: MeshInstance3D
 	var obsolete_area: Area3D
+	var backpack: MeshInstance3D
 	for key in view._visible_items:
 		var entry: Dictionary = view._visible_items[key]
 		var proxy: MeshInstance3D = entry["mesh"]
@@ -61,6 +62,11 @@ func verify() -> void:
 			if child is Area3D and child.position == proxy.position: area = child
 		check(area != null and area.collision_layer == 4 and area.collision_mask == 0, "aligned original pick layer")
 		var size: Vector3 = area.get_child(0).shape.size
+		if entry["item_id"] == "backpack-2":
+			backpack = proxy
+			check(size == Vector3(0.25, 0.3, 0.2), "backpack retains original pick envelope")
+			check(proxy.get_child_count() == 9, "backpack has bounded shoulder, pocket, strap and handle details")
+			check(proxy.mesh.get_aabb().size == Vector3(0.18, 0.23, 0.12), "backpack body is distinct from envelope box")
 		var box := AABB(proxy.position - size / 2, size)
 		check(box.grow(0.0001).encloses(proxy.transform * proxy.mesh.get_aabb()), "mesh within pick envelope")
 		for detail in proxy.get_children():
@@ -88,6 +94,8 @@ func verify() -> void:
 		area.input_event.emit(null, click, proxy.global_position, Vector3.UP, 0)
 		check(selected == entry["container_id"] + ":" + entry["item_id"] and pickup.is_empty(), "single click retains command identity")
 		check(proxy.material_override.albedo_color == Color("#ffe066"), "selected silhouette highlights")
+		for detail in proxy.get_children():
+			check(detail.material_override == proxy.material_override and detail.material_override.albedo_color == Color("#ffe066"), "every detail shares material and selection highlight")
 		if first_mesh != null:
 			check(first_mesh.material_override.albedo_color != Color("#ffe066"), "neighbor highlight clears")
 		click.double_click = true
@@ -96,11 +104,16 @@ func verify() -> void:
 		pickup = ""
 		first_mesh = proxy
 		obsolete_area = area
+	check(backpack != null, "canonical backpack exposed in paid dense tray")
 	var rebuilds: int = view._rebuilds
+	for frame in range(5): await process_frame
+	check(view._rebuilds == rebuilds and backpack.get_child_count() == 9, "idle frames do not rebuild or accumulate backpack parts")
 	view.observe(observed.duplicate(true))
 	check(view._rebuilds == rebuilds and first_mesh == view._visible_items[view._selected_key]["mesh"], "cache preserves dense anchors and selection")
 	view.clear_selection()
 	check(view._selected_key.is_empty() and first_mesh.material_override.albedo_color != Color("#ffe066"), "clear restores highlight")
+	for detail in backpack.get_children():
+		check(detail.material_override.albedo_color == Color("#6a986b"), "backpack details restore observed role material")
 	check(world.capture_world_snapshot_json().value == canonical, "dense layout and all picking preserve full canonical provenance")
 	var habitat := ProceduralHabitatPreview.new()
 	root.add_child(habitat)
@@ -112,10 +125,12 @@ func verify() -> void:
 			child._process(0)
 			check(child._trays.get_child_count() == 20, "four original bays retain all rims and supports")
 	habitat.free()
-	if "--dense-tray-stills" in OS.get_cmdline_user_args():
+	if "--dense-tray-stills" in OS.get_cmdline_user_args() or "--backpack-stills" in OS.get_cmdline_user_args():
 		await capture_dense_tray()
 	inventory_action("pickup", paid_ids[2])
 	view.observe(inventory.world_inventory_observation(context).value)
+	check(view._rebuilds == rebuilds + 1, "one changed observation triggers one bounded rebuild")
+	check(view._visible_items[JSON.stringify(["world.tray-1", "backpack-2"])]["mesh"].get_child_count() == 9, "changed observation recreates bounded backpack details")
 	check(view._visible_items.size() == 7 and not view._visible_items.has(JSON.stringify(["world.tray-1", paid_ids[2]])), "real pickup removes only exact paid item")
 	canonical = world.capture_world_snapshot_json().value
 	var empty := observed.duplicate(true)
@@ -148,7 +163,13 @@ func capture_dense_tray() -> void:
 	var center := ProceduralWorldInventoryPreview.DISPLAY_ORIGIN + Vector3(0, 0.8, 0)
 	var directory := "res://var/captures/dense-tray/" + RenderingServer.get_current_rendering_method()
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory))
-	for shot in [{"name": "front", "offset": Vector3(0.1, 1.8, 2.0)}, {"name": "top", "offset": Vector3(0, 2.4, 0.3)}]:
+	var shots: Array[Dictionary] = [{"name": "front", "offset": Vector3(0.1, 1.8, 2.0)}, {"name": "top", "offset": Vector3(0, 2.4, 0.3)}]
+	if "--backpack-stills" in OS.get_cmdline_user_args():
+		center = habitat.world_inventory._visible_items[JSON.stringify(["world.tray-1", "backpack-2"])]["mesh"].global_position
+		directory = "res://var/captures/backpack/" + RenderingServer.get_current_rendering_method()
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory))
+		shots = [{"name": "front", "offset": Vector3(0.38, 0.38, 0.65)}, {"name": "rear", "offset": Vector3(-0.38, 0.38, -0.65)}, {"name": "tray", "offset": Vector3(0.1, 1.8, 2.0)}]
+	for shot in shots:
 		habitat.camera.position = center + shot["offset"]
 		habitat.camera.look_at(center)
 		await create_timer(0.4).timeout
