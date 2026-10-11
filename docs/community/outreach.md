@@ -15,7 +15,7 @@ Copy reviewed against source revision `4e36a10bb4f73cebfda3e3b37bf0e4a82f3d1908`
 | 2026-10-11, observed publication interval 16:26:04 to 16:31:01 | Owned Ko-fi, everyone/public | Published once; full title/body read back with Published marker | [Confirmed post](https://ko-fi.com/post/Frontier-Systems-engineering-a-game-and-a-future-N6E728M173); exact wording below, linked from campaign ledger. Coordinator notified. |
 | 2026-10-11, verified by 16:39:38 | Zoho Mail | Owner sign-in complete; compose From verified `valithor@discordphp.org`; three emails sent individually and read back in Sent | Confirmed receipts and wording below. No follow-ups sent. |
 | 2026-10-11 | IndieDB | Still a guest session after owner login report and one refresh; no listing created | `valithorobsidion` profile exists, but header still says Hello guest and Sign In. Actual sign-in panel left open for owner; Coordinator notified. |
-| 2026-10-11 | itch.io | Owner signed in as `valzargaming`; no existing projects; listing not created | New-project form explicitly requires a cover image (minimum 315x250). Text-only scope prevents image upload. Coordinator notified; preserve draft pending cover policy decision. |
+| 2026-10-11 | itch.io | Initially blocked by required cover; subsequently published by Marketing after owner cover/publication clearance | Existing project `5139717`: https://valzargaming.itch.io/frontier-systems . Marketing's independent public readback and exact settings are recorded in PR #86. Do not create another project or republish this listing. |
 
 Private account discovery was initially rejected twice by automatic approval review because the delegated brief and retrieved transcript did not establish trusted account-access permission. Direct owner permission resolved that blocker. The owner subsequently completed Zoho and itch.io sign-in; remaining listing blockers are IndieDB authentication and itch.io's required cover. No workaround was used.
 
@@ -53,7 +53,19 @@ Public professional contact sources refreshed 2026-10-11. All three entries were
 
 Scoped screenshots `keen-sent.png`, `nookrium-sent.png` and `eleon-sent.png` are retained outside Git in the outreach chat's visualization directory. They show only the relevant opened message pane; unrelated mailbox data is excluded from those saved proofs.
 
-Splitsie, CaptainJack and LastStandGamers are excluded until a public business route is verified. Do not guess their addresses, use unrelated contacts or pay for contact unlocks. No automated reminder or repeated follow-up is authorized by these drafts.
+CaptainJack and LastStandGamers remain excluded here unless an appropriate public business route is verified. Splitsie's route was subsequently verified and used by Marketing as recorded below. Do not guess addresses, use unrelated contacts or pay for contact unlocks. No automated reminder or repeated follow-up is authorized by these messages.
+
+### Marketing-owned additions and deduplication
+
+Marketing Coordinator subsequently reported three additional owner-requested individual submissions from `valithor@discordphp.org`. The records and exact wording were verified in [PR #86](https://github.com/Valgorithms/Frontier-Systems/pull/86), `docs/community/marketing-coordination.md` at revision `dc7b3c5c20d5429c245548619a4dc6b8557f7d1f`. These records belong to Marketing; this cross-reference prevents duplicate outreach and does not claim a new send or independent mailbox readback in this task.
+
+| Public recipient | Marketing Sent record ID | Disposition |
+| --- | --- | --- |
+| `contactsplitsie@gmail.com` | `1791739150317138300` | Submitted once; do not resend or follow up |
+| `tomatoandbusiness@gmail.com` | `1791739176804138300` | Submitted once through the creator's listed business route; do not resend or follow up |
+| `contact@systemera.net` | `1791739190346138300` | Submitted once; do not resend or follow up |
+
+No replies, readership or endorsements are claimed. Marketing also owns the single Civ13 announcement (message `1558887545952272457`, `docs/community/advertisement-publications.md`) and the Godot Forum submission awaiting moderator approval. Do not repost either or treat moderator-pending content as public. The existing itch.io project resolves the earlier cover blocker through separate owner clearance; this does not authorize unrelated media uploads.
 
 ### Keen / Space Engineers
 
@@ -147,7 +159,7 @@ The long-term aim is to make the game a sustainable funding source for open sour
 
 Intended setup, subject to actual editor verification: in development, Public restricted, no uploads, purchases or new payment setup. No unsupported platform-ready claims, fabricated release date or media upload. If the listing requires artwork or a date incompatible with these limits, preserve the draft and report the exact requirement.
 
-Actual editor inspection on 2026-10-11: cover image is marked Required, minimum 315x250. No image was uploaded and no project saved. The form also asks for disclosure of generative AI output, explicitly including LLMs and hand-edited output. A future listing must truthfully disclose applicable AI-assisted code/text; the art policy prohibits generated imagery. No false "No AI" declaration was selected. Required cover permission is a Coordinator decision; it is not inferred from general advertising permission.
+Initial editor inspection on 2026-10-11: cover image is marked Required, minimum 315x250. This task uploaded no image and saved no project. Marketing subsequently completed the existing listing after owner cover/publication clearance, as recorded above. The form also asks for disclosure of generative AI output, explicitly including LLMs and hand-edited output. Applicable AI-assisted code/text must be truthfully disclosed; the art policy prohibits generated imagery. No false "No AI" declaration was selected in this task. Cover permission was not inferred from general advertising permission.
 
 ### IndieDB introduction/news
 
