@@ -15,7 +15,7 @@ registry = Registry().with_resources(
 )
 selected = [
     "terrain-system:v2", "terrain-materialize-command:v1",
-    "terrain-portable-receipt:v1", "world-snapshot:v1",
+    "terrain-portable-receipt:v1", "world-snapshot:v1", "construction-coverage:v2",
 ]
 validators = {}
 for suffix in selected:
@@ -23,6 +23,7 @@ for suffix in selected:
     schema = next(schema for schema in schemas if schema.get("$id") == identifier)
     Draft202012Validator.check_schema(schema)
     validators[suffix] = Draft202012Validator(schema, registry=registry)
+validators["construction-coverage:v2"].validate(json.loads((ROOT / "data/production/construction-coverage.v2.json").read_text()))
 fixture = json.loads((ROOT / "var/terrain-portable-fixture.json").read_text())
 validators["world-snapshot:v1"].validate(fixture)
 terrain = fixture["systems"]["terrain"]
@@ -70,4 +71,4 @@ rejects("terrain-system:v2", invalid)
 invalid = deepcopy(receipt)
 invalid["parcels"]["terrain.dirt.source.generation"] = 0
 rejects("terrain-portable-receipt:v1", invalid)
-print("Portable terrain: four metaschemas, real world/intent/receipt fixtures, legacy shape and eight invalid shapes passed.")
+print("Portable terrain: five metaschemas, real world/intent/receipt fixtures, legacy shape and eight invalid shapes passed.")

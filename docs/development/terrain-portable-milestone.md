@@ -32,6 +32,8 @@ Recovery validates both canonical payload owners before composing candidate mass
 
 Validation checks owner conservation and replay, exclusive escrow/portable coverage of all transfers, deterministic physical IDs, unique complete per-principal claim ordinals, unique and increasing inventory commit revisions, matching retained physical factory receipts, known claimants, physical item/association bijection and committed revision bounds. Claim rewind includes original portable claimants, so the existing retained excavation/fill tail still verifies. A physical item may belong to another body after a valid transfer. Checkpoints must be atomic and trusted; these consistency checks do not authenticate rewritten storage or reconstruct an unbounded creation history.
 
+Construction coverage metadata/schema **v2** adds the actual `terrain.materialize` special factory alongside existing plate and tool-part factories. V1 metadata/schema are retained. This explicit catalog contract change adds no Production runtime consumer or blueprint; `construction_catalog_test.gd` checks the new creation path.
+
 Schemas: `terrain-system-v2`, `terrain-materialize-command-v1`, `terrain-portable-receipt-v1`, and the additive terrain union in `world-snapshot-v1`. Runtime relationship checks remain authoritative beyond schema shape validation. JSON recovery preserves every numeric value and provenance parcel; legacy integral float representations normalize through existing inventory decoders, and the normalized full checkpoint is byte-stable on another restart.
 
 ## Verification
@@ -44,9 +46,11 @@ Windows Godot 4.7.2 passed **10/10 focused checks** (import, startup and eight s
 
 Use the versioned runner with the pinned Windows Godot 4.7.2 executable and this focused test set:
 
-    ./tools/ci/run-godot-checks.ps1 -Godot 'D:\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe' -TestNames 'terrain_portable_test.gd','terrain_runtime_test.gd','terrain_material_owner_test.gd','inventory_runtime_test.gd','world_inventory_runtime_test.gd','equipment_fabrication_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd' -OutputDirectory var/ci/portable-final
+    ./tools/ci/run-godot-checks.ps1 -Godot 'D:\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe' -TestNames 'construction_catalog_test.gd','terrain_portable_test.gd','terrain_runtime_test.gd','terrain_material_owner_test.gd','inventory_runtime_test.gd','world_inventory_runtime_test.gd','equipment_fabrication_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd' -OutputDirectory var/ci/portable-final
 
-`tests/schema/terrain_portable_schema_test.py` validates four metaschemas, actual world/intent/receipt fixtures, legacy envelope compatibility and eight malformed shapes. The existing terrain runtime schema test now checks v2 output and nine invalid shapes. Both use a local-only registry and development `jsonschema==4.23.0` isolated under ignored `var/ci/schema-python`, with a verified full Python interpreter path.
+`tests/schema/terrain_portable_schema_test.py` validates five metaschemas including construction coverage, actual world/intent/receipt fixtures, legacy envelope compatibility and eight malformed shapes. The existing terrain runtime schema test now checks v2 output and nine invalid shapes. Both use a local-only registry and development `jsonschema==4.23.0` isolated under ignored `var/ci/schema-python`, with a verified full Python interpreter path.
+
+The first complete Windows/Ubuntu CI run exposed the missing construction-coverage entry for the new parcel. Construction metadata/schema v2 and its catalog check correct that integration omission; the earlier full CI is not reported as passed. The correction passed **4/4 Windows checks** (import, startup, construction catalog and portable materialization) plus all five portable/catalog metaschemas and real fixtures. The focused workflow now includes the construction catalog gate.
 
 The focused `Terrain portable contracts` workflow reuses pinned checkout/Godot/artifact actions and the same bounded runner on Windows and Ubuntu, then checks the emitted schemas. The existing complete CI workflow also discovers the new Godot test. Final exact-head local and remote results are reported with the PR; no earlier or pending CI run is claimed as final evidence.
 
