@@ -18,11 +18,11 @@ The canonical owner remains `InventorySimulationSystem` and its shared coordinat
 Managed worktree: `C:/Users/valza/.codex/worktrees/client-inventory-hand-verification/Frontier Systems`.
 Branch: `client-inventory-hand-verification`, targets `dev-master`.
 
-**Coordinator lease request:** exclusive 27850 for the initial integrated ClientOnly rerun, followed by dedicated inventory/hand verification if needed. No listener has been started by this milestone. The initial native rerun and dedicated fixture remain pending the grant. Existing PR38 evidence is historical and is not represented as a new integrated pass.
+**Lease completed:** Coordinator granted exclusive 27850 at 2026-10-11T07:01Z. The integrated ClientOnly result is recorded below. Its process exited, override was removed and a final listener check found no 27850 listener. Lease release is reported in final chat status for Coordinator bookkeeping. The dedicated fixture binds no sockets.
 
 Cross-chat send is unavailable without direct human messaging authorization: the messaging tool explicitly says an orchestrator's received request does not itself authorize replying. This request is exposed through chat status for Coordinator polling; no owner approval is requested here. This is an authorization prerequisite, not a demonstrated client failure.
 
-No runtime, schema, authority, shared runner or creative asset changes have been made. New captures will stay ignored/internal; configuration examples are unchanged.
+No runtime, schema, authority, shared runner or creative asset changes have been made. Dedicated ordinary engine captures remain ignored/internal; configuration examples are unchanged.
 
 ## Integrated native prerequisite result
 
@@ -37,3 +37,8 @@ The fixture exercises equip, selected hand, switch, unequip into root, move into
 Native capture command: `tools/ci/capture-client-inventory.ps1 -Godot 'D:/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe'`. Headless fixture is included automatically by the existing Windows/Linux runner; graphical capture remains a separate local command. Output is ignored under `var/ci/client-inventory-render`, with clean source head and renderer in the manifest.
 
 Five baseline Windows headless checks passed at c78c3bd: import/startup, integrated_panel_layout, player_inventory_feedback and player_inventory_handoffs. Focused dedicated import/startup/fixture checks passed during iteration; final immutable execution evidence is recorded in chat/PR status. Native/CI final results must be checked separately.
+
+## Native dedicated result
+
+Clean immutable 76d0755fb0a732b13de91636ea6a4a9e6d940416 passed Windows Godot 4.7.2 Compatibility native execution: zero fixture failures. Rejected and accepted captures were visually inspected: full matching host message fits the narrow actual shell; no private data or generated artwork. Profile override removed and child process exited. This verifies the logical inventory body supplied by the injected observer; it does not verify physical habitat-body binding or real network transport. Integrated ClientOnly failure above remains unresolved and requires owning-scope triage. Later documentation-only head retains identical fixture/runner bytes.
+
