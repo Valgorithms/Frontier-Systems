@@ -83,9 +83,19 @@ func _observe(token: InventoryControllerToken, context: AuthenticatedCommandCont
 		&"local": result = _gate.local_observation(token, context)
 		&"search": result = _gate.read_search(token, context, view_id)
 		_: result = _reject(&"unsupported_operation")
-	var restored: bool = _sync_restore()
+	# The session provider is synchronous trusted code, but may free or advance
+	# the actual runtime. Recheck ownership before publishing any projection.
+	if not is_instance_valid(_inventory):
+		_busy = false
+		return _reject(&"queue_unavailable")
+	if _sync_restore():
+		_busy = false
+		return _reject(&"queue_restored")
+	snapshot = _inventory.capture_snapshot()
 	_busy = false
-	return _reject(&"queue_restored") if restored else result
+	if not snapshot.is_success or int(snapshot.value["last_tick"]) != _last_tick:
+		return _reject(&"queue_tick_mismatch")
+	return result
 
 
 ## Token is opaque identity; trusted context and bounded plain intent are detached.

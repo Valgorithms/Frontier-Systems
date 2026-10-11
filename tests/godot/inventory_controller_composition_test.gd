@@ -127,8 +127,48 @@ func _initialize() -> void:
 	_inventory.free()
 	_denied(fresh, _context(), "freed runtime")
 	_health.free()
+	_callback_boundaries()
 	print("Inventory controller composition: %d failures" % _failures)
 	quit(0 if _failures == 0 else 1)
+
+
+func _callback_boundaries() -> void:
+	for projection in ["own", "details", "world", "grip", "local", "search"]:
+		for effect in ["advance", "free"]:
+			var inventory := InventorySimulationSystem.new()
+			var queue := InventoryRuntimeCommandQueue.new()
+			var sessions := Sessions.new()
+			_check(inventory.configure_defaults().is_success, "callback fixture runtime")
+			_check(queue.initialize(inventory, &"world.test", &"region.test", sessions).is_success, "callback fixture queue")
+			var authority: InventoryControllerAuthority = queue.controller_authority()
+			_check(authority.bind(&"body.human-2", ACTOR, &"one", 0).is_success, "callback fixture bind")
+			var token: InventoryControllerToken = authority.pin(_context()).value
+			var generation: int = inventory.controller_restore_generation()
+			var before: Dictionary = inventory.capture_snapshot().value
+			sessions.on_check = func() -> void:
+				if effect == "free":
+					inventory.free()
+				else:
+					inventory.simulate_tick(1, 1.0 / 60.0)
+			var result: ServiceResult
+			match projection:
+				"own": result = queue.own_inventory_observation(token, _context())
+				"details": result = queue.own_inventory_observation(token, _context(), true)
+				"world": result = queue.world_inventory_observation(token, _context())
+				"grip": result = queue.local_grip_observation(token, _context())
+				"local": result = queue.local_observation(token, _context())
+				"search": result = queue.read_search(token, _context(), "callback.search")
+			var expected: StringName = &"queue_unavailable" if effect == "free" else &"queue_tick_mismatch"
+			_check(not result.is_success and result.value == null and result.error_code == expected, projection + " callback " + effect + " returns no projection")
+			_check(not queue.get("_busy"), projection + " callback " + effect + " releases busy guard")
+			if effect == "advance":
+				_check(inventory.controller_restore_generation() == generation, "callback tick changes without restore")
+				var after: Dictionary = inventory.capture_snapshot().value
+				_check(after["last_tick"] == 1, "callback actual runtime advanced once")
+				after["last_tick"] = before["last_tick"]
+				_check(after == before, "read adds no canonical mutation after callback tick")
+				_check(not queue.advance_tick(1, 1.0 / 60.0).is_success, "callback advance cannot be doubled")
+				inventory.free()
 
 
 func _stale_command(token: InventoryControllerToken, context: AuthenticatedCommandContext, id: String) -> void:
