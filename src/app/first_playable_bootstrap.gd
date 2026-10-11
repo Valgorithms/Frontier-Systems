@@ -26,6 +26,9 @@ var _terrain_panel: TerrainControlsPanel
 var _terrain_preview: TerrainCellPreview
 var _task_guide: FirstPlayableTaskGuidePanel
 var _look_viewport: SubViewport
+var _reconnect: Button
+var _connection_status: Label
+var _host_actions: Array[Button] = []
 
 
 func _ready() -> void:
@@ -81,15 +84,7 @@ func _start_client() -> void:
 	_remote.terrain_retry_directory = "user://terrain-client-intents"
 	add_child(_remote)
 	_remote.observation_received.connect(_on_observation)
-	_remote.connection_closed.connect(func(message: String) -> void:
-		_status.text = message
-		_latest = {}
-		_task_guide.observe({})
-		_body_initialized = false
-		_habitat.production.observe({})
-		_machinery_preview.observe({})
-		_terrain_preview.observe({})
-	)
+	_remote.connection_closed.connect(_on_connection_closed)
 	_remote.command_completed.connect(_on_completed)
 	var canvas := CanvasLayer.new()
 	add_child(canvas)
@@ -160,15 +155,16 @@ func _start_client() -> void:
 	var themed: ServiceResult = theme_selector.configure(row, background)
 	if not themed.is_success:
 		push_warning(themed.message)
-	var url: String = OS.get_environment("FRONTIER_HOST_URL")
-	if url.is_empty():
-		url = "ws://127.0.0.1:27840"
-	var connected: ServiceResult = _remote.connect_host(url, OS.get_environment("FRONTIER_INVITE_KEY"))
-	if not connected.is_success:
-		_status.text = connected.message
 	var views := VBoxContainer.new()
 	views.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(views)
+	_connection_status = Label.new()
+	_connection_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	views.add_child(_connection_status)
+	_reconnect = Button.new()
+	_reconnect.text = "Reconnect to shared host"
+	_reconnect.pressed.connect(_connect_client)
+	views.add_child(_reconnect)
 	var help := FirstPlayableControlsHelp.new()
 	views.add_child(help)
 	help.configure(_tabs)
@@ -244,9 +240,53 @@ func _start_client() -> void:
 		_status.text = "Checkpoint requested; waiting for disk confirmation…" if queued.is_success else queued.message
 	)
 	_content.add_child(save)
+	_host_actions.assign([pickup, drop, drop_plate, save])
+	for action in _host_actions: action.disabled = true
+	_connect_client()
+
+
+## Reuse operator configuration in memory only; never display or journal credentials.
+func _connect_client() -> void:
+	if _reconnect.disabled: return
+	_reconnect.disabled = true
+	_connection_status.text = "Connecting; waiting for authentication and a fresh host observation…"
+	var url: String = OS.get_environment("FRONTIER_HOST_URL")
+	if url.is_empty(): url = "ws://127.0.0.1:27840"
+	var connected: ServiceResult = _remote.connect_host(url, OS.get_environment("FRONTIER_INVITE_KEY"))
+	if not connected.is_success:
+		_connection_status.text = connected.message + " Reconnect to retry."
+		_reconnect.disabled = false
+
+
+func _on_connection_closed(message: String) -> void:
+	_status.text = message
+	_connection_status.text = message + ". Reconnect, then inspect fresh state; unacknowledged actions are not resubmitted."
+	_reconnect.disabled = false
+	for action in _host_actions: action.disabled = true
+	_latest = {}
+	_task_guide.observe({})
+	_body_initialized = false
+	_movement_pending = false
+	_movement_id = ""
+	_last_position = []
+	_hands_hud.text = "Hands unavailable until a fresh host observation."
+	_inventory_label.text = "Inventory unavailable until a fresh host observation."
+	_habitat.production.observe({})
+	_habitat.world_inventory.observe({})
+	_machinery_preview.observe({})
+	_terrain_preview.observe({})
+	for avatar in _avatars.values(): avatar.queue_free()
+	_avatars.clear()
+	# Production's disconnect contract releases its transport; rebuild on fresh data.
+	if _production_panel != null:
+		_production_panel.queue_free()
+		_production_panel = null
 
 
 func _on_observation(record: Dictionary) -> void:
+	_connection_status.text = "Connected to shared colony · Crew %d" % (_remote.server_slot + 1)
+	_reconnect.disabled = true
+	for action in _host_actions: action.disabled = false
 	_latest = record
 	_task_guide.observe(record)
 	_inventory_panel.observe(record)
