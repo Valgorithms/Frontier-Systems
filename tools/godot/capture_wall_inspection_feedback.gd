@@ -107,7 +107,7 @@ func finish() -> void:
 	physical._spatial_walls[id].input_event.emit(client._habitat.camera, click, Vector3(-6, 1, 1), Vector3.LEFT, 0)
 	check(panel._selected(panel._wall) == id and panel._placement_kind.selected == 1, "native wall input event selects stable wall in construction panel")
 	await capture_view(client, "selected.png")
-		check(panel._placement_status.text.contains(id) and panel._placement_status.text.contains("Selected X") and panel._placement_status.text.contains("1 × 2 × 0.1 m"), "authenticated selected wall details are readable")
+	check(panel._placement_status.text.contains(id) and panel._placement_status.text.contains("Selected X") and panel._placement_status.text.contains("1 × 2 × 0.1 m"), "authenticated selected wall details are readable")
 	# Out-of-reach rejection through the authenticated client and actual host.
 	runner.set_physics_process(false)
 	move([3000, 0, 0])
@@ -158,4 +158,3 @@ func finish() -> void:
 	world.free()
 	print("Wall inspection graphical capture: %d failures" % failures)
 	quit(1 if failures else 0)
-

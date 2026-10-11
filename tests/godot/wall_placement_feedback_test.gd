@@ -110,7 +110,10 @@ func finish() -> void:
 	var pending_snapshot: String = JSON.stringify(world.capture_world_snapshot_json().value)
 	var lost_wall: Dictionary = view_record()
 	lost_wall["production"]["walls"].clear()
+	lost_wall["production"]["walls"]["wall.other"] = {"position": [1000, 0, -1000], "quarter_turn": 0}
 	panel.observe(lost_wall)
+	check(panel._selected(panel._wall).is_empty(), "lost selected wall never silently switches to another observed wall")
+	panel.select_wall("wall.other")
 	panel._axes[0].value = 42
 	panel._wall_turn.select(0)
 	panel._show_placement.button_pressed = true

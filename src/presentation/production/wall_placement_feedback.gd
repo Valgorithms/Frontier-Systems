@@ -66,7 +66,7 @@ static func removal_result(wall_id: String, result: ServiceResult) -> String:
 		return "Host accepted removal of wall %s; returned one physical plate to your inventory. Panels do not seal rooms." % wall_id
 	if result.error_code == &"remote_disconnected":
 		return "Wall %s removal outcome unconfirmed: host disconnected before acknowledgment. Check fresh wall and inventory observations after reconnecting; no plate return confirmed." % wall_id
-	return "Host rejected removal of wall %s: %s. No plate return confirmed." % [wall_id, result.message]
+	return "Host rejected removal of wall %s: %s. No plate return confirmed." % [wall_id, result.message.trim_suffix(".")]
 
 
 static func envelope(turn: int) -> Vector3:
