@@ -14,6 +14,21 @@ func finish() -> void:
 	step(8)
 	var running: Dictionary = production.observation(context).value
 	check(helper.observe(running) and helper.state(extractor) == "running", "paid finite extraction advancing observation earns motion")
+	var preview := MachineryPreview.new()
+	root.add_child(preview)
+	preview.set_process(false)
+	preview.observe(first)
+	preview.observe(running)
+	var integrated: Dictionary = preview._activity_parts[extractor]
+	var drive: Node3D = integrated["rotors"][0]
+	var initial_transform: Transform3D = drive.transform
+	var colliders_before: Array[Node] = preview.find_children("*", "CollisionShape3D", true, false)
+	preview._process(0.05)
+	check(drive.transform != initial_transform and preview._labels[extractor]["label"].text.contains("Drive active"), "integrated preview transforms visible drive from paid observed progress")
+	check(preview.find_children("*", "CollisionShape3D", true, false) == colliders_before, "animation preserves original collision identities")
+	var running_transform: Transform3D = drive.transform
+	preview._process(1.0)
+	check(drive.transform == running_transform and preview._labels[extractor]["label"].text.contains("Motion unknown"), "integrated timeout freezes drive and visibly explains unknown telemetry")
 	var snapshot: String = world.capture_world_snapshot_json().value
 	var record_bytes: String = JSON.stringify(running)
 	# Detached, schema-valid contradictory observations exercise conservative edges.
@@ -78,6 +93,9 @@ func finish() -> void:
 	visual_root.free()
 	command("machine_enable", {"machine_id": extractor, "enabled": false})
 	check(helper.observe(production.observation(context).value) and helper.state(extractor) == "blocked", "host isolation freezes")
+	preview.observe(production.observation(context).value)
+	preview._process(0.1)
+	check(drive.transform == running_transform and preview._labels[extractor]["label"].text.contains("Drive stopped"), "integrated isolation freezes with readable indicator state")
 	step(8)
 	helper.observe(production.observation(context).value)
 	helper.advance(0.1)
@@ -89,10 +107,15 @@ func finish() -> void:
 	var paused_production: ProductionSimulationSystem = paused_world.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)
 	var paused: Dictionary = paused_production.observation(context).value
 	check(helper.observe(paused) and helper.state(extractor) == "paused", "actual restored paused job freezes")
+	preview.observe(paused)
+	preview._process(0.1)
+	check(drive.transform == running_transform and preview._labels[extractor]["label"].text.contains("Drive paused"), "integrated restored pause stays frozen")
 	helper.advance(0.1)
 	check(helper.phase(extractor) == phase, "paused transform stays still")
 	paused_world.free()
 	check(not helper.observe({}) and helper.state(extractor) == "unknown", "disconnect forgets evidence")
+	preview.observe({})
+	check(preview._activity_parts.is_empty() and preview._labels.is_empty(), "actual preview disconnect clears meshes and activity labels together")
 	helper.advance(0.1)
 	check(helper.phase(extractor) == phase, "disconnect freezes retained cosmetic pose")
 	helper.observe(production.observation(context).value)
@@ -116,6 +139,7 @@ func finish() -> void:
 	var malformed: Dictionary = completed.duplicate(true)
 	malformed["machinery"]["jobs"] = "invalid"
 	check(not helper.observe(malformed), "malformed observation discarded without motion")
+	preview.free()
 	world.free()
 	print("Machinery activity animation: %d failures" % failures)
 	quit(1 if failures else 0)
