@@ -34,6 +34,19 @@ func finish() -> void:
 		await RenderingServer.frame_post_draw
 		check(root.get_texture().get_image().save_png(directory.path_join(shot["name"] + ".png")) == OK, "native still saved")
 	check(world.capture_world_snapshot_json().value == canonical, "native rendering preserves complete canonical snapshot")
+	# Stable-ID ordering keeps dense trays crowded. Reveal the hook through actual
+	# pickup of adjacent paid items, not a synthetic rearrangement or moved anchor.
+	inventory_action("pickup", paid_ids[0])
+	inventory_action("pickup", paid_ids[2])
+	check(habitat.world_inventory.observe(inventory.world_inventory_observation(context).value).is_success, "current isolated crowbar observation")
+	canonical = world.capture_world_snapshot_json().value
+	proxy = habitat.world_inventory._visible_items[JSON.stringify(["world.tray-1", paid_ids[1]])]["mesh"]
+	habitat.camera.position = proxy.global_position + Vector3(0.05, 0.5, 0.6)
+	habitat.camera.look_at(proxy.global_position)
+	await create_timer(0.4).timeout
+	await RenderingServer.frame_post_draw
+	check(root.get_texture().get_image().save_png(directory.path_join("crowbar.png")) == OK, "unoccluded crowbar still saved")
+	check(world.capture_world_snapshot_json().value == canonical, "unoccluded still preserves canonical world")
 	print("Native paid item silhouettes: %d failures" % failures)
 	habitat.free()
 	world.free()
