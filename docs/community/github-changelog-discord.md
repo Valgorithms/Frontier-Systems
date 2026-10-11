@@ -14,7 +14,11 @@ Repository Actions configuration:
 
 The webhook must belong to Frontier guild `1558661083131019364` and that channel. URLs are HTTPS `discord.com` incoming webhook paths only; redirects and extra URL components are rejected. The publisher logs no response bodies or credential-bearing errors. Issue text and manifests are data, never shell code. Discord mentions are disabled.
 
-Provision remote branch `discord-changelog-receipts` from `dev-master` before activation. Keep it permanently; never merge it into gameplay or delete its records. The workflow writes only `receipts/<manifest-id>.json` there. All runs share one non-canceling concurrency group. Optimistic GitHub file SHA checks fail closed on conflicting state writes.
+Setup on 2026-10-11: the dedicated text channel's inherited read-only permissions were checked. The owner manually configured the posting secret; GitHub API inspection confirmed its name and the exact channel variable, without reading the secret value. Activation remains absent. Secret-name presence does not prove the saved webhook works; no live send or game availability has been verified.
+
+Behavioral reference reviewed: Civ13 commit `039cdc98a4086fb83057b2c366479cb2d90e6095`, `.github/workflows/changelog.yml` and `tools/changelog/README.md`. Frontier implementation is independently authored; no source/assets were copied.
+
+Remote branch `discord-changelog-receipts` was provisioned from `dev-master` at `f58fe715b3e8aa087f665b9cf8ea4d30744ba3bd` on 2026-10-11, before activation. Keep it permanently; never merge it into gameplay or delete its records. The workflow writes only `receipts/<manifest-id>.json` there. All runs share one non-canceling concurrency group. Optimistic GitHub file SHA checks fail closed on conflicting state writes.
 
 After reviewing a [manifest](../../changelogs/README.md), dispatch **Reviewed Discord player changelog** on `dev-master` with its ID and exact full game SHA, leaving `dry_run=true`. This prints only the intended public text and performs no network requests or receipt writes. After separately approving publication and confirming that exact integrated SHA is available to players, enable the variable and dispatch with `dry_run=false`, `confirm_live=true`. Neither operation deploys anything. No live game publication is authorized merely by configuring this feature.
 

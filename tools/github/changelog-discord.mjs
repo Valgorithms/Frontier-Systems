@@ -48,22 +48,23 @@ export async function publish(m, previous, adapters) {
   for (let i=0;i<receipt.chunks.length;i++) {
     const chunk = receipt.chunks[i];
     if (!exact(chunk,['content','status','message_id']) || chunk.content !== messages[i].content
-      || chunk.status !== 'sent' || !/^\d+$/.test(chunk.message_id)) throw new Error('Pending or invalid receipt requires manual reconciliation');
+      || chunk.status !== 'sent' || typeof chunk.message_id !== 'string' || !/^\d+$/.test(chunk.message_id)) throw new Error('Pending or invalid receipt requires manual reconciliation');
   }
   for (let i=receipt.chunks.length;i<messages.length;i++) {
     receipt = structuredClone(receipt);
     receipt.chunks.push({content:messages[i].content,status:'pending',message_id:''});
     await adapters.save(receipt); // Reserve before any external send; errors fail closed.
     const message = await adapters.send(messages[i]);
-    if (!/^\d+$/.test(message?.id || '') || message.channel_id !== adapters.channel) throw new Error('Discord confirmation invalid; reconcile pending receipt');
+    if (typeof message?.id !== 'string' || !/^\d+$/.test(message.id) || message.channel_id !== adapters.channel) throw new Error('Discord confirmation invalid; reconcile pending receipt');
     receipt.chunks[i] = {...receipt.chunks[i],status:'sent',message_id:message.id};
     await adapters.save(receipt); // An ambiguous send/write must never be replayed automatically.
   }
+  if (!previous && !messages.length) await adapters.save(receipt);
   return receipt;
 }
-export async function run(event, env, fetcher=fetch) {
+export async function run(event, env, fetcher=fetch, loadManifest=id=>readFile(`changelogs/${id}.json`,'utf8')) {
   const dry = admit(event,env);
-  const m = validateManifest(JSON.parse(await readFile(`changelogs/${event.inputs.manifest}.json`,'utf8')));
+  const m = validateManifest(JSON.parse(await loadManifest(event.inputs.manifest)));
   if (m.id !== event.inputs.manifest || m.commit !== event.inputs.commit) throw new Error('Manifest and confirmed version differ');
   const messages = payloads(m,env.GITHUB_REPOSITORY);
   if (dry) { console.log(JSON.stringify({manifest:m.id,commit:m.commit,skip:m.skip,messages})); return; }

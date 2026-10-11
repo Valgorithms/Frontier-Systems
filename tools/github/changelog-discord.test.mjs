@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {admit,payloads,publish,validateManifest} from './changelog-discord.mjs';
+import {admit,payloads,publish,validateManifest,run} from './changelog-discord.mjs';
 
 const manifest = () => ({schema:1,id:'inventory-update',commit:'a'.repeat(40),heading:'',entries:['Open portable storage before moving its contents.'],skip:''});
 const event = () => ({repository:{default_branch:'dev-master'},inputs:{manifest:'inventory-update',commit:'a'.repeat(40),dry_run:'true',confirm_live:'false'}});
@@ -62,4 +62,51 @@ test('partial completed batch resumes only unsent chunks; changed content is rej
   const previous={schema:1,manifest:JSON.stringify(m),chunks:[{content:payloads(m,env.GITHUB_REPOSITORY)[0].content,status:'sent',message_id:'111'}]};
   await publish(m,previous,f.adapters); assert.equal(f.calls.filter(x=>x==='send').length,1);
   await assert.rejects(publish({...m,heading:'Changed'},f.saved,f.adapters));
+});
+test('skip decisions are durably recorded without a Discord send', async () => {
+  const f=fixture(); await publish({...manifest(),entries:[],skip:'Only tooling changed.'},null,f.adapters);
+  assert.equal(f.saved.chunks.length,0); assert.equal(f.calls.filter(x=>x==='send').length,0);
+});
+function httpFixture(overrides={}) {
+  const calls=[]; let receipt=null; let writes=0;
+  const fetcher=async (url,options={}) => {
+    calls.push({url,options}); assert.equal(options.redirect,'error'); assert.ok(options.signal);
+    let status=200, data={};
+    if(url.includes('/compare/'))data={status:overrides.ancestry || 'ahead'};
+    else if(url.includes('/commits/'))data={sha:manifest().commit};
+    else if(url.includes('/git/ref/')) {if(overrides.missingBranch)status=404;else data={ref:'refs/heads/discord-changelog-receipts'};}
+    else if(url.includes('/contents/') && options.method==='PUT') {
+      writes++; receipt=JSON.parse(Buffer.from(JSON.parse(options.body).content,'base64').toString('utf8')); data={content:{sha:'saved'+writes}};
+    } else if(url.includes('/contents/'))status=404;
+    else if(url.startsWith('https://discord.com/') && options.method==='POST') {
+      if(overrides.sendError)throw Error('ambiguous');
+      data={id:'456',channel_id:'123'};
+    } else if(url.startsWith('https://discord.com/'))data={type:1,guild_id:'1558661083131019364',channel_id:overrides.channel || '123'};
+    else throw Error('Unexpected endpoint');
+    return {ok:status===200,status,json:async()=>data};
+  };
+  const live=event();live.inputs.dry_run='false';live.inputs.confirm_live='true';
+  const config={...env,DISCORD_CHANGELOG_ENABLED:'true',DISCORD_CHANGELOG_CHANNEL_ID:'123',DISCORD_CHANGELOG_WEBHOOK_URL:'https://discord.com/api/webhooks/123/fake-token',GITHUB_TOKEN:'fake-github-token'};
+  return {calls,fetcher,live,config,get receipt(){return receipt;}};
+}
+test('dry run performs no HTTP calls or receipt writes', async () => {
+  const f=httpFixture(); await run(event(),env,f.fetcher,async()=>JSON.stringify(manifest())); assert.deepEqual(f.calls,[]);
+});
+test('live adapter verifies ancestry/destination and writes only dedicated receipt branch', async () => {
+  const f=httpFixture();await run(f.live,f.config,f.fetcher,async()=>JSON.stringify(manifest()));
+  const puts=f.calls.filter(c=>c.options.method==='PUT');assert.equal(puts.length,2);
+  for(const c of puts)assert.equal(JSON.parse(c.options.body).branch,'discord-changelog-receipts');
+  assert.equal(f.receipt.chunks[0].status,'sent');
+  const post=f.calls.find(c=>c.options.method==='POST');assert.ok(post.url.endsWith('?wait=true'));
+  assert.equal(post.options.headers.Authorization,undefined);
+});
+test('unintegrated version, wrong webhook channel and absent receipt branch send nothing', async () => {
+  for(const overrides of [{ancestry:'diverged'},{channel:'other'},{missingBranch:true}]) {
+    const f=httpFixture(overrides);await assert.rejects(run(f.live,f.config,f.fetcher,async()=>JSON.stringify(manifest())));
+    assert.equal(f.calls.filter(c=>['PUT','POST'].includes(c.options.method)).length,0);
+  }
+});
+test('actual HTTP adapter leaves pending after ambiguous POST', async () => {
+  const f=httpFixture({sendError:true});await assert.rejects(run(f.live,f.config,f.fetcher,async()=>JSON.stringify(manifest())));
+  assert.equal(f.receipt.chunks[0].status,'pending');assert.equal(f.calls.filter(c=>c.options.method==='POST').length,1);
 });
