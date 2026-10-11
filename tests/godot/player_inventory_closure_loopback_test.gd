@@ -185,7 +185,3 @@ func _run() -> void:
 	await process_frame
 	print("Owned container wire/durable recovery: %d failures; fixture-owned listeners closed; no human/process-crash evidence" % failures)
 	quit(1 if failures else 0)
-
-
-
-
