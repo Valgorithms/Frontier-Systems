@@ -81,6 +81,8 @@ func run() -> void:
 	missing["inventory"]["items"].clear()
 	missing["inventory"]["container_ids"] = ["storage.pouch-1"]
 	panel.observe(missing)
+	panel.use_active_tool()
+	panel._repair_component()
 	panel._self_action("move")
 	check(remote.sent.size() == 1 and panel._pending_inventory == pinned and panel._result.text == waiting, "removed item does not imply success or retarget pending move")
 	apply(world, owner, remote.sent[0])

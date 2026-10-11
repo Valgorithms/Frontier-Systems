@@ -366,6 +366,7 @@ func _disconnected(message: String) -> void:
 
 
 func _use_tool() -> void:
+	if not _pending.is_empty(): return
 	if _record.is_empty():
 		return
 	if _carrier.selected < 0:
@@ -379,6 +380,7 @@ func switch_active_hand() -> void:
 
 
 func _repair_component() -> void:
+	if not _pending.is_empty(): return
 	if _tool_parts.selected < 0 or _tools.is_empty():
 		_result.text = "Select a tool and component first."
 		return
@@ -386,6 +388,7 @@ func _repair_component() -> void:
 
 
 func _sustained_action(operation: String) -> void:
+	if not _pending.is_empty(): return
 	if _production.is_empty(): return
 	var payload: Dictionary = {"expected_revision": _production["state_revision"]}
 	if operation == "start_tool_extract":
@@ -395,6 +398,7 @@ func _sustained_action(operation: String) -> void:
 
 
 func _part_action(operation: String) -> void:
+	if not _pending.is_empty(): return
 	if _tools.is_empty() or _production.is_empty(): return
 	var payload: Dictionary = {"expected_revision": _production["state_revision"], "expected_tool_revision": _tools["state_revision"]}
 	if operation == "fabricate_tool_part":
