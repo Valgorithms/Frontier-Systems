@@ -190,6 +190,7 @@ func _start_client() -> void:
 	container.add_child(viewport)
 	_habitat = ProceduralHabitatPreview.new()
 	viewport.add_child(_habitat)
+	_habitat.production.workstation_selected.connect(_navigate_to_workstation)
 	_machinery_preview = MachineryPreview.new()
 	_habitat.add_child(_machinery_preview)
 	_terrain_preview = TerrainCellPreview.new()
@@ -283,6 +284,13 @@ func _on_connection_closed(message: String) -> void:
 		_production_panel = null
 
 
+func _navigate_to_workstation() -> void:
+	if _latest.is_empty() or not is_instance_valid(_production_panel) or _production_panel.is_queued_for_deletion():
+		return
+	_tabs.current_tab = 0
+	_scroll.ensure_control_visible(_production_panel.refining_focus_control())
+
+
 func _on_observation(record: Dictionary) -> void:
 	_connection_status.text = "Connected to shared colony · Crew %d" % (_remote.server_slot + 1)
 	_reconnect.disabled = true
@@ -314,10 +322,6 @@ func _on_observation(record: Dictionary) -> void:
 		_production_panel.observation_changed.connect(_habitat.production.observe)
 		_habitat.production.source_selected.connect(_production_panel.select_source)
 		_habitat.production.extraction_requested.connect(_production_panel.extract_source)
-		_habitat.production.workstation_selected.connect(func() -> void:
-			_tabs.current_tab = 0
-			_scroll.ensure_control_visible(_production_panel.refining_focus_control())
-		)
 	if not _body_initialized:
 		var position: Array = record["position"]
 		_habitat.character.position = ProceduralWorldInventoryPreview.DISPLAY_ORIGIN + Vector3(float(position[0]), maxf(950.0, float(position[1])), float(position[2])) / 1000.0

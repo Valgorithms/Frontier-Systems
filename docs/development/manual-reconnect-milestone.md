@@ -10,7 +10,7 @@ Draft [PR #53](https://github.com/Valgorithms/Frontier-Systems/pull/53) targets 
 
 Windows Godot 4.7.2 dedicated adapter/shell checks pass: initial/duplicate suppression, authentication without a fresh observation, abandoned command completion, stale projection clearing, failed attempt and rejected authentication recovery. The same running actual client also passes disposable loopback checkpoint save, disconnect, unavailable-host attempt, real invite rejection and manual reconnect to a restored host. It retains body/slot, items, active hand, inventory revision, production stock/deposits/walls/structures/components and the integer-normalized original terrain intent. Reconnect transmits no abandoned command or automatic terrain retry. The synthetic retained return targets an absent fixture parcel; it proves preservation and explicit retry availability, not successful terrain settlement.
 
-The selected final Windows run passed all 11 checks: import, startup and the nine scripts listed below, including existing two-client finite engineering/checkpoint acceptance and inventory/production shell regressions. `git diff --check` passed. PHP and domain schemas are unchanged; their cross-platform checks remain CI evidence.
+The initial Windows run for the source tree committed as `37b9682` passed all 11 checks: import, startup and the nine scripts listed below, including existing two-client finite engineering/checkpoint acceptance and inventory/production shell regressions. `git diff --check` passed. PHP and domain schemas are unchanged; their cross-platform checks remain CI evidence.
 
 Use the existing runners:
 
@@ -24,3 +24,11 @@ Port 27849 requires a Coordinator lease and a fresh free-listener probe before b
 Native OpenGL Compatibility acceptance passes through button-signal activation with real loopback authentication and checkpoint I/O. Ordinary viewport captures of connected/disconnected/rejected/reconnected states were inspected locally; recovery status and button are visible, direct actions disable while disconnected, and production is rebuilt after fresh data. Existing MIT engine geometry is the capture source; no generative art or third-party assets. All captures remain ignored/internal, with no upload.
 
 Automated adapter, headless network and native Compatibility evidence does not establish human usability, physical keyboard/mouse reconnect activation, controller, VR, Forward+, public networking, TLS or Linux graphical acceptance. Windows/Linux CI for the exact final pushed head remains the Coordinator review gate; earlier-head success does not certify the final head.
+
+## Repeated reconnect navigation review correction
+
+The persistent workstation selection emitter now connects once during client setup to a named guarded bootstrap handler. Rebuilding a production panel no longer installs another anonymous callback. Workstation signals during disconnect or deferred panel deletion leave navigation unchanged and never dereference the absent panel.
+
+`reconnect_workstation_navigation_test.gd` drives four actual-shell observation/disconnect cycles with a socket-free recording adapter and canonical fixture observations. Each fresh cycle invokes exactly one handler and changes to the workstation tab, the persistent emitter has one owned connection, and signals both before and after deferred deletion safely leave the current tab alone. It also verifies navigation submits no canonical command. This is automated presentation evidence, not another network or native-render acceptance run.
+
+Windows Godot 4.7.2 import/startup and `reconnect_workstation_navigation_test.gd`, `manual_reconnect_adapter_test.gd`, `client_inventory_shell_test.gd`, `integrated_panel_layout_test.gd` passed (six checks, ignored `var/ci/reconnect-navigation-review`). `git diff --check` passed. No sockets were opened, no new port lease was needed, and prior native/network evidence above remains scoped to the earlier source tree. Exact new-head Windows/Linux CI remains separate.
