@@ -7,6 +7,7 @@ var _remote: RemoteWorldRuntime
 var _status: Label
 var _checkpoint_status: Label
 var _checkpoint_request: CheckpointRequest
+var _checkpoint_outcome_unknown: bool = false
 var _content: VBoxContainer
 var _habitat: ProceduralHabitatPreview
 var _production_panel: LocalProductionPanel
@@ -251,6 +252,7 @@ func _start_client() -> void:
 func _request_checkpoint() -> void:
 	var command := CheckpointRequest.new()
 	command.command_id = StringName("save-%s" % _remote.next_local_request_id())
+	_checkpoint_outcome_unknown = false
 	_checkpoint_request = command
 	_checkpoint_status.text = "Checkpoint requested; waiting for disk confirmation…"
 	var queued: ServiceResult = _remote.enqueue_command(command)
@@ -272,6 +274,13 @@ func _connect_client() -> void:
 
 
 func _on_connection_closed(message: String) -> void:
+	if _checkpoint_request != null:
+		_checkpoint_outcome_unknown = true
+	if _checkpoint_outcome_unknown:
+		_checkpoint_status.text = "Checkpoint outcome unknown after disconnect; no request will be resubmitted."
+	else:
+		_checkpoint_status.text = "Checkpoint session ended; reconnect before requesting a new save."
+	_checkpoint_request = null
 	_status.text = message
 	_connection_status.text = message + ". Reconnect, then inspect fresh state; unacknowledged actions are not resubmitted."
 	_reconnect.disabled = false
@@ -402,6 +411,7 @@ func _on_completed(command: SimulationCommand, result: ServiceResult) -> void:
 	if command is CheckpointRequest and command == _checkpoint_request:
 		_checkpoint_request = null
 		if result.error_code == &"remote_disconnected":
+			_checkpoint_outcome_unknown = true
 			_checkpoint_status.text = "Checkpoint outcome unknown after disconnect; no request will be resubmitted."
 		elif result.is_success:
 			_checkpoint_status.text = "Shared world checkpoint confirmed on disk."
