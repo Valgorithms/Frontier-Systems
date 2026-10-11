@@ -84,7 +84,7 @@ func observe(record: Dictionary) -> void:
 		var mesh: MeshInstance3D = _deposits[id]
 		mesh.visible = mass > 0
 		_source_areas[id].input_ray_pickable = mass > 0
-		_source_labels[id].text = "%s · %.2f kg\n%s" % [SOURCE_NAMES[id] + " [" + id + "]", float(mass) / 1000000.0, "Double-click to extract into a carried canister" if mass > 0 else "Depleted"]
+		_source_labels[id].text = "%s\n%.2f kg\n%s" % [SOURCE_NAMES[id] + " [" + id + "]", float(mass) / 1000000.0, "Double-click to extract into a carried canister" if mass > 0 else "Depleted"]
 		var fraction: float = float(mass) / (5000000.0 if id == "deposit.ice" else 10000000.0)
 		mesh.scale = Vector3.ONE * maxf(0.05, pow(fraction, 1.0 / 3.0))
 	var count: int = int(record["wall_mass_milligrams"]) / 1000000
@@ -150,4 +150,5 @@ func _box(size: Vector3, location: Vector3, color: Color) -> MeshInstance3D:
 	mesh.material_override = material
 	add_child(mesh)
 	return mesh
+
 
