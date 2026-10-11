@@ -18,6 +18,7 @@ var client: FirstPlayableBootstrap
 var directory: String
 var keys: Array[String] = ["reconnect-fixture-one-000000000000000", "reconnect-fixture-two-000000000000000"]
 var acks: Dictionary = {}
+var checkpoint_receipt: Dictionary = {}
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -56,7 +57,13 @@ func run() -> void:
 	client = FirstPlayableBootstrap.new()
 	root.add_child(client)
 	client._remote.terrain_retry_directory = directory.path_join("client-intents")
-	client._remote.command_completed.connect(func(command: SimulationCommand, result: ServiceResult) -> void: acks[String(command.command_id)] = result)
+	client._remote.command_completed.connect(func(command: SimulationCommand, result: ServiceResult) -> void:
+		acks[String(command.command_id)] = result
+		if command is CheckpointRequest:
+			# A following observation in this same socket poll may replace the label.
+			checkpoint_receipt["success"] = result.is_success
+			checkpoint_receipt["visible"] = client._status.text == "Shared world checkpoint confirmed on disk."
+	)
 	check(await wait_for(func() -> bool: return client._remote._authenticated), "real session authenticates")
 	check(client._latest.is_empty() and client._reconnect.disabled and not client._remote.connection_ready(), "authentication waits for first observation")
 	var denied := CheckpointRequest.new()
@@ -78,7 +85,8 @@ func run() -> void:
 	await capture("connected")
 	check(await wait_for(func() -> bool: return not store.status()["busy"]), "checkpoint worker idle")
 	client._host_actions[-1].pressed.emit()
-	check(await wait_for(func() -> bool: return client._status.text == "Shared world checkpoint confirmed on disk."), "actual save button confirms disk checkpoint")
+	check(await wait_for(func() -> bool: return checkpoint_receipt.has("success"), 5.0) and checkpoint_receipt.get("success", false) and checkpoint_receipt.get("visible", false), "actual save button confirms disk checkpoint at receipt delivery")
+	check(LocalWorldSaveStore.read_latest(directory).is_success, "acknowledged checkpoint exists on disposable disk")
 	var uncertain := InventoryDevelopmentCommand.new()
 	var retained: Dictionary = {"schema_version": 3, "world_id": String(world.world_id), "region_id": String(world.region_id), "slot": 0, "request_number": 1, "operation": "return", "payload": {"item_id": "terrain-item-999999", "expected_inventory_revision": expected["inventory"]["inventory_revision"]}}
 	check(client._remote.restore_terrain_intent(retained).is_success, "fixture restores bounded unresolved terrain intent without submission")
