@@ -1,5 +1,12 @@
 extends SceneTree
 
+## This explicit-save route polls real workers without advancing the autosave clock.
+## An idle observation cannot otherwise reserve the store across WebSocket delivery.
+class ManualCheckpointStore extends WorldPersistenceAdapter:
+	func _process(_delta: float) -> void:
+		super._process(0.0)
+
+
 ## Hold a real worker write at the injected filesystem boundary; native I/O follows.
 class GatedFiles extends CheckpointFileIO:
 	var armed: bool = false
@@ -35,7 +42,7 @@ func _run() -> void:
 	var world := WorldRuntime.new()
 	world.resource_carriers_enabled = true
 	root.add_child(world)
-	var store := WorldPersistenceAdapter.new()
+	var store := ManualCheckpointStore.new()
 	root.add_child(store)
 	_check(store.configure(world, directory, _files).is_success, "new durable store initializes")
 	var host := FirstPlayableHost.new()
@@ -354,6 +361,11 @@ func _wall_recovery(world: WorldRuntime, store: WorldPersistenceAdapter, host: F
 		return {"world": world, "store": store, "host": host}
 	await _wait(func() -> bool: return _files.entered.try_wait(), 3.0)
 	_check(store.status()["busy"] and not host._checkpoint_request.is_empty() and shell._checkpoint_request == abandoned and not _acks.has(String(abandoned.command_id)), "exact manual save remains pending while its real worker is held")
+	var busy: ServiceResult = store.request_checkpoint()
+	_check(not busy.is_success and busy.error_code == &"checkpoint_busy", "runtime rejects a second checkpoint while the native worker is held")
+	var competing_save: String = _queue(clients[1 - winner], "world", "checkpoint", {})
+	await _wait(func() -> bool: return _acks.has(competing_save), 3.0)
+	_check(_acks.has(competing_save) and _ack_slots.get(competing_save) == 1 - winner and not _acks[competing_save].is_success and _acks[competing_save].error_code == &"checkpoint_unavailable" and host._checkpoint_request.get("request_id") == String(abandoned.command_id), "competing peer save rejects without replacing the exact pending disk request")
 	await create_timer(0.15).timeout
 	_check(shell._checkpoint_status.text.contains("waiting for disk") and shell._checkpoint_request == abandoned, "fresh observations cannot claim pending disk completion")
 	host.free() # Close only this fixture's listener while its write is in flight.
@@ -370,7 +382,7 @@ func _wall_recovery(world: WorldRuntime, store: WorldPersistenceAdapter, host: F
 	var replacement := WorldRuntime.new()
 	replacement.resource_carriers_enabled = true
 	root.add_child(replacement)
-	var replacement_store := WorldPersistenceAdapter.new()
+	var replacement_store := ManualCheckpointStore.new()
 	root.add_child(replacement_store)
 	_check(replacement_store.configure(replacement, directory, _files).is_success, "replacement store restores its actual worker checkpoint")
 	var replacement_host := FirstPlayableHost.new()
