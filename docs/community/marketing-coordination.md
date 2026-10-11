@@ -169,3 +169,103 @@ My long-term aim is for the game to help sustain open-source API work, including
 
 Thanks,
 Valithor
+
+## Expanded per-game outreach: 2026-10-11
+
+Owner requested 5-10 contacts per game, grouped SS13 together and excluded the Civ13 team. Target at least five verified contacts for each of SS13, Astroneer, Moonbase Alpha, Space Engineers and Empyrion. Prior sends count; shared creators receive one message. No unrelated Civ13 staff contact.
+
+Four additional individually submitted emails below have matching recipient/subject Sent entries at displayed1:30PM. w4stedspace and Criken bodies additionally read back. Captain Jack/LastStandGamers complete body readback remains pending; do not resend.
+
+### w4stedspace
+Games: Space Engineers
+To: w4stedspace@gmail.com
+Public source: https://x.com/w4stedspace
+Subject: Frontier Systems: cooperative engineering and readable logistics
+Sent ID: 1791739827068138300
+
+Hi w4stedspace,
+
+I'm Valithor, maintainer of DiscordPHP and developer of Frontier Systems, an early cooperative engineering game. Your Space Engineers engineering work and recent cooperative EverRail streams make you a relevant person to ask about readable machinery and cargo systems.
+
+Frontier is a source prototype with finite extraction, portable containers, refining, plate and wall construction, recycling, and save/reconnect recovery with two authenticated local clients. Fresh-player usability and public-server playtesting are unverified. Colonies, spacecraft and broader station systems are future work. There is no packaged demo or announced release date.
+
+Overview: https://valzargaming.itch.io/frontier-systems
+Source and development instructions: https://github.com/Valgorithms/Frontier-Systems
+
+I'd welcome your perspective on which feedback helps a group understand where material is going and whether a machine is actually ready. You can inspect it now or try the source build when you judge it comfortable; there is no expectation of coverage, endorsement or a paid partnership.
+
+The long-term aim is to help sustain open-source API work including DiscordPHP. Current optional support funds initial game development under its existing campaign plan.
+
+Thanks,
+Valithor
+
+### Captain Jack
+Games: Space Engineers
+To: CaptainJack@redwoodmedia.net
+Public source: https://x.com/CaptainJackYT
+Subject: An early cooperative engineering project for your radar
+Sent ID: 1791739829518138300
+
+Hi Captain Jack,
+
+I'm Valithor, maintainer of DiscordPHP and developer of Frontier Systems, an early cooperative engineering game. Your Space Engineers scenarios and community storytelling are a good fit for the shared engineering direction we're working toward.
+
+Frontier is a source prototype with finite extraction, portable containers, refining, plate and wall construction, recycling, and save/reconnect recovery with two authenticated local clients. Fresh-player usability and public-server playtesting are unverified. Colonies, spacecraft and broader station systems are future work. There is no packaged demo or announced release date.
+
+Overview: https://valzargaming.itch.io/frontier-systems
+Source and development instructions: https://github.com/Valgorithms/Frontier-Systems
+
+If the project interests you, I'd welcome a look or thoughts on what an engineering sandbox needs before it is comfortable to explore with friends. You can inspect it now or try the source build when you judge it comfortable; there is no expectation of coverage, endorsement or a paid partnership.
+
+The long-term aim is to help sustain open-source API work including DiscordPHP. Current optional support funds initial game development under its existing campaign plan.
+
+Thanks,
+Valithor
+
+### Criken
+Games: SS13
+To: criken@criken.com
+Public source: https://x.com/CrikMaster
+Subject: Frontier Systems: a small engineering prototype with a broader station direction
+Sent ID: 1791739831336138300
+
+Hi Criken,
+
+I'm Valithor, maintainer of DiscordPHP and developer of Frontier Systems, an early cooperative engineering game. Your Space Station 13 coverage makes you a relevant person to ask about a cooperative game with a broader shared-station direction.
+
+Frontier is a source prototype with finite extraction, portable containers, refining, plate and wall construction, recycling, and save/reconnect recovery with two authenticated local clients. Fresh-player usability and public-server playtesting are unverified. Colonies, spacecraft and broader station systems are future work. There is no packaged demo or announced release date.
+
+Overview: https://valzargaming.itch.io/frontier-systems
+Source and development instructions: https://github.com/Valgorithms/Frontier-Systems
+
+I'd welcome your perspective on making cooperative engineering understandable without losing the interesting consequences of shared systems. You can inspect it now or try the source build when you judge it comfortable; there is no expectation of coverage, endorsement or a paid partnership.
+
+The long-term aim is to help sustain open-source API work including DiscordPHP. Current optional support funds initial game development under its existing campaign plan.
+
+Thanks,
+Valithor
+
+### Arron
+Games: Space Engineers, Empyrion
+To: Laststandgamers@googlemail.com
+Public source: https://www.youtube.com/@LastStandGamers/about
+Subject: Frontier Systems: a cooperative engineering project in development
+Sent ID: 1791739842487138300
+
+Hi Arron,
+
+I'm Valithor, maintainer of DiscordPHP and developer of Frontier Systems. Your Space Engineers and Empyrion coverage makes LastStandGamers a relevant audience for our cooperative construction and resource-logistics direction.
+
+Frontier is a source prototype with finite extraction, portable containers, refining, plate and wall construction, recycling, and save/reconnect recovery with two authenticated local clients. Fresh-player usability and public-server playtesting are unverified. Colonies, spacecraft and broader station systems are future work. There is no packaged demo or announced release date.
+
+Overview: https://valzargaming.itch.io/frontier-systems
+Source and development instructions: https://github.com/Valgorithms/Frontier-Systems
+
+If this interests you, I'd welcome a look or feedback on how an early engineering game can explain its construction loop clearly. You're welcome to inspect now or try the source build when you judge it comfortable, with no expectation of coverage or endorsement.
+
+The long-term aim is to sustain open-source API work such as DiscordPHP. Current optional support funds initial game development under its existing campaign plan.
+
+Thanks,
+Valithor
+
+Expanded outreach checkpoint: all four first-batch additional Sent recipient/subject entries confirmed, and Captain Jack/LastStandGamers exact bodies now read back in full. Later Z1/Spanj/Blitz/OneLastMidnight clicked Send attempts were not confirmed in refreshed Sent. Zoho visibly reports550 5.4.6 Unusual sending activity detected. Z1/Spanj remain in Drafts; no Outbox queue. Stop sending; no bypass/alternate sender. Correct any earlier conversational Submitted/Sent shorthand to attempted, unconfirmed. Exact unsent text and five-contact-per-game roster are in outreach-roster.md. Civ13 team excluded. Space Engineers minimum met; other game quotas remain incomplete.
