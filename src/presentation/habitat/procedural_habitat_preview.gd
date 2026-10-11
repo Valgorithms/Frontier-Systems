@@ -151,4 +151,3 @@ func _collider(parent: Node3D, node_name: String, dimensions: Vector3, location:
 	body.add_child(collider)
 	parent.add_child(body)
 	return collider
-

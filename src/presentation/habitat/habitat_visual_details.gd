@@ -32,6 +32,8 @@ static func resource(mesh: MeshInstance3D, index: int, color: Color) -> void:
 		var prism := PrismMesh.new()
 		prism.size = Vector3(0.5, 0.5, 0.5)
 		mesh.mesh = prism
+	elif index == 2:
+		(mesh.mesh as BoxMesh).size = Vector3(0.5, 0.25, 0.5)
 
 
 static func workstation(parent: Node3D) -> void:
@@ -69,6 +71,7 @@ func _process(_delta: float) -> void:
 						box(_trays, Vector3(1.05, 0.09, 0.025), origin + Vector3(0, 0.06, side * 0.3), Color("#91a8af"))
 						box(_trays, Vector3(0.025, 0.09, 0.6), origin + Vector3(side * 0.51, 0.06, 0), Color("#91a8af"))
 					box(_trays, Vector3(0.82, 0.66, 0.38), origin + Vector3(0, -0.37, 0), Color("#34454e"))
+	_trays.visible = inventory.visible
 	var live: Dictionary = {}
 	for child in habitat.get_children():
 		if not child is TerrainCellPreview: continue
