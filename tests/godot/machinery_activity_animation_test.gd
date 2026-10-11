@@ -16,6 +16,31 @@ func finish() -> void:
 	check(helper.observe(running) and helper.state(extractor) == "running", "paid finite extraction advancing observation earns motion")
 	var snapshot: String = world.capture_world_snapshot_json().value
 	var record_bytes: String = JSON.stringify(running)
+	# Detached, schema-valid contradictory observations exercise conservative edges.
+	var edge := MachineryActivityAnimation.new()
+	edge.observe(first)
+	edge.observe(running)
+	var unchanged: Dictionary = running.duplicate(true)
+	unchanged["last_tick"] += 1
+	check(edge.observe(unchanged) and edge.state(extractor) == "blocked", "new tick without progress stops motion")
+	var regressed: Dictionary = unchanged.duplicate(true)
+	regressed["last_tick"] += 1
+	regressed["machinery"]["jobs"][extractor]["progress"] = 0
+	check(edge.observe(regressed) and edge.state(extractor) == "unknown", "regressed job cannot be treated as continuation")
+	var replaced: Dictionary = regressed.duplicate(true)
+	replaced["last_tick"] += 1
+	replaced["machinery"]["jobs"][extractor]["recipe"] = "refine.iron"
+	check(edge.observe(replaced) and edge.state(extractor) == "unknown", "different recipe cannot inherit prior activity")
+	var same_tick: Dictionary = running.duplicate(true)
+	var conflicting := MachineryActivityAnimation.new()
+	conflicting.observe(first)
+	conflicting.observe(running)
+	same_tick["machinery"]["jobs"][extractor]["progress"] += 1
+	check(conflicting.observe(same_tick) and conflicting.state(extractor) == "unknown", "changed same-tick job is not fresh progress evidence")
+	var broken: Dictionary = running.duplicate(true)
+	for physical in broken["machinery"]["inventory_items"]:
+		if physical["item_id"] == extractor: physical["condition_permille"] = 0
+	check(conflicting.observe(broken) and conflicting.state(extractor) == "blocked", "broken retained frame freezes even with earlier progress")
 	helper.advance(0.05)
 	check(helper.phase(extractor) > 0.0, "observed running moves cosmetic phase")
 	var partitioned := MachineryActivityAnimation.new()
@@ -36,6 +61,21 @@ func finish() -> void:
 	helper.advance(1000000.0)
 	check(helper.phase(extractor) == phase, "long gap expires before animating")
 	check(world.capture_world_snapshot_json().value == snapshot and JSON.stringify(running) == record_bytes, "animation never changes canonical snapshot or source observation")
+	var visual_root := Node3D.new()
+	root.add_child(visual_root)
+	var parts: Dictionary = MachineryActivityParts.build(visual_root, ["extractor", "refinery"])
+	check(parts["rotors"].size() == 2 and visual_root.find_children("*", "CollisionObject3D", true, false).is_empty(), "cosmetic rotor/indicator only")
+	for sample in range(100):
+		MachineryActivityParts.present(parts, float(sample) * TAU / 100.0, helper.indicator(extractor))
+		for rotor in parts["rotors"]:
+			check(rotor.transform.is_finite(), "finite rotor transform")
+			for visual in rotor.get_children():
+				var bounds: AABB = rotor.transform * visual.transform * visual.get_aabb()
+				check(bounds.position.x >= -0.4 and bounds.end.x <= 0.4 and bounds.position.z >= -0.4 and bounds.end.z <= 0.4 and bounds.position.y >= -0.4 and bounds.end.y <= 0.95, "all animated extremes inside unchanged frame envelope")
+	var held: Transform3D = parts["rotors"][0].transform
+	MachineryActivityParts.present(parts, NAN, Color.RED)
+	check(parts["rotors"][0].transform == held, "nonfinite presentation phase rejected")
+	visual_root.free()
 	command("machine_enable", {"machine_id": extractor, "enabled": false})
 	check(helper.observe(production.observation(context).value) and helper.state(extractor) == "blocked", "host isolation freezes")
 	step(8)

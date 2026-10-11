@@ -33,7 +33,7 @@ func observe(record: Dictionary) -> bool:
 			if not prior.get("job", {}).is_empty() or _states.get(id) == "outcome_unknown": state = "outcome_unknown"
 		elif job["paused"]:
 			state = "paused"
-		elif not enabled:
+		elif not enabled or _frame_broken(workshop, id):
 			state = "blocked"
 		elif tick == _tick and prior == {"job": job, "enabled": enabled}:
 			state = _states.get(id, "unknown")
@@ -51,6 +51,12 @@ func observe(record: Dictionary) -> bool:
 	_previous = next
 	_states = states
 	return true
+
+
+static func _frame_broken(workshop: Dictionary, id: String) -> bool:
+	for physical in workshop["inventory_items"]:
+		if physical["item_id"] == id: return int(physical["condition_permille"]) == 0
+	return false
 
 
 func _forget() -> void:
