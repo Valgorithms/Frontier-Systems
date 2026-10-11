@@ -32,6 +32,7 @@ func _run() -> void:
 	_select_head()
 	_check(_panel._maintenance_details.text.contains("healthy") and _panel._maintenance_button.disabled, "healthy component blocks unnecessary repair")
 	_check(_panel._maintenance_details.text.contains("Energy quote unavailable"), "no fabricated energy quote")
+	_check(ToolMaintenanceView.describe(_panel._tool_record, {}, _head).contains("Station reserve unavailable."), "absent workstation observation never invents a zero reserve")
 	await _capture_view("healthy")
 	_panel.free()
 	_world.free()

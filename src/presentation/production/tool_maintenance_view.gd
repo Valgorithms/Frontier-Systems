@@ -29,7 +29,7 @@ static func blocker(tools: Dictionary, production: Dictionary, selected_id: Stri
 static func describe(tools: Dictionary, production: Dictionary, selected_id: String) -> String:
 	var entries: Dictionary = components(tools)
 	if not entries.has(selected_id):
-		return "Unavailable: " + blocker(tools, production, selected_id)
+		return ("Selected ID: " + selected_id + "\n" if not selected_id.is_empty() else "") + "Unavailable: " + blocker(tools, production, selected_id)
 	var entry: Dictionary = entries[selected_id]
 	var part: Dictionary = entry["part"]
 	var lines: PackedStringArray = [
@@ -46,7 +46,11 @@ static func describe(tools: Dictionary, production: Dictionary, selected_id: Str
 			var state: Dictionary = entry["actions"][action]
 			lines.append("%s: %s" % [action, "available" if state["available"] else "disabled; missing " + ", ".join(PackedStringArray(state["missing_functions"]))])
 	lines.append("Preview: maintain up to full integrity; host validates ownership, revisions, reach, voluntary action, power and energy.")
-	lines.append("Energy quote unavailable in current observation. Station reserve: %d J." % int(production.get("energy_joules", 0)))
+	lines.append("Energy quote unavailable in current observation.")
+	if production.has("energy_joules"):
+		lines.append("Station reserve: %d J." % int(production["energy_joules"]))
+	else:
+		lines.append("Station reserve unavailable.")
 	var reason: String = blocker(tools, production, selected_id)
 	if not reason.is_empty():
 		lines.append("Unavailable: " + reason)
