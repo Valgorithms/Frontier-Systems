@@ -42,6 +42,7 @@ var _maintenance_details: Label
 var _maintenance_feedback: Label
 var _maintenance_button: Button
 var _selected_part_id: String = ""
+var _maintenance_choice_key: String = ""
 var _nonce: String = str(Time.get_ticks_usec())
 
 
@@ -59,6 +60,7 @@ func configure(world: WorldRuntime) -> ServiceResult:
 	maintenance_title.text = "Tool diagnosis and maintenance"
 	_maintenance_parts = _picker()
 	_maintenance_parts.clip_text = true
+	_maintenance_parts.fit_to_longest_item = false
 	_maintenance_parts.item_selected.connect(_select_maintenance_part)
 	_maintenance_details = _label()
 	_maintenance_button = _button("Maintain selected component", _maintain_component)
@@ -421,15 +423,20 @@ func _refresh_maintenance() -> void:
 	if _maintenance_parts == null:
 		return
 	var entries: Dictionary = ToolMaintenanceView.components(_tool_record)
-	_maintenance_parts.clear()
-	_maintenance_parts.add_item("Select a component")
-	_maintenance_parts.set_item_metadata(0, "")
+	var choices: Array = []
 	for id in entries:
-		var part: Dictionary = entries[id]["part"]
-		_maintenance_parts.add_item("%s · %s" % [part["name"], id])
-		_maintenance_parts.set_item_metadata(_maintenance_parts.item_count - 1, id)
-		if id == _selected_part_id:
-			_maintenance_parts.select(_maintenance_parts.item_count - 1)
+		choices.append([id, entries[id]["part"]["name"]])
+	var choice_key: String = JSON.stringify(choices)
+	if choice_key != _maintenance_choice_key:
+		_maintenance_choice_key = choice_key
+		_maintenance_parts.clear()
+		_maintenance_parts.add_item("Select a component")
+		_maintenance_parts.set_item_metadata(0, "")
+		for choice in choices:
+			_maintenance_parts.add_item("%s · %s" % [choice[1], choice[0]])
+			_maintenance_parts.set_item_metadata(_maintenance_parts.item_count - 1, choice[0])
+			if choice[0] == _selected_part_id:
+				_maintenance_parts.select(_maintenance_parts.item_count - 1)
 	# Missing IDs remain remembered but never retarget to the first remaining part.
 	_maintenance_details.text = ToolMaintenanceView.describe(_tool_record, _record, _selected_part_id)
 	var reason: String = ToolMaintenanceView.blocker(_tool_record, _record, _selected_part_id)

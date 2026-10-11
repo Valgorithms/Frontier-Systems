@@ -15,6 +15,9 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_capture = OS.get_cmdline_user_args().has("--capture-maintenance")
+	if _capture:
+		root.size = Vector2i(420, 760)
+		root.content_scale_size = Vector2i(420, 760)
 	_world = WorldRuntime.new()
 	_world.resource_carriers_enabled = true
 	root.add_child(_world)
@@ -44,6 +47,7 @@ func _run() -> void:
 	var request: String = _panel._pending
 	_panel._maintain_component()
 	_check(not request.is_empty() and request == _panel._pending and _panel._maintenance_feedback.text.begins_with("Queued:"), "queued state and double-click guard")
+	await _capture_view("queued")
 	_step()
 	_check(_panel._maintenance_feedback.text.begins_with("Rejected:") and _integrity() == 500000, "real stale-revision command rejection retains condition")
 	_check(_panel._maintenance_button.disabled and _panel._maintenance_details.text.contains("power is off"), "observed power prerequisite blocks maintenance")
@@ -67,8 +71,11 @@ func _run() -> void:
 	await _capture_view("disabled")
 	_panel._maintain_component()
 	_step()
-	_check(_integrity() == 1000000 and _panel._maintenance_details.text.contains("tool.extractor: available"), "capability changes only after host maintenance")
+	_check(_integrity() == 1000000 and _panel._maintenance_details.text.contains("action.extract: available"), "capability changes only after host maintenance")
 	var original: Dictionary = _panel._tool_record.duplicate(true)
+	_panel._tool_record["assemblies"].reverse()
+	_panel._refresh_maintenance()
+	_check(_panel._selected_part_id == _head and _panel._maintenance_parts.get_item_metadata(_panel._maintenance_parts.selected) == _head, "reordered observation keeps stable ID")
 	for assembly in _panel._tool_record["assemblies"]:
 		if assembly["assembly_id"] == "extractor-1":
 			assembly["parts"] = []
@@ -155,7 +162,7 @@ func _capture_view(name: String) -> void:
 	_panel.size = Vector2(330, 700)
 	await process_frame
 	await process_frame
-	_check(_panel.size.x <= 340.0, "maintenance layout fits a narrow 330 px panel")
+	_check(_panel.size.x <= 340.0, "maintenance layout fits a narrow 330 px panel (%s)" % _panel.size)
 	var directory: String = "res://var/ci/repair-usability"
 	DirAccess.make_dir_recursive_absolute(directory)
 	_check(root.get_texture().get_image().save_png(directory + "/" + name + ".png") == OK, "local capture saved")
