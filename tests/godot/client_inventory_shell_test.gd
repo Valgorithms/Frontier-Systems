@@ -163,7 +163,3 @@ func run() -> void:
 	PlayerInputSettings.instance().release_all()
 	print("Actual-shell inventory fixture: %d failures; injected GUI, fixture selectors, explicit observations/receipts; no sockets or human acceptance" % failures)
 	quit(1 if failures else 0)
-
-
-
-
