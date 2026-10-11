@@ -23,3 +23,17 @@ Branch: `client-inventory-hand-verification`, targets `dev-master`.
 Cross-chat send is unavailable without direct human messaging authorization: the messaging tool explicitly says an orchestrator's received request does not itself authorize replying. This request is exposed through chat status for Coordinator polling; no owner approval is requested here. This is an authorization prerequisite, not a demonstrated client failure.
 
 No runtime, schema, authority, shared runner or creative asset changes have been made. New captures will stay ignored/internal; configuration examples are unchanged.
+
+## Integrated native prerequisite result
+
+At clean `c78c3bd3a62b1ab7a31a1f640507ab5ab2c75baa`, the exclusive Coordinator 27850 lease was confirmed and a listener probe succeeded. Windows Godot 4.7.2 Compatibility ClientOnly **failed** after the guide's explicit stale-revision retry: the subsequent "Collect printed plate into inventory" command received "The production revision is stale or exhausted." Logs/manifest remain internal at `var/ci/tutorial-readiness/6b0933d3116441edbb9520fa9e6dfc8c`. No successful capture was produced. Shared PR38 scripts remain unchanged. This result requires Coordinator triage in its owning scope; it is not waived by the dedicated fixture.
+
+## Dedicated fixture
+
+`client_inventory_shell_test.gd` embeds the actual `FirstPlayableBootstrap` with its real tabs, theme/header, inventory panel and scroll containers. A recording transport avoids sockets/persistence; a fresh canonical world uses the existing owned nested crowbar as the tool. Fixture-selected item/storage/hand IDs, injected Enter events, explicit observer delivery and command receipts are labelled. No physical human input or live-network acceptance is claimed.
+
+The fixture exercises equip, selected hand, switch, unequip into root, move into pouch, unrelated receipt immunity, real intervening hand command causing stale-move rejection, matching rejected feedback reveal and refreshed explicit retry. Checks cover exact unique item identity/definition/condition, carried mass and production stocks/cargo/deposits/energy/structures/components; failed move conserves inventory owner/ledger/receipts. The simulation tick itself advances normally. No runtime fixes or authority changes were needed.
+
+Native capture command: `tools/ci/capture-client-inventory.ps1 -Godot 'D:/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe'`. Headless fixture is included automatically by the existing Windows/Linux runner; graphical capture remains a separate local command. Output is ignored under `var/ci/client-inventory-render`, with clean source head and renderer in the manifest.
+
+Five baseline Windows headless checks passed at c78c3bd: import/startup, integrated_panel_layout, player_inventory_feedback and player_inventory_handoffs. Focused dedicated import/startup/fixture checks passed during iteration; final immutable execution evidence is recorded in chat/PR status. Native/CI final results must be checked separately.
