@@ -88,3 +88,9 @@ Owner uploaded approved cover. Created one itch project ID5139717 at https://val
 Automatic approval review rejected selecting Public: trusted messages were judged to authorize project creation but not clearly public publication. No workaround or retry attempted. Concrete remaining decision: approve making this exact reviewed itch page public to everyone. Owner preview retained, screenshot itch-draft.png in this chat visualization directory. No public publication claimed. Godot remains pending moderator approval.
 
 Deduplication receipt from gameplay coordinator: Civ13 announcements advertisement already posted once at https://discord.com/channels/468979034571931648/468979680607731723/1558887545952272457; exact text is in docs/community/advertisement-publications.md at primary53fc49e. Do not duplicate.
+
+## itch publication confirmed: 2026-10-11 13:11 America/New_York
+
+Owner answered Yes to this chat's exact public-visibility question; gameplay coordinator independently relayed direct owner instruction Publish this itch.io listing. Selected Public and saved existing project5139717. Owner-facing page shows Published. Independent signed-out in-app browser opened https://valzargaming.itch.io/frontier-systems without secret URL or credentials and rendered complete five-paragraph reviewed description, source/support links and station cover; visible update time17:11 UTC. No download/purchase control. This confirms public availability, not search indexing or audience engagement.
+
+Exact public text matches prior saved five-paragraph draft and itch-published.png receipt. In development / No payments and AI Code+Text classification preserved. No binaries, promises, price changes, current gameplay media or additional advertisements. Previous explicit-publication blocker resolved; Godot moderation remains pending as last observed. Do not recreate or republish this itch project.
