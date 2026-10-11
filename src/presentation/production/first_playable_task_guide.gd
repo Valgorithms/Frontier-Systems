@@ -43,7 +43,7 @@ static func describe(production: Dictionary) -> PackedStringArray:
 		"No carried plate for another wall; make or recover one." if plates == 0 else "Select a carried plate in Construction. Host checks reach, free hand, grid, orientation, capacity and overlap."])
 	var job: Dictionary = production["job"]
 	if not job.is_empty():
-		lines.append("Pending work observed: %s · %.1f s remaining%s. Acceptance is not completion; wait for observed output or the Workstation's completion event." % [job["recipe_id"], float(job["remaining_ticks"]) / float(production["timebase_hz"]), " · paused without power" if not production["powered"][job["station"]] else ""])
+		lines.append("Pending work observed: %s · %.1f s remaining%s. Acceptance is not completion; wait for output and check the Workstation's session guide." % [job["recipe_id"], float(job["remaining_ticks"]) / float(production["timebase_hz"]), " · paused without power" if not production["powered"][job["station"]] else ""])
 	else:
 		lines.append("No active recipe observed. Job disappearance alone does not prove completion; stock can be shared, consumed or transferred. See Workstation for confirmed session steps.")
 	return lines
