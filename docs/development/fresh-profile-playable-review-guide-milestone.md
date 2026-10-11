@@ -86,6 +86,14 @@ The ignored review world and profile may be retained for follow-up or removed se
 
 ## Evidence map and limits
 
+### Research documentation import boundary
+
+`docs/research/.gdignore` keeps the machine-readable research CSVs out of Godot's resource import pipeline. They are documentation inputs, not runtime resources or localization tables. The documentation validator at [`check-foundational-capability-matrix.ps1`](../../tools/ci/check-foundational-capability-matrix.ps1) reads the CSVs directly from the checkout, so this exclusion does not prevent matrix or reference-manifest validation.
+
+Before adding the exclusion, the source and test search found no references to the research CSVs or `docs/research` resources. The generic dynamic document loader is used by overlay controllers with built-in paths under `res://data/overlays`, and mod/settings paths under `user://overlay-*`; no caller targets `docs/research`. This folder therefore has no identified runtime or test resource dependency.
+
+The exclusion addresses repeated CSV import failures observed during PR47/PR49 CI investigations. PR49's first import attempt terminated with allocator corruption while reimporting the capability matrix CSV, while its second attempt on the same source revision passed. That pattern makes avoiding an unnecessary Godot import plausible mitigation; it does not establish the allocator failure's root cause.
+
 | Procedure claim | Existing evidence | What that evidence does not establish |
 | --- | --- | --- |
 | Source launch, two crew slots, loopback host, profile/world separation and save directory | [`launch-first-playable.ps1`](../../tools/launch-first-playable.ps1), [`first-playable-running.md`](first-playable-running.md) | A successful launch on this reviewer's machine or a public/network deployment |
