@@ -212,7 +212,7 @@ func _make_captions() -> void:
 
 func _shot(frame: int) -> void:
 	var segment: int = frame / 180
-	var starts: Array[Vector3] = [Vector3(-4.4, 3.2, 1), Vector3(4.2, 3, 3.5), Vector3(-8.4, 2.3, 0.7), Vector3(-5, 4, 0.3)]
+	var starts: Array[Vector3] = [Vector3(-4.4, 3.2, 1), Vector3(3.8, 3.3, 1), Vector3(-8.4, 2.3, 0.7), Vector3(-5, 4, 0.3)]
 	var targets: Array[Vector3] = [Vector3(-2, 0.9, 2.5), Vector3(1.4, 0.7, -1), Vector3(-6, 0.8, -2), Vector3(-2.7, 0.9, 2.5)]
 	var display_origin: Vector3 = ProceduralWorldInventoryPreview.DISPLAY_ORIGIN
 	habitat.camera.position = display_origin + starts[segment]
