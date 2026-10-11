@@ -226,7 +226,23 @@ func run() -> void:
 	panel.observe(frame())
 	choose(panel._slot, "hand.right")
 	choose(panel._destination, "body.human-1")
-	panel._self_action("unequip")
+	# Activate the paid-item unequip through the existing focused GUI control.
+	var button: Button = panel._inventory_buttons["unequip"]
+	button.grab_focus()
+	await settle()
+	check(not button.disabled and button.has_focus() and (panel.get_parent() as ScrollContainer).get_global_rect().encloses(button.get_global_rect()), "paid unequip button focused and visible")
+	var enter := InputEventKey.new()
+	enter.keycode = KEY_ENTER
+	enter.physical_keycode = KEY_ENTER
+	enter.pressed = true
+	root.push_input(enter)
+	await process_frame
+	enter = InputEventKey.new()
+	enter.keycode = KEY_ENTER
+	enter.physical_keycode = KEY_ENTER
+	root.push_input(enter)
+	await settle()
+	button.release_focus()
 	check(remote.sent.size() == 1 and panel._pending_equipment_observation.contains("slot item " + plate), "submission freezes actual paid slot occupant")
 	var pending_payload: Dictionary = remote.sent[0].payload.duplicate(true)
 	equipment("unequip", "", "", "body.human-1")
