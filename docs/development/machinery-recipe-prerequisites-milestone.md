@@ -1,0 +1,7 @@
+# Machinery recipe prerequisites
+
+Read-only successor to PR #90 control groups. Operation / recipes shows the selected recipe's host-observed inputs and batch energy, the required work-head combination under the existing machine recipe contract, and physical canisters in sockets mounted to the selected machine. Canister contents are observations, not assigned input/output roles. Other frames and carried stock do not count as fitted feedstock. Broken/unobserved sockets remain explicit. Output amounts, allocation and free capacity quotes are unavailable; existing host execution chooses and validates empty or matching-material canisters. Legacy or absent recipe requirements stay unknown, including extraction recipes without catalog quotes.
+
+Paused batch identity is distinct from selected recipe: restore parts/canisters and power and explicitly use the existing Resume control. No automatic resume/retry, new controls, predicted yield, canonical mutation, schema, transport, persistence or conservation changes. Production remains the fixed-tick authority; inventory owns physical fitting and conditions. Invalid, stale and disconnected observations clear prerequisite details; the submitted request identity remains independent and frozen.
+
+Verification is in progress on the draft PR. Paid finite machinery fixture and actual desktop/narrow client shell checks bind no sockets. Human tutorial gate remains awaiting human; no graphical/controller/VR/live-network acceptance, public media or deployment is claimed. Coordinator owns merge.

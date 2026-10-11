@@ -5,6 +5,26 @@ func finish() -> void:
 	var observed: Dictionary = production.observation(context).value
 	var original: String = JSON.stringify(observed)
 	var helper := MachineryOperationFeedback.new()
+	check(helper.observe(observed), "paid scoped fixture accepted for recipe prerequisites")
+	var workshop: Dictionary = observed["machinery"]
+	var carrier_machine: String = ""
+	for module in workshop["mounts"]:
+		if workshop["parts"][module]["kind"] != "socket": continue
+		for physical in workshop["inventory_items"]:
+			if physical["item_id"] == "resource-canister-1" and physical["container_id"] == InventorySimulationSystem.factory_storage_id(module): carrier_machine = workshop["mounts"][module]
+	var prerequisites: String = helper.recipe_text(carrier_machine, "refine.iron")
+	check(not carrier_machine.is_empty() and prerequisites.contains("resource-canister-1") and prerequisites.contains("ice 1.000 kg") and not prerequisites.contains("resource-canister-2"), "paid fitted contents scoped to selected machine; carried spare excluded")
+	check(prerequisites.contains("ore.iron 1.000 kg") and prerequisites.contains("1000 J") and prerequisites.contains("power, controller, refinery") and prerequisites.contains("observed at least 0 / required 1000000 mg"), "observed recipe requirements distinguish unrelated canister feedstock")
+	check(prerequisites.contains("Output amounts, allocation and free capacity quote unavailable") and prerequisites.contains("No active batch observed to resume"), "no yield readiness or resume promise")
+	check(helper.recipe_text(carrier_machine, "extract.ice").contains("quote unavailable"), "extraction requirements absent from observation stay unknown")
+	var legacy: Dictionary = observed.duplicate(true)
+	legacy["schema_version"] = 7
+	legacy.erase("recipe_requirements")
+	check(helper.observe(legacy) and helper.recipe_text(carrier_machine, "refine.iron").contains("quote unavailable"), "legacy recipe requirements remain unknown")
+	var malformed: Dictionary = observed.duplicate(true)
+	malformed["machinery"]["inventory_items"] = "invalid"
+	check(not helper.observe(malformed) and helper.recipe_text(carrier_machine, "refine.iron").contains("unavailable"), "invalid observation clears prerequisite details without crash")
+	check(helper.observe(observed), "valid recovery restores prerequisite details")
 	var preview := MachineryPreview.new()
 	root.add_child(preview)
 	var panel := MachineryPanel.new()
@@ -103,11 +123,11 @@ func finish() -> void:
 	check(preview._labels.is_empty(), "stale preview clears settled labels")
 	record["production"] = stale
 	panel.observe(record)
-	check(panel._record.is_empty() and panel._status.text.contains("Stale"), "stale panel clears actions and telemetry")
+	check(panel._record.is_empty() and panel._status.text.contains("Stale") and panel._recipe_prerequisites.text.contains("unavailable"), "stale panel clears actions telemetry and prerequisites")
 	helper.observe({})
 	preview.observe({})
 	panel.observe({})
-	check(helper.machines.is_empty() and preview._labels.is_empty() and panel._status.text.contains("unavailable"), "disconnect clears all operation telemetry")
+	check(helper.machines.is_empty() and preview._labels.is_empty() and panel._status.text.contains("unavailable") and panel._recipe_prerequisites.text.contains("unavailable"), "disconnect clears all operation telemetry and recipe details")
 	check(helper.observe(observed), "new connection resets tick history")
 	check(not helper.machines[id]["job"].contains("previous batch"), "reconnect does not retain ended job inference")
 	panel.free()
