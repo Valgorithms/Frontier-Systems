@@ -110,6 +110,8 @@ func _start_client() -> void:
 	var scroll := ScrollContainer.new()
 	_scroll = scroll
 	scroll.name = "Workstation"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
 	_tabs.add_child(scroll)
 	_content = VBoxContainer.new()
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -149,6 +151,7 @@ func _start_client() -> void:
 	_task_guide.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	guide_scroll.add_child(_task_guide)
 	_status = Label.new()
+	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.text = "Connecting to the shared host…"
 	_content.add_child(_status)
 	var theme_selector := OverlayThemeController.new()
