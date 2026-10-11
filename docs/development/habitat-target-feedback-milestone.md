@@ -25,6 +25,12 @@ Windows Godot 4.7.2 bounded import/startup and these checks passed:
 & 'D:\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe' --path . --script tools/godot/capture_habitat_target_feedback.gd --rendering-method gl_compatibility --quit-after 300 --log-file var/ci/habitat-target-feedback-native.log
 ```
 
+## Focused GUI regression repair
+
+Review identified that the initial `_input` guard could consume the default left mouse selection binding before GUI activation. A regression fixture first reproduced the failure: focus a LineEdit, click another Button using the default mouse binding, and require both activation/focus transfer and unchanged world selection/request counters. The guard now consumes blocked selection only in `_unhandled_input`, after GUI dispatch and before native physics picking. Keyboard/controller routing and rebinding guards remain intact. This matches [Godot's documented Viewport dispatch order](https://docs.godotengine.org/en/stable/classes/class_viewport.html#class-viewport-method-push-input).
+
+The focused headless check verifies controls in the same SubViewport as the habitat guard. The native capture tool verifies actual GUI dispatch in a Window with an instance of the same guard and a GUI Button layered over the world viewport; complete press/release pairs activate that Button without underlying source selection/extraction. Native world picking is checked separately through the habitat SubViewport. Synthetic input explicitly declares mouse entry and uses local handled state so parent-window/OS pointer state does not make the fixture depend on cursor placement. No OS cursor movement, direct Button signal emission or direct target handler invocation is used for these native checks. This is automated engine dispatch, not human acceptance.
+
 ## Limits
 
 Headless keyboard/controller fixtures do not establish human ergonomics or physical controller usability. Native graphical coverage uses simulated mouse events and Compatibility rendering; default Forward+/D3D12 appearance, Linux native rendering, every client-panel layout, live-service integration and human acceptance are unverified locally. No visual targeting establishes reach, permission or action success. The existing world selection ray excludes wall bodies for keyboard/controller events; this milestone reports rather than changes that route.

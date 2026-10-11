@@ -66,6 +66,31 @@ func run() -> void:
 	feedback._physics_process(0)
 	check(requests == 1 and not feedback.visible, "rebinding suppresses route and feedback")
 	PlayerInputSettings.instance().rebinding = false
+	# GUI routing occurs after _input: focusing one control must not swallow
+	# the default selection binding when it is used to activate another control.
+	PlayerInputSettings.instance()._reset_map()
+	var focused := LineEdit.new()
+	viewport.add_child(focused)
+	focused.grab_focus()
+	var button := Button.new()
+	button.position = Vector2(350, 250)
+	button.size = Vector2(100, 100)
+	button.text = "Close"
+	viewport.add_child(button)
+	var activations: Array[bool] = []
+	button.pressed.connect(func() -> void: activations.append(true))
+	var ui_click := InputEventMouseButton.new()
+	ui_click.position = Vector2(400, 300)
+	ui_click.button_index = MOUSE_BUTTON_LEFT
+	ui_click.pressed = true
+	press(ui_click)
+	ui_click.pressed = false
+	press(ui_click)
+	await physics_frame
+	check(activations.size() == 1 and button.has_focus() and requests == 1 and selections == 1, "focused UI permits another button's mouse activation without world interaction")
+	button.free()
+	focused.free()
+	PlayerInputSettings._set_binding("world_select", key)
 	var edit := LineEdit.new()
 	root.add_child(edit)
 	edit.grab_focus()

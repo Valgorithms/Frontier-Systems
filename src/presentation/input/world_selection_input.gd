@@ -6,13 +6,12 @@ static func gameplay_allowed(viewport: Viewport) -> bool:
 	return PlayerInputSettings.instance().accepts_gameplay_input() and viewport.gui_get_focus_owner() == null and (Engine.get_main_loop() as SceneTree).root.gui_get_focus_owner() == null
 
 
-func _input(event: InputEvent) -> void:
-	# Stop native physics picking as well as the keyboard route during UI editing.
+func _unhandled_input(event: InputEvent) -> void:
+	# GUI controls receive their mouse activation first. Only leftover gameplay
+	# selection is consumed here, before Godot's native physics picking stage.
 	if event.is_action_pressed("world_select") and not gameplay_allowed(get_viewport()):
 		get_viewport().set_input_as_handled()
-
-
-func _unhandled_input(event: InputEvent) -> void:
+		return
 	if event is InputEventMouseButton or not event.is_action_pressed("world_select") or event.is_echo() or not gameplay_allowed(get_viewport()):
 		return
 	var viewport: Viewport = get_viewport()

@@ -18,6 +18,13 @@ func check(ok: bool, message: String) -> void:
 		push_error(message)
 
 
+func click(viewport: Viewport, mouse: InputEventMouseButton) -> void:
+	viewport.push_input(mouse, true)
+	var released := mouse.duplicate() as InputEventMouseButton
+	released.pressed = false
+	viewport.push_input(released, true)
+
+
 func run() -> void:
 	PlayerInputSettings.instance()._reset_map()
 	root.size = Vector2i(1000, 700)
@@ -41,26 +48,57 @@ func run() -> void:
 	habitat.camera.look_at(source.global_position)
 	habitat.camera.set_process(false)
 	await create_timer(0.5).timeout
+	# Explicitly mark synthetic pointer entry before push_input, as required by
+	# Viewport's native GUI/physics picking contract; don't move the OS cursor.
+	viewport.notify_mouse_entered()
+	# Direct child injection starts its own event transaction; ordinary container
+	# forwarding shares the parent Window's handled state instead.
+	viewport.handle_input_locally = true
 	var motion := InputEventMouseMotion.new()
 	motion.position = Vector2(viewport.size) / 2.0
+	motion.global_position = motion.position
 	viewport.push_input(motion, true)
 	var mouse := InputEventMouseButton.new()
 	mouse.position = motion.position
+	mouse.global_position = mouse.position
+	mouse.window_id = root.get_window_id()
 	mouse.button_index = MOUSE_BUTTON_LEFT
 	mouse.pressed = true
-	viewport.push_input(mouse, true)
+	click(viewport, mouse)
 	await create_timer(0.2).timeout
 	check(selections == 1 and requests == 0 and feedback.selected == source, "native single click selects without extraction")
 	mouse.double_click = true
-	viewport.push_input(mouse, true)
+	click(viewport, mouse)
 	await create_timer(0.2).timeout
 	check(requests == 1, "native double click requests extraction")
 	var edit := LineEdit.new()
 	root.add_child(edit)
 	edit.grab_focus()
-	viewport.push_input(mouse, true)
+	click(viewport, mouse)
 	await create_timer(0.2).timeout
-	check(requests == 1 and not feedback.visible, "native mouse cannot leak gameplay through UI focus")
+	check(requests == 1 and selections == 2 and not feedback.visible, "native mouse cannot leak gameplay through UI focus")
+	var button := Button.new()
+	var ui_layer := CanvasLayer.new()
+	ui_layer.layer = 10
+	root.add_child(ui_layer)
+	# Exercise the same guard in the GUI viewport, before the overlapping world
+	# viewport receives any unhandled mouse event from its container.
+	var gui_guard := WorldSelectionInput.new()
+	root.add_child(gui_guard)
+	button.text = "Close help"
+	button.position = Vector2(viewport.size) / 2.0 - Vector2(60, 30)
+	button.size = Vector2(120, 60)
+	ui_layer.add_child(button)
+	var activations: Array[bool] = []
+	button.pressed.connect(func() -> void: activations.append(true))
+	await RenderingServer.frame_post_draw
+	mouse.double_click = false
+	root.push_input(motion, true)
+	click(root, mouse)
+	await create_timer(0.2).timeout
+	check(activations.size() == 1 and button.has_focus() and requests == 1 and selections == 2, "native focused UI allows another button activation while world picking stays blocked")
+	ui_layer.free()
+	gui_guard.free()
 	edit.release_focus()
 	edit.free()
 	await create_timer(0.2).timeout
