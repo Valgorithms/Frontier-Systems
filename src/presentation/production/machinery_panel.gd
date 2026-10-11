@@ -23,6 +23,7 @@ var _wall_turn := OptionButton.new()
 var _pending_deploy: Dictionary = {}
 var _pending_wall: Dictionary = {}
 var _wall_result: String = ""
+var _wall_selection_lost: bool = false
 var _placement_kind := OptionButton.new()
 var _show_placement := CheckBox.new()
 var _placement_status := Label.new()
@@ -128,6 +129,7 @@ func configure(world: WorldRuntime) -> void:
 			_pending = ""
 			_feedback.text = WallPlacementFeedback.removal_result(String(_pending_wall["wall_id"]), result) if _pending_wall.get("operation", "") == "wall_remove" else ("Completed" if result.is_success else result.message)
 			_wall_result = _feedback.text if _pending_wall.get("operation", "") == "wall_remove" else ""
+			if _pending_wall.get("operation", "") == "wall_build" and result.is_success: _wall_selection_lost = false
 			if (not _pending_deploy.is_empty() or not _pending_wall.is_empty()) and result.is_success:
 				_show_placement.set_pressed_no_signal(false)
 			_pending_deploy.clear()
@@ -175,7 +177,8 @@ func observe(record: Dictionary) -> void:
 	for id in record["production"]["walls"]: walls[id] = "Wall %s · %s" % [id, str(record["production"]["walls"][id]["position"])]
 	var previous_wall: String = _selected(_wall)
 	_fill(_wall, walls)
-	if not previous_wall.is_empty() and not walls.has(previous_wall): _wall.select(-1)
+	if not previous_wall.is_empty() and not walls.has(previous_wall): _wall_selection_lost = true
+	if _wall_selection_lost: _wall.select(-1)
 	_refresh_placement()
 
 
@@ -241,6 +244,7 @@ func select_machine(id: String) -> void:
 func select_wall(id: String) -> void:
 	for index in range(_wall.item_count):
 		if _wall.get_item_metadata(index) == id:
+			_wall_selection_lost = false
 			_wall.select(index)
 			if _pending.is_empty():
 				_placement_kind.select(1)

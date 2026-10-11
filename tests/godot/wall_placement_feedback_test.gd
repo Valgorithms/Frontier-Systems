@@ -115,6 +115,8 @@ func finish() -> void:
 	lost_wall["production"]["walls"]["wall.other"] = {"position": [1000, 0, -1000], "quarter_turn": 0}
 	panel.observe(lost_wall)
 	check(panel._selected(panel._wall).is_empty(), "lost selected wall never silently switches to another observed wall")
+	panel.observe(lost_wall)
+	check(panel._selected(panel._wall).is_empty(), "repeated observations do not auto-select a replacement for a vanished wall")
 	panel.select_wall("wall.other")
 	panel._axes[0].value = 42
 	panel._wall_turn.select(0)
