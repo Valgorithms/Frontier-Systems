@@ -150,7 +150,7 @@ func finish() -> void:
 	var missing: Dictionary = view_record()
 	missing["inventory"]["items"] = []
 	panel.observe(missing)
-	check(preview._feedback_root.get_child_count() == 0, "lost owned plate retires stale ghost")
+	check(preview._feedback_root.get_child_count() == 0 and panel._selected(panel._part).is_empty() and not panel._show_placement.button_pressed, "lost owned plate retires stale ghost without silently retargeting selector")
 	panel.observe(view_record())
 	panel.observe({})
 	check(preview._feedback_root.get_child_count() == 0 and panel._action_buttons[0].disabled and panel._wall.item_count == 0, "unavailable observations clear selection and block actions")

@@ -129,9 +129,11 @@ func configure(world: WorldRuntime) -> void:
 	_new_wall.pressed.connect(_begin_wall_placement)
 	add_child(_new_wall)
 	_cancel_wall.text = "Cancel wall preview (keep draft)"
+	_cancel_wall.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_cancel_wall.pressed.connect(_cancel_wall_placement)
 	add_child(_cancel_wall)
 	_reset_wall.text = "Reset wall draft to origin / along X"
+	_reset_wall.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_reset_wall.pressed.connect(_reset_wall_placement)
 	add_child(_reset_wall)
 	_wall_input_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -208,6 +210,10 @@ func configure(world: WorldRuntime) -> void:
 
 
 func observe(record: Dictionary) -> void:
+	var previous_owned_plate: String = ""
+	for item in _record.get("inventory", {}).get("items", []):
+		if item["item_id"] == _selected(_part) and item["definition_id"] == "item.plate.prototype":
+			previous_owned_plate = item["item_id"]
 	if not _operation_feedback.observe(record.get("production", {})): record = {}
 	_record = record
 	if record.is_empty():
@@ -234,7 +240,10 @@ func observe(record: Dictionary) -> void:
 	_fill(_other, frames)
 	var previous_part: String = _selected(_part)
 	_fill(_part, parts)
-	if _placement_kind.selected == 1 and not previous_part.is_empty() and not parts.has(previous_part):
+	var still_owned: bool = false
+	for item in record["inventory"]["items"]:
+		if item["item_id"] == previous_owned_plate and item["definition_id"] == "item.plate.prototype": still_owned = true
+	if _placement_kind.selected == 1 and not previous_part.is_empty() and (not parts.has(previous_part) or (not previous_owned_plate.is_empty() and not still_owned)):
 		_part.select(-1)
 		_show_placement.set_pressed_no_signal(false)
 	_fill(_socket, sockets)
