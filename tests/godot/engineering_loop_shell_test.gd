@@ -74,6 +74,8 @@ func run() -> void:
 	remote = client._remote
 	remote.set_process(false)
 	remote.server_slot = 0
+	world.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID).batch_completed.connect(func(recipe_id: String, tick_number: int) -> void:
+		remote._receive({"type": "batch_completed", "recipe_id": recipe_id, "tick_number": tick_number}))
 	observe_shell()
 	var physical_ids: Array[String] = []
 	var extraction: SimulationCommand
