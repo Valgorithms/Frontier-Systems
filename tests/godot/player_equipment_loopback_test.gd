@@ -198,4 +198,3 @@ func exercise() -> void:
 	check(owner()["ledger"]["items"] == baseline["ledger"]["items"], "final full ledger item records restored without material loss")
 	check(body(owner())["equipped"] == body(baseline)["equipped"], "final original equipment bindings restored")
 	print("Equipment transport acceptance: exact self receipts, foreign/closed denials, explicit reopening, active tools and conservation checked.")
-
