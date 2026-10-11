@@ -107,10 +107,11 @@ func exercise() -> void:
 		var resubmitted: SimulationCommand = closure("storage.backpack-1", "close_container")
 		if resubmitted == null: return
 		check(resubmitted.command_id != command.command_id and int(resubmitted.payload["expected_revision"]) == committed["state_revision"] and remote.sent.size() == sent_count + 1, "explicit user resubmission uses fresh request identity and observed revision")
-		if not await settle(resubmitted, "storage.backpack-1", false): return
-		var repeated: Dictionary = verify_commit(committed, resubmitted)
-		check(not has_ack(command) and results[String(command.command_id)].error_code == &"remote_disconnected", "old command stays unknown after fresh command accepted")
+		if not await wait_for(func() -> bool: return results.has(String(resubmitted.command_id)) and panel._pending.is_empty(), "explicit same-state resubmission receives its own rejection" ): return
+		check(not results[String(resubmitted.command_id)].is_success and results[String(resubmitted.command_id)].message.contains("already has") and owner() == committed and observed_open("storage.backpack-1", false), "same-state Close rejected without canonical mutation")
+		check(panel._closure_feedback.text.contains("Host rejected") and panel._closure_feedback.text.contains(String(resubmitted.command_id)), "fresh rejected receipt replaces feedback only for explicit new intent")
+		check(not has_ack(command) and results[String(command.command_id)].error_code == &"remote_disconnected", "old command stays unknown after fresh command rejected")
 		var reopened: SimulationCommand = closure("storage.backpack-1", "open_container")
 		if not await settle(reopened, "storage.backpack-1", true): return
-		verify_commit(repeated, reopened)
+		verify_commit(committed, reopened)
 		check(panel._record["mass_milligrams"] == mass, "explicit resubmission/reopen preserve exact carried mass")
