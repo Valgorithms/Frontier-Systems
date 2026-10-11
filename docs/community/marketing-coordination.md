@@ -269,3 +269,13 @@ Thanks,
 Valithor
 
 Expanded outreach checkpoint: all four first-batch additional Sent recipient/subject entries confirmed, and Captain Jack/LastStandGamers exact bodies now read back in full. Later Z1/Spanj/Blitz/OneLastMidnight clicked Send attempts were not confirmed in refreshed Sent. Zoho visibly reports550 5.4.6 Unusual sending activity detected. Z1/Spanj remain in Drafts; no Outbox queue. Stop sending; no bypass/alternate sender. Correct any earlier conversational Submitted/Sent shorthand to attempted, unconfirmed. Exact unsent text and five-contact-per-game roster are in outreach-roster.md. Civ13 team excluded. Space Engineers minimum met; other game quotas remain incomplete.
+
+## Twitch Streamer Shouts request: 2026-10-11
+
+Owner requested Streamer Shout advertising Frontier and supplied https://help.twitch.tv/s/article/streamer-shouts. Read the official guide through signed-in browser because web fetch failed. This is creator-to-own-viewer milestone messaging, distinct from live /shoutout. Official guide says selective rollout, Twitch-selected eligible groups, one per group/day, and no scheduling. Availability cannot be requested.
+
+Authenticated Creator Dashboard resolved to valgorithms. Official linked /shouts route displays content unavailable. Expanded Content contains Video Producer, Collections, Clips, Copyright Claims Manager but no Shouts authoring entry. Header Shouts opens received viewer messages, not authoring. Home has no Shouts action item/send control. No message submitted; no recipient group invented or request to Twitch support sent. Screenshot twitch-shouts-unavailable.png retained in this chat visualization directory. This is observed account/UI unavailability, not proof of a permanent eligibility decision.
+
+Ready unsent message: I'm working on Frontier Systems, a cooperative engineering game about finite resources, machinery, construction and recovering shared work. It's still a source prototype, with no packaged demo or release date yet. If that sounds interesting, you can follow progress and inspect the source here: https://valzargaming.itch.io/frontier-systems . My long-term aim is for the game to help sustain open-source API development, including DiscordPHP.
+
+No fabricated stream milestone, game clip or community achievement is attributed to this draft. Review actual eligible viewer group and current source-prototype claims if Twitch later exposes authoring. Owner authorization covers this requested Shout; it does not substitute another destination or grant current gameplay-media upload permission.
