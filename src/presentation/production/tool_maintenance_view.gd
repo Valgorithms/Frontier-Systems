@@ -45,7 +45,9 @@ static func describe(tools: Dictionary, production: Dictionary, selected_id: Str
 		lines.append("Loose component; no installed assembly capability observed.")
 	else:
 		lines.append("Tool: " + entry["assembly_id"])
-		for action in entry["actions"]:
+		var actions: Array = entry["actions"].keys()
+		actions.sort()
+		for action in actions:
 			var state: Dictionary = entry["actions"][action]
 			lines.append("%s: %s" % [action, "available" if state["available"] else "disabled; missing " + ", ".join(PackedStringArray(state["missing_functions"]))])
 	lines.append("Preview: maintain up to full integrity; host validates ownership, revisions, reach, voluntary action, power and energy.")

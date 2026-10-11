@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://frontier-systems.local/schema/tool-observation-v3.schema.json",
+  "$id": "urn:frontier-systems:schema:tool-observation:v3",
   "type": "object",
   "additionalProperties": false,
   "required": [
