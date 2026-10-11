@@ -228,5 +228,3 @@ func run() -> void:
 	world.free()
 	PlayerInputSettings.instance()._reset_map()
 	quit(1 if failures else 0)
-
-
