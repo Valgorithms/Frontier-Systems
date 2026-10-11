@@ -58,6 +58,7 @@ func run() -> void:
 			var code: StringName = &"inventory_revision_conflict" if tab_index == 1 else (&"invalid_machinery_intent" if tab_index == 3 else &"production_rejected")
 			remote.command_completed.emit(request, ServiceResult.failure(code, reason))
 			await settle()
+			check(production._pending.is_empty() if tab_index == 0 else (panel._pending.is_empty() if tab_index == 1 else machinery._pending.is_empty()), "matching failure clears only its pending request")
 			check(feedback.text.contains(reason) and feedback.text.contains("Code: " + String(code)) and feedback.text.contains("Next:"), "complete original reason, code and advice retained")
 			check(feedback.size.x <= scroll.size.x and feedback.get_line_count() > 3, "long advice wraps within actual shell viewport")
 			check(scroll.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED, "engineering panel needs no horizontal scrolling")
@@ -69,7 +70,7 @@ func run() -> void:
 				if button.disabled: continue
 				button.grab_focus()
 				await settle()
-				check(scroll.get_global_rect().intersects(button.get_global_rect()), "focused retry control reachable through existing scroll")
+				check(scroll.get_global_rect().encloses(button.get_global_rect()), "focused retry control reachable through existing scroll")
 			if OS.get_cmdline_user_args().has("--capture-guidance-layout"):
 				scroll.ensure_control_visible(feedback)
 				await settle()
