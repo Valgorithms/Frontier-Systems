@@ -32,4 +32,33 @@ Component presentation now wraps full selected IDs outside clipped pickers, flow
 
 ## Cursor and controls
 
+Equipment controls and hand-tool extraction show the host-observed active hand
+and equipped item separately from selected inventory item and equipment slot.
+Missing, older, disconnected or five-second non-advancing observations remove
+these active-equipment claims. Pending commands require their matching receipt;
+equipment display follows fresh observations and predicts no engineering readiness.
+See [active hand/tool feedback](../development/active-hand-tool-feedback-milestone.md)
+for the presentation-only freshness boundary and actual-shell verification.
+
 Hold Left Alt (default) to access panels during navigation. The Settings tab provides rebinding and sensitivity; see [player controls](player-controls.md). Inventory, hand and tool shortcuts use the same configured action registry.
+
+Transfer selections now show exact observed source, owned destination and equipment
+slot IDs together, with loaded item mass and destination load/capacity. Tray drop and
+collection have separate summaries so their different destinations stay explicit.
+Unavailable observation fields remain unavailable; the panel predicts no fit or
+authoritative outcome. See [inventory transfer preview](../development/inventory-transfer-preview-milestone.md).
+
+Transfer/capacity summaries, tray status and host receipts accept keyboard focus.
+Use Tab/Shift+Tab to review them and Up/Down or Page Up/Page Down to scroll
+the Inventory pane while keeping guidance focused, including receipts taller
+than the pane. Enabled action buttons remain in the same relative order and
+focus-following scrolling reveals them. See [transfer layout verification](../development/inventory-transfer-layout-milestone.md).
+
+Maintenance target feedback now identifies the inspected item, selected repair
+part and loose part separately from the host-observed mount occupant. Repair and
+work intents retain exact submitted fields through matching receipts. Work source,
+canister and cycle selections are distinct from an existing host reservation and
+its completed counts. Missing inventory frames and disconnect remove these scoped
+claims; no after-state, compatibility or reach is inferred. See
+[maintenance target feedback](../development/tool-maintenance-target-feedback-milestone.md)
+for actual-panel authority, keyboard review and verification limits.
