@@ -10,6 +10,8 @@ var _age: float = EVIDENCE_LIFETIME
 var _previous: Dictionary = {}
 var _states: Dictionary = {}
 var _phase: Dictionary = {}
+var _drive_phase: Dictionary = {}
+var _drive_kind: Dictionary = {}
 
 
 func observe(record: Dictionary) -> bool:
@@ -24,6 +26,7 @@ func observe(record: Dictionary) -> bool:
 	var workshop: Dictionary = record["machinery"]
 	var next: Dictionary = {}
 	var states: Dictionary = {}
+	_drive_kind.clear()
 	for id in workshop["placements"]:
 		var job: Dictionary = workshop["jobs"].get(id, {})
 		var prior: Dictionary = _previous.get(id, {})
@@ -41,11 +44,20 @@ func observe(record: Dictionary) -> bool:
 			state = "running" if int(job["progress"]) > int(prior["job"]["progress"]) else ("blocked" if int(job["progress"]) == int(prior["job"]["progress"]) else "unknown")
 		else:
 			state = "unknown"
+		var recipe: String = job.get("recipe", "")
+		if recipe.begins_with("extract.") and record["deposits"].has("deposit." + recipe.trim_prefix("extract.")):
+			_drive_kind[id] = "extractor"
+		elif record.get("recipe_requirements", {}).has(recipe):
+			_drive_kind[id] = "refinery" if record["recipe_requirements"][recipe]["station"] != "printer" else ""
+		if state == "running" and not String(_drive_kind.get(id, "")).is_empty() and not _components_usable(workshop, id, _drive_kind[id]): state = "blocked"
 		states[id] = state
 		next[id] = {"job": job.duplicate(true), "enabled": enabled}
 		if not _phase.has(id): _phase[id] = 0.0
+		if not _drive_phase.has(id): _drive_phase[id] = {"extractor": 0.0, "refinery": 0.0}
 	for id in _phase.keys():
-		if not next.has(id): _phase.erase(id)
+		if not next.has(id):
+			_phase.erase(id)
+			_drive_phase.erase(id)
 	if tick > _tick: _age = 0.0
 	_tick = tick
 	_previous = next
@@ -59,10 +71,22 @@ static func _frame_broken(workshop: Dictionary, id: String) -> bool:
 	return false
 
 
+static func _components_usable(workshop: Dictionary, id: String, kind: String) -> bool:
+	var usable: Dictionary = {}
+	var frame_usable: bool = false
+	for physical in workshop["inventory_items"]:
+		var module: String = physical["item_id"]
+		if module == id: frame_usable = int(physical["condition_permille"]) > 0
+		if workshop["mounts"].get(module) == id and int(physical["condition_permille"]) > 0:
+			usable[workshop["parts"][module]["kind"]] = true
+	return frame_usable and usable.has("power") and usable.has("controller") and usable.has(kind)
+
+
 func _forget() -> void:
 	_age = EVIDENCE_LIFETIME
 	_previous.clear()
 	_states.clear()
+	_drive_kind.clear()
 	# Keep cosmetic pose frozen through disconnect; never reset canonical state.
 
 
@@ -72,15 +96,23 @@ func advance(delta: float) -> void:
 	if _age >= EVIDENCE_LIFETIME: return
 	var bounded: float = minf(delta, MAX_FRAME_DELTA)
 	for id in _states:
-		if _states[id] == "running": _phase[id] = fposmod(float(_phase[id]) + bounded * TAU, TAU)
+		if _states[id] != "running": continue
+		_phase[id] = fposmod(float(_phase[id]) + bounded * TAU, TAU)
+		var kind: String = drive_kind(id)
+		if _drive_phase[id].has(kind): _drive_phase[id][kind] = fposmod(float(_drive_phase[id][kind]) + bounded * TAU, TAU)
 
 
 func state(machine_id: String) -> String:
 	return "unknown" if _age >= EVIDENCE_LIFETIME else _states.get(machine_id, "unknown")
 
 
-func phase(machine_id: String) -> float:
+func phase(machine_id: String, kind: String = "") -> float:
+	if not kind.is_empty(): return float(_drive_phase.get(machine_id, {}).get(kind, 0.0))
 	return float(_phase.get(machine_id, 0.0))
+
+
+func drive_kind(machine_id: String) -> String:
+	return _drive_kind.get(machine_id, "")
 
 
 func indicator(machine_id: String) -> Color:

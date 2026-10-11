@@ -151,10 +151,10 @@ func _process(delta: float) -> void:
 
 func _present_activity() -> void:
 	for id in _activity_parts:
-		MachineryActivityParts.present(_activity_parts[id], _activity.phase(id), _activity.indicator(id))
+		MachineryActivityParts.present(_activity_parts[id], {"extractor": _activity.phase(id, "extractor"), "refinery": _activity.phase(id, "refinery")}, _activity.indicator(id))
 		var text: String = "Motion unknown · waiting for fresh progress"
 		match _activity.state(id):
-			"running": text = "Drive active · observed progress"
+			"running": text = "Drive active · observed progress" if not _activity.drive_kind(id).is_empty() else "Batch active · drive telemetry unavailable"
 			"paused": text = "Drive paused · Resume required"
 			"blocked": text = "Drive stopped · no progress confirmed"
 			"idle": text = "Drive idle · no batch observed"

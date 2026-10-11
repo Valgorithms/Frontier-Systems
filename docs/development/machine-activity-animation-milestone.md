@@ -49,6 +49,12 @@ neutral/teal/amber/purple indicators distinguish idle, observed progress,
 paused/blocked, and unknown/ended-unconfirmed evidence. Collisions, selection,
 camera/input, bootstrap, UI panels, wire schemas and canonical systems are unchanged.
 Motion is a repeating cosmetic drive cycle, never a percentage, yield or countdown.
+Each fitted drive retains its own phase. Only the job's observed recipe capability
+advances; an unrelated work head on a mixed frame stays still. Extractor identity
+uses the observed finite deposit ID; refinery identity uses observed recipe station
+requirements with the existing host mapping. Missing legacy recipe requirements
+leave the drive unconfirmed. Required fitted controller/power/work-head conditions
+must be observed nonzero, so broken/unobserved parts invalidate prior motion.
 Evidence expires after one second without a strictly newer host tick; duplicate
 observations do not renew it. Delta is finite/positive and motion is clamped to
 0.1 seconds/frame; long gaps expire evidence before moving. No phase is persisted.

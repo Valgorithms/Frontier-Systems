@@ -46,6 +46,24 @@ func finish() -> void:
 	replaced["last_tick"] += 1
 	replaced["machinery"]["jobs"][extractor]["recipe"] = "refine.iron"
 	check(edge.observe(replaced) and edge.state(extractor) == "unknown", "different recipe cannot inherit prior activity")
+	var refining: Dictionary = replaced.duplicate(true)
+	refining["last_tick"] += 1
+	refining["machinery"]["jobs"][extractor]["progress"] = 1
+	# The fixture extractor has no refinery; positive progress alone must not spin it.
+	edge.observe(refining)
+	edge.advance(0.05)
+	check(edge.state(extractor) == "blocked" and edge.phase(extractor, "extractor") == 0.0, "unfitted recipe capability cannot animate a different head")
+	var missing: Dictionary = running.duplicate(true)
+	for physical in missing["machinery"]["inventory_items"]:
+		if missing["machinery"]["mounts"].get(physical["item_id"]) == extractor and missing["machinery"]["parts"][physical["item_id"]]["kind"] == "controller": physical["condition_permille"] = 0
+	var invalidated := MachineryActivityAnimation.new()
+	invalidated.observe(first)
+	invalidated.observe(running)
+	check(invalidated.observe(missing) and invalidated.state(extractor) == "blocked", "same-tick broken required component freezes prior running evidence")
+	var unobserved_frame: Dictionary = running.duplicate(true)
+	unobserved_frame["machinery"]["inventory_items"] = unobserved_frame["machinery"]["inventory_items"].filter(func(physical: Dictionary) -> bool: return physical["item_id"] != extractor)
+	invalidated.observe(unobserved_frame)
+	check(invalidated.state(extractor) != "running", "unobserved frame condition cannot earn motion")
 	var same_tick: Dictionary = running.duplicate(true)
 	var conflicting := MachineryActivityAnimation.new()
 	conflicting.observe(first)
@@ -58,6 +76,7 @@ func finish() -> void:
 	check(conflicting.observe(broken) and conflicting.state(extractor) == "blocked", "broken retained frame freezes even with earlier progress")
 	helper.advance(0.05)
 	check(helper.phase(extractor) > 0.0, "observed running moves cosmetic phase")
+	check(helper.phase(extractor, "extractor") > 0.0 and helper.phase(extractor, "refinery") == 0.0, "extraction never animates an unrelated fitted refinery head")
 	var partitioned := MachineryActivityAnimation.new()
 	partitioned.observe(first)
 	partitioned.observe(running)
@@ -81,14 +100,14 @@ func finish() -> void:
 	var parts: Dictionary = MachineryActivityParts.build(visual_root, ["extractor", "refinery"])
 	check(parts["rotors"].size() == 2 and visual_root.find_children("*", "CollisionObject3D", true, false).is_empty(), "cosmetic rotor/indicator only")
 	for sample in range(100):
-		MachineryActivityParts.present(parts, float(sample) * TAU / 100.0, helper.indicator(extractor))
+		MachineryActivityParts.present(parts, {"extractor": float(sample) * TAU / 100.0, "refinery": float(sample) * TAU / 100.0}, helper.indicator(extractor))
 		for rotor in parts["rotors"]:
 			check(rotor.transform.is_finite(), "finite rotor transform")
 			for visual in rotor.get_children():
 				var bounds: AABB = rotor.transform * visual.transform * visual.get_aabb()
 				check(bounds.position.x >= -0.4 and bounds.end.x <= 0.4 and bounds.position.z >= -0.4 and bounds.end.z <= 0.4 and bounds.position.y >= -0.4 and bounds.end.y <= 0.95, "all animated extremes inside unchanged frame envelope")
 	var held: Transform3D = parts["rotors"][0].transform
-	MachineryActivityParts.present(parts, NAN, Color.RED)
+	MachineryActivityParts.present(parts, {"extractor": NAN}, Color.RED)
 	check(parts["rotors"][0].transform == held, "nonfinite presentation phase rejected")
 	visual_root.free()
 	command("machine_enable", {"machine_id": extractor, "enabled": false})

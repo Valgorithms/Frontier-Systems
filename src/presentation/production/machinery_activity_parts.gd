@@ -17,6 +17,7 @@ static func build(parent: Node3D, fitted: Array) -> Dictionary:
 			var vane: MeshInstance3D = _box(rotor, Vector3(0.11, 0.04, 0.05), Vector3(0.13 * cos(angle), 0, 0.13 * sin(angle)), Color(0.9, 0.65, 0.2))
 			vane.rotation.y = -angle
 		rotor.set_meta("axis", Vector3.UP)
+		rotor.set_meta("kind", "extractor")
 		rotors.append(rotor)
 	if fitted.has("refinery"):
 		var rotor := Node3D.new()
@@ -26,6 +27,7 @@ static func build(parent: Node3D, fitted: Array) -> Dictionary:
 		_box(rotor, Vector3(0.18, 0.035, 0.035), Vector3.ZERO, Color(0.7, 0.8, 0.85))
 		_box(rotor, Vector3(0.035, 0.18, 0.035), Vector3.ZERO, Color(0.4, 0.65, 0.7))
 		rotor.set_meta("axis", Vector3.BACK)
+		rotor.set_meta("kind", "refinery")
 		rotors.append(rotor)
 	var indicator: MeshInstance3D = _box(root, Vector3(0.13, 0.045, 0.018), Vector3(0.22, 0.22, -0.345), Color(0.65, 0.4, 0.7))
 	indicator.name = "ActivityIndicator"
@@ -34,10 +36,11 @@ static func build(parent: Node3D, fitted: Array) -> Dictionary:
 	return {"root": root, "rotors": rotors, "indicator": indicator}
 
 
-static func present(parts: Dictionary, phase: float, color: Color) -> void:
-	if not is_finite(phase): return
+static func present(parts: Dictionary, phases: Dictionary, color: Color) -> void:
+	for value in phases.values():
+		if not is_finite(float(value)): return
 	for rotor in parts["rotors"]:
-		rotor.basis = Basis(rotor.get_meta("axis"), phase)
+		rotor.basis = Basis(rotor.get_meta("axis"), float(phases.get(rotor.get_meta("kind"), 0.0)))
 	var material: StandardMaterial3D = parts["indicator"].material_override
 	material.albedo_color = color
 
