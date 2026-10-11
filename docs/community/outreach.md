@@ -53,7 +53,7 @@ Public professional contact sources refreshed 2026-10-11. All three entries were
 
 Scoped screenshots `keen-sent.png`, `nookrium-sent.png` and `eleon-sent.png` are retained outside Git in the outreach chat's visualization directory. They show only the relevant opened message pane; unrelated mailbox data is excluded from those saved proofs.
 
-CaptainJack and LastStandGamers remain excluded here unless an appropriate public business route is verified. Splitsie's route was subsequently verified and used by Marketing as recorded below. Do not guess addresses, use unrelated contacts or pay for contact unlocks. No automated reminder or repeated follow-up is authorized by these messages.
+Splitsie, Captain Jack and LastStandGamers were initially excluded pending appropriate public business routes; Marketing subsequently verified and used those routes as recorded below. Do not guess addresses, use unrelated contacts or pay for contact unlocks. No automated reminder or repeated follow-up is authorized by these messages.
 
 ### Marketing-owned additions and deduplication
 
@@ -66,6 +66,14 @@ Marketing Coordinator subsequently reported three additional owner-requested ind
 | `contact@systemera.net` | `1791739190346138300` | Submitted once; do not resend or follow up |
 
 No replies, readership or endorsements are claimed. Marketing also owns the single Civ13 announcement (message `1558887545952272457`, `docs/community/advertisement-publications.md`) and the Godot Forum submission awaiting moderator approval. Do not repost either or treat moderator-pending content as public. The existing itch.io project resolves the earlier cover blocker through separate owner clearance; this does not authorize unrelated media uploads.
+
+Later Marketing checkpoint, verified in PR #86's `docs/community/outreach-roster.md` at `f6ca6ffba27ebad022a0e67992bca5e45968342d`, records additional confirmed Sent submissions to `w4stedspace@gmail.com`, `CaptainJack@redwoodmedia.net`, `criken@criken.com` and `Laststandgamers@googlemail.com`. Do not resend or follow up. LastStandGamers is one shared recipient across Space Engineers and Empyrion, not two sends. Exact wording/receipt ownership remains with Marketing; this task did not independently reopen those mailbox entries.
+
+### Provider sending block
+
+That checkpoint records Zoho's message: "550 5.4.6 Unusual sending activity detected". Sending is paused. Do not attempt more sends or use alternate accounts, senders, SMTP or any workaround. No cooldown duration was exposed; wait for normal provider/account recovery and check Sent before any later authorized attempt.
+
+Keep successful submissions separate from blocked attempts: Z1 and Spanj are observed server drafts, not sends. Blitz and OneLastMidnight have no confirmed Sent entries; wording is retained locally by Marketing, with no server-draft claim. None is a publication. The original three submissions in this task and Marketing's confirmed submissions above remain recorded as successful submissions, without implying inbox delivery, readership or endorsement.
 
 ### Keen / Space Engineers
 
