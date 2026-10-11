@@ -14,6 +14,7 @@ var _world_details := Label.new()
 var _world_status := Label.new()
 var _pending_world: Dictionary = {}
 var _pending_inventory: Dictionary = {}
+var _pending_equipment_observation: String = ""
 var _inventory_buttons: Dictionary = {}
 var _storage_status := Label.new()
 var _transfer_preview := Label.new()
@@ -263,7 +264,9 @@ func _process(_delta: float) -> void:
 
 func _update_active_equipment() -> void:
 	var text: String = PlayerInventoryPresentation.active_equipment(_equipment_record, _selected_id(_items), _picker_id(_slot))
+	text += "\n" + PlayerInventoryPresentation.equipment_access(_equipment_record, _selected_id(_items), _picker_id(_slot), _picker_id(_destination))
 	if not _pending_inventory.is_empty() and _pending_inventory.get("operation") in ["equip", "unequip", "select_hand", "switch_hand"]:
+		text += "\n" + _pending_equipment_observation
 		text += "\nEquipment command pending; outcome unconfirmed until its matching host receipt. Display follows fresh observations."
 	_active_tool.text = text
 	var equipped := PackedStringArray()
@@ -450,6 +453,7 @@ func _self_action(operation: String) -> void:
 	_submit("self", payload)
 	if not _pending.is_empty():
 		_pending_inventory = payload.duplicate(true)
+		_pending_equipment_observation = PlayerInventoryPresentation.equipment_submission(_equipment_record, payload) if operation in ["equip", "unequip", "select_hand", "switch_hand"] else ""
 		_result.text = PlayerInventoryPresentation.pending_text(_pending_inventory)
 		_update_active_equipment()
 
@@ -500,6 +504,7 @@ func _disconnected(message: String) -> void:
 	_pending = ""
 	_pending_world.clear()
 	_pending_inventory.clear()
+	_pending_equipment_observation = ""
 	_pending_component.clear()
 	_inspected_tool = ""
 	_view_key = ""
@@ -661,6 +666,7 @@ func _completed(command: SimulationCommand, result: ServiceResult) -> void:
 		_pending = ""
 		_pending_world.clear()
 		_pending_inventory.clear()
+		_pending_equipment_observation = ""
 		_pending_component.clear()
 		_result.text = "Host accepted action. Inventory follows the latest host view." if result.is_success else EngineeringFailureGuidance.describe(result, "Host rejected action: " + result.message)
 		if not exact_targets.is_empty(): _result.text += "\nReceipt targets\n" + exact_targets + "\nObserved state below follows host observations; receipt does not predict capabilities."
