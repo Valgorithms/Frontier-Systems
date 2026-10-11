@@ -81,8 +81,22 @@ func run() -> void:
 	var fingerprint: Dictionary = observed.duplicate(true)
 	fingerprint["catalog_fingerprint"] = "z".repeat(64)
 	bad.append(fingerprint)
+	var oversized: Dictionary = observed.duplicate(true)
+	oversized["recipes"] = []
+	oversized["recipe_requirements"] = {}
+	for index in range(33):
+		var id: String = "recipe.test-%d" % index
+		oversized["recipes"].append(id)
+		oversized["recipe_requirements"][id] = {"station": "printer", "inputs": {"iron": 1}, "energy_joules": 1}
+	bad.append(oversized)
+	var revision: Dictionary = observed.duplicate(true)
+	revision["catalog_revision"] = 0
+	bad.append(revision)
 	for item in bad:
 		check(not WorkstationResourceView.valid(item) and WorkstationResourceView.recipe_text(item, "craft.plate").contains("unavailable"), "malformed requirements fail closed")
+	var detached: Dictionary = projection.observation(null).value
+	detached["recipe_requirements"]["craft.plate"]["inputs"]["iron"] = 1
+	check(projection.record == wire and production.observation(context).value == observed, "detached observation cannot mutate catalog requirements")
 	var changed: Dictionary = observed.duplicate(true)
 	changed["recipe_requirements"]["craft.plate"]["energy_joules"] = 999
 	check(not projection.accept_record(changed).is_success and projection.record == wire, "same identity cannot change requirements")
