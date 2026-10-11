@@ -13,7 +13,7 @@ static func entry(id: String, record: Dictionary) -> String:
 static func describe(terrain: Dictionary, escrow_id: String, parcel_id: String, intent: Dictionary, waiting: bool) -> String:
 	var lines: PackedStringArray = []
 	if not intent.is_empty():
-		lines.append("Unresolved %s #%d · original payload %s. Fresh terrain work is blocked. Retry the original intent after reconnecting and receiving a scoped observation; retry does not promise success or recreate a parcel." % [intent["operation"], intent["request_number"], str(intent["payload"])])
+		lines.append("Unresolved %s #%d · original payload %s. Fresh terrain work is blocked. Retry the original intent with a scoped observation; reconnect first if disconnected. Retry does not promise success or recreate a parcel." % [intent["operation"], intent["request_number"], str(intent["payload"])])
 	elif waiting:
 		lines.append("Waiting for host confirmation; fresh terrain work is blocked.")
 	lines.append("Client retry storage is not a durable host save; host recovery depends on its checkpoint cadence.")
