@@ -2,13 +2,13 @@
 
 ## Dependency gate
 
-Planning base: origin/dev-master `f9f7085`. Dependency: PR #77, read-only contract reviewed at `b2ff932cc5baaa00eecc9a3ae69ca1671c9092e0`. Implementation waits for Coordinator confirmation that #77 is merged, then updates this isolated branch from current origin/dev-master. This document is a plan, not evidence of implemented behavior or acceptance.
+Planning base: origin/dev-master `f9f7085`. Dependency PR #77 was reviewed read-only at `b2ff932cc5baaa00eecc9a3ae69ca1671c9092e0`; Coordinator confirmed merge `9d29fdd6e6252f8ddb226798290ad055fda35f80` before implementation. The isolated branch then integrated current origin/dev-master `f58fe715b3e8aa087f665b9cf8ea4d30744ba3bd`.
 
 ## Scope and interfaces
 
-Extend the existing PlayerInventoryPanel and its presentation helper with an explicit stable owned-container selection, observed closure status, and separate Open container / Close container actions. Browsing owned knowledge remains distinct from physical opening. Preserve the selected ID when observations reorder; retain an unavailable selected ID without choosing another target when it disappears.
+The existing PlayerInventoryPanel and its presentation helper now expose an explicit stable owned-container selection, observed closure status, and separate Open container / Close container actions. Browsing owned knowledge remains distinct from physical opening. Selected IDs survive reordering, missing targets and disconnect without choosing another target.
 
-Consume existing detailed own-inventory container records and inventory revision. Only an explicit boolean `is_open` establishes observed open/closed state; absent, malformed, stale or disconnected fields mean unavailable. Legacy knowledge remains visible but cannot establish closure prerequisites. Full owned descendant knowledge and aggregate mass do not imply physical access, a lock, another body's access, or world-container control.
+The panel consumes existing detailed own-inventory container records and inventory revision. Only a v4 boolean `is_open` establishes observed open/closed state; absent, malformed, stale or disconnected fields mean unavailable. Legacy v3 knowledge remains visible with unavailable closure state; an explicit request for known item-hosted owned storage leaves all physical checks to the host and permits the first legacy closure migration. Missing v4 closure fields disable requests. Full owned descendant knowledge and aggregate mass do not imply physical access, a lock, another body's access, or world-container control.
 
 Submit the merged authenticated `open_container` / `close_container` operations with exactly `{container_id, expected_revision}` through the existing remote inventory intent route. The host owns closure, ancestry, hands, revision, work cancellation and receipts. Pin operation, selected ID, revision and returned request ID while pending; correlate only the exact receipt. Do not optimistically alter observations, retry, retarget, or infer closure from receipt arrival alone. Preserve uncertainty across disconnect and reconcile only actual observations and exact retained receipts.
 
@@ -16,10 +16,16 @@ No changes to schemas, inventory owner, commands, bootstrap, movement, first_pla
 
 ## Verification plan
 
-After the dependency gate, add a focused real-domain panel regression using the merged inventory queue and disposable isolated fixture state. Verify open/closed nested ancestor transfer refusal and later acceptance, interrupted/ongoing work refusal and conservation using actual runtime commands and the existing closed-container runtime regression. Exercise stale revision rejection, exact request/receipt correlation, a mismatched receipt, disconnect uncertainty, missing closure fields, unavailable targets, reorder refresh and preserved selection.
+`player_inventory_closure_test.gd` uses the actual WorldRuntime command queue and disposable isolated fixture state for panel closure, nested ancestor transfer refusal and later acceptance, stale revision rejection and item/provenance conservation. The existing `inventory_closed_containers_test.gd` additionally exercises authenticated controller tokens/queue, interrupted unfinished and paused work, search refusal, exact retained receipts, factory boundaries and snapshot contracts. Panel regression covers mismatched operation/payload receipts, real remote disconnect signal ordering, queue refusal, missing closure fields, unavailable targets, reorder refresh and preserved selection.
 
 Verify keyboard selection and activation, focus reachability/reveal, wrapped status and full pending IDs at desktop/narrow panel sizes. Reuse existing inventory handoff, feedback, usability, transfer-preview and integrated panel regressions where applicable. Use the repository pinned Godot runner and existing Windows/Ubuntu CI matrix; report exact pushed head and CI evidence. Capture only if these checks leave material visual uncertainty. No live service, human, physical controller/VR, Linux graphical or network acceptance is implied by automated checks.
 
 ## Workflow
 
 Isolated managed worktree; descriptive branch `observed-container-controls`; attached draft PR to dev-master while work continues. Scope includes this own milestone document and relevant inventory presentation architecture documentation. Coordinator receives dependency wait and final evidence; genuine human acceptance routes through Coordinator. No merge, release or deployment is authorized for this task.
+
+## Local evidence
+
+Windows pinned Godot 4.7.2 import/startup and eight focused tests passed after the final source change: `player_inventory_closure_test`, `inventory_closed_containers_test`, `player_inventory_handoffs_test`, `player_inventory_feedback_test`, `player_inventory_usability_test`, `player_inventory_transfer_preview_test`, `player_inventory_transfer_layout_test`, and `integrated_panel_layout_test`. Reproduce with `tools/ci/run-godot-checks.ps1 -Godot <verified pinned executable> -TestNames <the eight filenames with .gd> -OutputDirectory var/ci/container-controls-final -TestTimeoutSeconds 120`. Ignored logs/JUnit remain in that directory. The new panel test covers physical Tab/Shift+Tab and Enter injection, keyboard review of exact feedback, five-second freshness expiry, and 440/280-pixel bounded controls. The integrated layout test supplies existing client-shell regression coverage; the new closure fixture directly instantiates the actual panel and domain runtime.
+
+No port listeners or services were started. Source review and the meaningful runtime/layout regressions resolve the scoped behavior without captures. Human, live authenticated network, physical controller/VR and Linux graphical acceptance remain unverified. Exact-head Windows/Ubuntu CI is reported through draft PR #78 and Coordinator after the push; local success does not establish remote CI.
