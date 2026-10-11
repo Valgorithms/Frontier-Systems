@@ -18,6 +18,9 @@ func run() -> void:
 	panel.custom_minimum_size.x = 420
 	root.add_child(panel)
 	check(panel._rows[0].text.contains("unavailable"), "fresh panel confirms nothing")
+	check(panel.find_children("*", "Button", true, false).is_empty(), "guide has no action controls")
+	for row in panel._rows:
+		check(row.autowrap_mode == TextServer.AUTOWRAP_WORD_SMART and row.mouse_filter == Control.MOUSE_FILTER_IGNORE, "rows wrap without consuming native input")
 	var initial: Dictionary = production.observation(context).value
 	var before: String = world.capture_world_snapshot_json().value
 	panel.observe({"production": initial})
@@ -28,9 +31,21 @@ func run() -> void:
 		panel.observe({"production": partial})
 		check(panel._rows[0].text.contains("unavailable") and not panel._rows[4].visible, "partial data clears all prior facts")
 	var malformed: Dictionary = initial.duplicate(true)
-	malformed["components"] = ["bad id"]
+	malformed["components"] = [42]
 	panel.observe({"production": malformed})
 	check(panel._rows[0].text.contains("unavailable"), "rejected projection cannot claim physical plate")
+	var limited: Dictionary = initial.duplicate(true)
+	limited["cargo"] = {}
+	limited["deposits"]["deposit.iron"] = 0
+	limited["energy_joules"] = 0
+	limited["can_operate"] = true
+	panel.observe({"production": limited})
+	check(panel._rows[0].text.contains("Depleted") and panel._rows[1].text.contains("Collect a canister"), "depleted/no-carrier prerequisites are explicit")
+	check(panel._rows[2].text.contains("Needs 1000 J"), "missing energy blocks recipe guidance")
+	limited["energy_joules"] = 1000
+	limited["powered"]["refinery"] = false
+	panel.observe({"production": limited})
+	check(panel._rows[2].text.contains("needs power"), "unpowered station blocks recipe guidance")
 	move([-3000, 0, -1000])
 	command("extract", {"deposit_id": "deposit.iron", "carrier_id": "resource-canister-1", "amount_milligrams": 1000000})
 	observe()
@@ -58,7 +73,7 @@ func run() -> void:
 	check(panel._rows[3].text.contains("0 carried"), "accepted printing does not invent a carried plate")
 	step(120)
 	observe()
-	check(panel._rows[3].text.contains("Collect printed stock"), "stock still requires materialization")
+	check(panel._rows[3].text.contains("collect printed stock"), "stock still requires materialization")
 	command("materialize_plate", {})
 	observe()
 	check(panel._rows[3].text.contains("1 carried"), "real materialization shows owned physical plate")

@@ -12,11 +12,10 @@ static func describe(production: Dictionary) -> PackedStringArray:
 	var remaining: int = int(production["deposits"]["deposit.iron"])
 	var ore: int = 0
 	var canisters: int = 0
+	# Production cargo is already scoped to owned resource carriers.
 	for stock in production["cargo"].values():
-		# Physical plates have their own payloads; only canister payloads count here.
-		if int(stock.get("plate", 0)) == 0:
-			canisters += 1
-			ore += int(stock.get("ore.iron", 0))
+		canisters += 1
+		ore += int(stock.get("ore.iron", 0))
 	lines.append("1 · Finite iron source: %.2f kg remains. %s" % [float(remaining) / 1000000.0,
 		"Depleted; this source cannot supply more ore." if remaining == 0 else ("In extraction reach; use Workstation controls." if production["extractable_sources"].has("deposit.iron") else "Approach iron ore with a conscious body and a free hand.")])
 	lines.append("2 · Carried canister: %d scoped payload(s), %.2f kg iron ore. %s" % [canisters, float(ore) / 1000000.0,
@@ -27,7 +26,7 @@ static func describe(production: Dictionary) -> PackedStringArray:
 		_recipe_hint(production, "refine.iron", "refinery", stored_ore)])
 	var plates: int = production["components"].size()
 	lines.append("4 · Physical plate: %d carried; %.2f kg printed stock. %s" % [plates, float(production["store"]["plate"]) / 1000000.0,
-		"Select a carried plate in Construction for wall placement." if plates > 0 else ("Collect printed stock using Workstation controls; host checks inventory capacity." if int(production["store"]["plate"]) >= 1000000 else _recipe_hint(production, "craft.plate", "printer", iron))])
+		"Select a carried plate in Construction for wall placement." if plates > 0 else ("Approach the workstation to collect printed stock; host checks free hand and inventory capacity." if int(production["store"]["plate"]) >= 1000000 else _recipe_hint(production, "craft.plate", "printer", iron))])
 	lines.append("5 · Physical walls: %d currently observed. %s" % [production["walls"].size(),
 		"No carried plate for another wall; make or recover one." if plates == 0 else "Construction checks reach, free hand, grid, orientation, capacity and overlap at submission."])
 	var job: Dictionary = production["job"]
