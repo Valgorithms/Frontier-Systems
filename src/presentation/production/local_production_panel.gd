@@ -185,8 +185,29 @@ func configure(world: WorldRuntime) -> ServiceResult:
 	_add_section("Observed resources / jobs", [[_status, _status]], original, section_root)
 	_add_section("Other workstation controls", [[build_button, power_button]], original, section_root)
 	_show_section(0)
+	_wire_focus_reveal(self)
 	refresh()
 	return ServiceResult.success()
+
+
+## Inner task scrolling can move a focused control after the outer shell follows it.
+func _wire_focus_reveal(node: Node) -> void:
+	if node is Control and node.focus_mode != Control.FOCUS_NONE:
+		node.focus_entered.connect(func() -> void: _reveal_focused.call_deferred(node))
+	for child in node.get_children(): _wire_focus_reveal(child)
+
+
+func _reveal_focused(control: Control) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not is_inside_tree() or not is_instance_valid(control) or not control.has_focus(): return
+	var ancestor: Node = control.get_parent()
+	while ancestor != null:
+		if ancestor is ScrollContainer:
+			(ancestor as ScrollContainer).ensure_control_visible(control)
+			await get_tree().process_frame
+			if not is_inside_tree() or not is_instance_valid(control) or not control.has_focus(): return
+		ancestor = ancestor.get_parent()
 
 
 func _process(delta: float) -> void:

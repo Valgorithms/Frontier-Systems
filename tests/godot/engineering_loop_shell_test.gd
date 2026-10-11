@@ -17,11 +17,13 @@ func activate_button(button: Button) -> SimulationCommand:
 	await settle()
 	button.grab_focus()
 	await settle()
-	check(button.has_focus() and visible(button, client._scroll), "keyboard action revealed in actual shell: " + button.text + " rect=" + str(button.get_global_rect()) + " viewport=" + str(client._scroll.get_global_rect()))
+	var ancestor: Node = button.get_parent()
+	while not ancestor is ScrollContainer: ancestor = ancestor.get_parent()
+	check(button.has_focus() and visible(button, ancestor), "keyboard action revealed in actual shell: " + button.text)
 	var sent: int = remote.sent.size()
 	var before: String = world.capture_world_snapshot_json().value
 	await key(KEY_ENTER)
-	check(remote.sent.size() == sent + 1, "one Enter queues one intent: " + button.text + " sent=" + str(sent) + " now=" + str(remote.sent.size()) + " pressed=" + str(button.button_pressed) + " pending=" + client._production_panel._pending + " feedback=" + client._production_panel._feedback.text)
+	check(remote.sent.size() == sent + 1, "one Enter queues one intent: " + button.text + " sent=" + str(sent) + " now=" + str(remote.sent.size()) + " pressed=" + str(button.button_pressed) + " focused=" + str(button.has_focus()) + " disabled=" + str(button.disabled) + " pending=" + client._production_panel._pending + " feedback=" + client._production_panel._feedback.text)
 	check(world.capture_world_snapshot_json().value == before, "queued GUI intent cannot mutate canonical state")
 	button.release_focus()
 	return remote.sent[-1] if remote.sent.size() > sent else null
@@ -54,6 +56,7 @@ func recipe(id: String) -> void:
 
 func run() -> void:
 	create_timer(45.0).timeout.connect(func() -> void: push_error("Engineering shell deadline"); quit(1))
+	capture = OS.get_cmdline_user_args().has("--capture-integrated")
 	PlayerInputSettings.instance()._reset_map()
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
 	root.size = Vector2i(1920, 1080)
@@ -109,6 +112,21 @@ func run() -> void:
 		var production: Dictionary = frame()["production"]
 		check(production["components"].is_empty() and production["store"]["plate"] == 0, "physical recycle consumes that plate exactly once")
 		check(production["deposits"]["deposit.iron"] == 10000000 - (cycle + 1) * 2000000 and production["store"]["iron"] == (cycle + 1) * 1200000 and production["store"]["tailings"] == (cycle + 1) * 800000 and production["store"]["ore.iron"] == 0 and production["cargo"]["resource-canister-1"]["ore.iron"] == 0, "repeat finite loop conserves all 10 kg of source matter")
+	# Place an additional paid physical plate through the current Construction panel.
+	await recipe("craft.plate")
+	await paid_action(button_named(client._production_panel, "Collect printed plate into inventory"), "materialize_plate")
+	var construction_plate: String = frame()["production"]["components"][0]
+	client._tabs.current_tab = 3
+	var machinery: MachineryPanel = client._machinery_panel
+	choose(machinery._part, construction_plate)
+	machinery._new_wall.pressed.emit()
+	machinery._axes[2].value = -1.0
+	var wall_request: SimulationCommand = await paid_action(machinery._wall_build_button, "wall_build")
+	var walls: Dictionary = frame()["production"]["walls"].duplicate(true)
+	check(walls.size() == 1 and frame()["production"]["components"].is_empty(), "paid physical plate becomes one persistent wall")
+	var wall_id: String = walls.keys()[0]
+	check(wall_request.payload["item_id"] == construction_plate and walls[wall_id]["position"] == [0, 0, -1000], "construction receipt uses exact consumed plate and observed wall target")
+	client._tabs.current_tab = 0
 	# Real checkpoint files in unique temporary test storage; UI receipt delivered by adapter.
 	var save_request: CheckpointRequest = await activate_button(client._host_actions[3])
 	var snapshot: String = world.capture_world_snapshot_json().value
@@ -122,6 +140,7 @@ func run() -> void:
 	client._checkpoint_status.grab_focus()
 	await settle()
 	check(client._checkpoint_status.has_focus(), "checkpoint feedback accessible to keyboard")
+	await snap("engineering-checkpoint")
 	var abandoned: CheckpointRequest = await activate_button(client._host_actions[3])
 	var sent: int = remote.sent.size()
 	remote.connection_closed.emit("Fixture disconnect after save submission")
@@ -141,9 +160,11 @@ func run() -> void:
 	await settle()
 	check(remote.sent.size() == sent and client._checkpoint_status.text.contains("outcome unknown"), "fresh reconnect observation cannot replay or confirm abandoned request")
 	var recovered: Dictionary = frame()
-	check(recovered["production"]["deposits"]["deposit.iron"] == 6000000 and recovered["production"]["store"]["iron"] == 2400000 and recovered["production"]["store"]["tailings"] == 1600000, "fresh recovery observes exact finite loop balances")
+	check(recovered["production"]["deposits"]["deposit.iron"] == 6000000 and recovered["production"]["store"]["iron"] == 1400000 and recovered["production"]["store"]["tailings"] == 1600000 and recovered["production"]["walls"] == walls, "fresh recovery observes exact finite loop balances and stable physical wall")
 	apply(extraction)
-	check(frame()["production"] == recovered["production"], "retained extraction replay cannot mint matter after recovery")
+	for field: String in ["state_revision", "deposits", "store", "cargo", "components", "structures", "energy_joules", "job"]:
+		check(frame()["production"][field] == recovered["production"][field], "retained extraction replay preserves " + field + " after recovery")
+	await snap("engineering-recovered")
 	client.free()
 	world.free()
 	for name in ["world-a.json", "world-b.json"]:
