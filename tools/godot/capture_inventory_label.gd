@@ -135,4 +135,3 @@ func run() -> void:
 	world.free()
 	print("Graphical inventory feedback route: %d failures" % failures)
 	quit(1 if failures else 0)
-

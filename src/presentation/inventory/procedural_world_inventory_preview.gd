@@ -28,6 +28,7 @@ func _ready() -> void:
 	add_child(layer)
 	_selection_label = InventorySelectionLabel.new()
 	layer.add_child(_selection_label)
+	_highlight()
 
 
 func observe(record: Dictionary) -> ServiceResult:
@@ -152,5 +153,3 @@ func _box(parent: Node3D, dimensions: Vector3, location: Vector3, color: Color) 
 	instance.position = location
 	parent.add_child(instance)
 	return instance
-
-
