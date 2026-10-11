@@ -82,3 +82,11 @@ test('Discord failure writes no false receipt',async()=>{
 });
 
 
+
+test('reopened issue can send a later closure in the same forum thread',async()=>{
+  const h=harness({bugs:{thread:'701',message:'901',closed:true,closed_at:'2026-10-11T10:00:00Z'}});
+  const e=event('closed');e.issue.closed_at='2026-10-11T12:00:00Z';
+  await run(e,env,h.fetcher);
+  assert.equal(h.posts.length,1);assert.equal(h.posts[0].url.searchParams.get('thread_id'),'701');
+  await run(e,env,h.fetcher);assert.equal(h.posts.length,1);
+});

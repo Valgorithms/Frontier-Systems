@@ -14,7 +14,7 @@ export function selectRoutes(event, saved) {
     return routes.filter(r => r.labels.includes(event.label?.name?.toLowerCase()) && !saved[r.key]);
   }
   if (event.action === 'synchronize') {
-    return event.issue.state === 'closed' ? routes.filter(r => saved[r.key] && !saved[r.key].closed)
+    return event.issue.state === 'closed' ? routes.filter(r => saved[r.key] && saved[r.key].closed_at !== (event.issue.closed_at || 'closed'))
       : routes.filter(r => r.labels.some(l => labelsOf(event.issue).includes(l)) && !saved[r.key]);
   }
   return [];
@@ -67,7 +67,7 @@ export async function run(event, env, fetcher = fetch) {
   const path = '/contents/issues/' + event.issue.number + '.json';
   let record = await api(path + '?ref=' + branch);
   const saved = record ? JSON.parse(Buffer.from(record.content,'base64').toString('utf8')) : {};
-  const selected = selectRoutes(event,saved).filter(r => !(event.action === 'closed' && saved[r.key]?.closed));
+  const selected = selectRoutes(event,saved).filter(r => !(event.action === 'closed' && saved[r.key]?.closed_at === (event.issue.closed_at || 'closed')));
   if (!selected.length) return;
   // All destinations validated before any public post. No issue-controlled URLs or code.
   const hooks = new Map();
@@ -103,7 +103,7 @@ export async function run(event, env, fetcher = fetch) {
     const posted = await response.json();
     if (!/^[0-9]+$/.test(posted.id) || !/^[0-9]+$/.test(posted.channel_id)) throw new Error('Discord receipt invalid; inspect forum before retrying');
     if (closed && posted.channel_id !== saved[route.key].thread) throw new Error('Discord closure thread mismatch');
-    saved[route.key] = {...saved[route.key],thread:posted.channel_id,closed,message:posted.id};
+    saved[route.key] = {...saved[route.key],thread:posted.channel_id,closed,closed_at:closed ? (event.issue.closed_at || 'closed') : null,message:posted.id};
     // Optimistic content SHA guards state writes. Failure is visible, never reported as success.
     const body = {message:'Record Discord routing for issue #' + event.issue.number,
       content:Buffer.from(JSON.stringify(saved,null,2)+'\n').toString('base64'),branch,
