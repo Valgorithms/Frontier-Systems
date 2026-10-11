@@ -86,7 +86,8 @@ func run() -> void:
 	check(await wait_for(func() -> bool: return not store.status()["busy"]), "checkpoint worker idle")
 	client._host_actions[-1].pressed.emit()
 	check(await wait_for(func() -> bool: return checkpoint_receipt.has("success"), 5.0) and checkpoint_receipt.get("success", false) and checkpoint_receipt.get("visible", false), "actual save button confirms disk checkpoint at receipt delivery")
-	check(LocalWorldSaveStore.read_latest(directory).is_success, "acknowledged checkpoint exists on disposable disk")
+	var disk_checkpoint: ServiceResult = LocalWorldSaveStore.read_latest(directory)
+	check(disk_checkpoint.is_success and not disk_checkpoint.value.is_empty(), "acknowledged checkpoint exists on disposable disk")
 	var uncertain := InventoryDevelopmentCommand.new()
 	var retained: Dictionary = {"schema_version": 3, "world_id": String(world.world_id), "region_id": String(world.region_id), "slot": 0, "request_number": 1, "operation": "return", "payload": {"item_id": "terrain-item-999999", "expected_inventory_revision": expected["inventory"]["inventory_revision"]}}
 	check(client._remote.restore_terrain_intent(retained).is_success, "fixture restores bounded unresolved terrain intent without submission")
