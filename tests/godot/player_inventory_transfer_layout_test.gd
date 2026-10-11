@@ -109,6 +109,7 @@ func run() -> void:
 		selections()
 		await settle()
 		var scroll := panel.get_parent() as ScrollContainer
+		print("Layout viewport %s; actual sidebar %.0f; inventory pane %.0f x %.0f" % [viewport_size, client._tabs.size.x, scroll.size.x, scroll.size.y])
 		check(client._tabs.get_global_rect().end.x <= root.size.x, "shell fits supported viewport")
 		bounded(panel, scroll.size.x)
 		check(panel._transfer_preview.text.contains(ids["crowbar-1"]) and panel._transfer_preview.text.contains(ids["storage.pouch-1"]) and panel._transfer_preview.text.contains(ids["body.human-1"]) and panel._transfer_preview.text.contains(ids["hand.right"]), "complete selected transfer IDs")
@@ -142,6 +143,7 @@ func run() -> void:
 		await settle()
 		check(panel._pending.is_empty() and panel._result.text.contains(guidance), "complete matching failure retained")
 		bounded(panel, scroll.size.x)
+		capture_stage = "rejected" if panel._result.text.contains("Host rejected") else "disconnected"
 		await readable(panel._result)
 		var removed: Dictionary = observed.duplicate(true)
 		removed["inventory"]["items"].clear()
@@ -162,6 +164,7 @@ func run() -> void:
 		await settle()
 		check(panel._pending.is_empty() and panel._pending_world.is_empty() and panel._transfer_preview.text.is_empty() and panel._world_transfer_preview.text.is_empty(), "disconnect clears targets and previews")
 		check(panel._result.text.contains("outcome is unknown"), "disconnect retains uncertainty guidance")
+		capture_stage = "rejected" if panel._result.text.contains("Host rejected") else "disconnected"
 		await readable(panel._result)
 	check(JSON.stringify(observed) == input_before and world.capture_world_snapshot_json().value == canonical, "layout/input/receipts preserve observed input and canonical state")
 	client.free()
