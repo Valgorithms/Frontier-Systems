@@ -39,8 +39,11 @@ func _ready() -> void:
 
 ## Coordinates are already validated by the observation adapter. Never interpolate
 ## position or infer motion from input, velocity, elapsed frames or a repeated tick.
-func observe_position(coords: Array, tick: int) -> void:
-	if not InventorySpatialMath.is_position(coords) or tick < 0 or tick <= _tick:
+func observe_position(coords: Array, tick: Variant) -> void:
+	if not InventorySpatialMath.is_position(coords) or not ControlContractValidation.is_integer(tick, 0, 9007199254740000):
+		return
+	var observed_tick: int = int(tick)
+	if observed_tick <= _tick:
 		return
 	var observed := Vector3(float(coords[0]), float(coords[1]), float(coords[2])) / 1000.0
 	if not observed.is_finite():
@@ -49,7 +52,7 @@ func observe_position(coords: Array, tick: int) -> void:
 	var fresh: bool = _initialized and _age < STALE_SECONDS
 	var displacement: Vector3 = observed - _previous
 	_previous = observed
-	_tick = tick
+	_tick = observed_tick
 	_age = 0.0
 	_initialized = true
 	position = ProceduralWorldInventoryPreview.DISPLAY_ORIGIN + Vector3(observed.x, maxf(0.95, observed.y), observed.z)

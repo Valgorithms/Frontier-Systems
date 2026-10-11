@@ -68,6 +68,8 @@ func run() -> void:
 	var position: Vector3 = avatar.position
 	avatar.observe_position([500, 950, -2000], observed_tick)
 	avatar.observe_position([500, 950, -2000], observed_tick - 1)
+	for invalid_tick in [-1, "bad", NAN, 1.5, true, 9007199254740991]:
+		avatar.observe_position([500, 950, -2000], invalid_tick)
 	avatar.observe_position(["bad", 950, -2000], observed_tick + 1)
 	avatar.observe_position([NAN, 950, -2000], observed_tick + 1)
 	check(avatar.position == position and avatar._age == 0.1, "duplicate/regressing/malformed observations neither move nor refresh")
