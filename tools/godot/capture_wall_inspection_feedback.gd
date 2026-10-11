@@ -70,10 +70,10 @@ func finish() -> void:
 	panel._show_placement.button_pressed = true
 	panel._refresh_placement()
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(CAPTURE_DIRECTORY))
-	
+
 	panel._wall_turn.select(1)
 	panel._refresh_placement()
-	
+
 	panel._axes[1].value = 0.1
 	panel._send("wall_build")
 	await create_timer(0.5).timeout
@@ -85,7 +85,7 @@ func finish() -> void:
 	var pending: String = panel._pending
 	panel._send("wall_build")
 	check(not pending.is_empty() and panel._pending == pending, "authenticated duplicate UI submission suppressed")
-	
+
 	host.set_process(true)
 	await create_timer(0.6).timeout
 	check(panel._feedback.text == "Completed" and client._latest["production"]["walls"].size() == 1, "authenticated build commits one wall")
