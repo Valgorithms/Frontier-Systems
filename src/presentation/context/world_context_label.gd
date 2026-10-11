@@ -7,6 +7,12 @@ var text: String = ""
 
 func _ready() -> void:
 	add_to_group(GROUP)
+	_ensure_layout.call_deferred()
+
+
+func _ensure_layout() -> void:
+	# Nested viewport/overlay construction may still be adding children in _ready.
+	if not is_inside_tree(): return
 	var viewport: Viewport = get_viewport()
 	if viewport.get_node_or_null("_WorldContextLabels") == null:
 		var layer := CanvasLayer.new()
