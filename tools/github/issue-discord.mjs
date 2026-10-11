@@ -49,7 +49,7 @@ export async function run(event, env, fetcher = fetch) {
   const api = async (path, method='GET', body) => {
     let response;
     try { response = await fetcher('https://api.github.com/repos/' + repo + path, {
-      method, headers:{Authorization:'Bearer ' + env.GITHUB_TOKEN, Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'},
+      method, headers:{Authorization:'Bearer ' + env.GITHUB_TOKEN, Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'},
       ...(body === undefined ? {} : {body:JSON.stringify(body)}), signal:AbortSignal.timeout(20000)
     }); } catch { throw new Error('GitHub request failed'); }
     if (response.status === 404 && method === 'GET') return null;
@@ -117,4 +117,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try { await run(JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH,'utf8')),process.env); }
   catch(error) { console.error(error.message); process.exitCode=1; }
 }
+
 
