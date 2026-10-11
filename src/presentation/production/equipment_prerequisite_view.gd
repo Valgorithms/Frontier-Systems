@@ -4,20 +4,24 @@ class_name EquipmentPrerequisiteView
 ## Advisory observations only; never predicts compatibility or repair.
 static func fill(picker: OptionButton, entries: Dictionary, prompt: String) -> void:
 	var selected_id: String = selected(picker)
-	picker.clear()
-	picker.add_item(prompt)
-	picker.set_item_metadata(0, "")
 	var ids: Array = entries.keys()
 	ids.sort()
+	var choices: Array = [["", prompt, false]]
 	for id in ids:
-		picker.add_item("%s · %s" % [entries[id], id])
-		picker.set_item_metadata(picker.item_count - 1, id)
-		if id == selected_id: picker.select(picker.item_count - 1)
+		choices.append([id, "%s · %s" % [entries[id], id], false])
 	if not selected_id.is_empty() and not entries.has(selected_id):
-		picker.add_item("Unavailable selected ID · " + selected_id)
-		picker.set_item_metadata(picker.item_count - 1, selected_id)
-		picker.set_item_disabled(picker.item_count - 1, true)
-		picker.select(picker.item_count - 1)
+		choices.append([selected_id, "Unavailable selected ID · " + selected_id, true])
+	var unchanged: bool = picker.item_count == choices.size()
+	for index in range(choices.size()):
+		if not unchanged: break
+		unchanged = picker.get_item_metadata(index) == choices[index][0] and picker.get_item_text(index) == choices[index][1] and picker.is_item_disabled(index) == choices[index][2]
+	if unchanged: return
+	picker.clear()
+	for choice in choices:
+		picker.add_item(choice[1])
+		picker.set_item_metadata(picker.item_count - 1, choice[0])
+		picker.set_item_disabled(picker.item_count - 1, choice[2])
+		if choice[0] == selected_id: picker.select(picker.item_count - 1)
 
 
 static func selected(picker: OptionButton) -> String:
