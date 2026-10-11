@@ -94,6 +94,7 @@ func _rebuild() -> void:
 				color = Color("#dfa645")
 			var location: Vector3 = origin + Vector3(-0.3 + float(index % 4) * 0.2, 0.75 + dimensions.y / 2.0, -0.15 + float(index / 4) * 0.3)
 			var mesh: MeshInstance3D = _box(_rendered, dimensions, location, color)
+			InventoryItemSilhouettes.apply(mesh, item["definition_id"])
 			var key: String = JSON.stringify([container["container_id"], item["item_id"]])
 			_visible_items[key] = {"mesh": mesh, "color": color, "item_id": item["item_id"], "container_id": container["container_id"], "distance": container["distance_millimetres"]}
 			var area := Area3D.new()
