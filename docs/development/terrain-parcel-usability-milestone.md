@@ -1,0 +1,9 @@
+# Terrain parcel lifecycle presentation
+
+Base: origin/dev-master `17be0b59aa19768e64c6ee135f8354935bc4e1a0` (merged PR22). Isolated branch `codex/terrain-parcel-usability`; Coordinator owns review/integration. No merge, integration push, release, deployment or media upload is in scope.
+
+TerrainControlsPanel and the read-only TerrainParcelLifecycleView describe own excavation escrow, currently carried returnable parcels and returned fill-only escrow separately. Exact observed milligrams, six-decimal kilograms, material IDs and stable item/transfer IDs wrap within the panel. Dropdowns keep short IDs; removed selections remain pinned and require an explicit user choice to retarget. Reappearance of the same ID restores selection.
+
+The authoritative TerrainSimulationSystem, fixed tick commands, checkpoint v3 and transport/journal versions remain unchanged. Views explain the owner-wide lifetime 128-claim ceiling, principal-specific next ordinal, permanent consumed slots, fill-only returned transfers and reconciliation of the original pending intent. A retry never promises a recreated parcel or automatic success. Client intent storage is explicitly distinct from host checkpoint durability. Legacy and missing scoped observations show unavailable lifecycle data, rather than claiming absence. Host prerequisite messages remain advisory; buttons preserve existing authoritative command gates.
+
+Verification is pending: focused presentation tests will exercise observed lifecycle states, original pending payload, rejection, disconnect/reconnect, stable selections, narrow layout and read-only behavior. Existing owner regression checks and exact-head Windows/Linux CI remain acceptance gates. Fixed network acceptance ports must be assigned through Coordinator; none is currently reserved by this worker. No graphical, human, controller or VR usability is claimed.
