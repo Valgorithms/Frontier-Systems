@@ -102,6 +102,16 @@ func verify() -> void:
 	view.clear_selection()
 	check(view._selected_key.is_empty() and first_mesh.material_override.albedo_color != Color("#ffe066"), "clear restores highlight")
 	check(world.capture_world_snapshot_json().value == canonical, "dense layout and all picking preserve full canonical provenance")
+	var habitat := ProceduralHabitatPreview.new()
+	root.add_child(habitat)
+	habitat.character.set_navigation_enabled(false)
+	habitat.camera.set_process(false)
+	check(habitat.world_inventory.observe(observed).is_success, "dense bays integrate with real habitat")
+	for child in habitat.get_children():
+		if child is HabitatVisualDetails:
+			child._process(0)
+			check(child._trays.get_child_count() == 20, "four original bays retain all rims and supports")
+	habitat.free()
 	if "--dense-tray-stills" in OS.get_cmdline_user_args():
 		await capture_dense_tray()
 	inventory_action("pickup", paid_ids[2])
@@ -138,7 +148,7 @@ func capture_dense_tray() -> void:
 	var center := ProceduralWorldInventoryPreview.DISPLAY_ORIGIN + Vector3(0, 0.8, 0)
 	var directory := "res://var/captures/dense-tray/" + RenderingServer.get_current_rendering_method()
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory))
-	for shot in [{"name": "front", "offset": Vector3(0.1, 1.3, 2.0)}, {"name": "top", "offset": Vector3(0, 2.4, 0.3)}]:
+	for shot in [{"name": "front", "offset": Vector3(0.1, 1.8, 2.0)}, {"name": "top", "offset": Vector3(0, 2.4, 0.3)}]:
 		habitat.camera.position = center + shot["offset"]
 		habitat.camera.look_at(center)
 		await create_timer(0.4).timeout
