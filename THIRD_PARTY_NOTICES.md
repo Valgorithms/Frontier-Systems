@@ -34,3 +34,7 @@ Before adding an external art, audio, font, model, texture, or code asset, recor
 ## Procedural habitat visual details
 
 The resource clusters/prism, workbench supports/surfaces, tray rims/pedestals and terrain outlines in src/presentation/habitat/habitat_visual_details.gd are independently authored first-party MIT GDScript/Godot primitive geometry and materials. Creation tools: text editing and ordinary Godot 4.7.2 engine rendering. No imported source artwork, new fonts, third-party creative assets, AI image generation or generative intermediate assets are used. Internal graphical captures are ignored local diagnostics and are not shipped or uploaded.
+
+## Engineering object recognition geometry
+
+`src/presentation/production/engineering_object_details.gd` independently authors extractor gantry/auger collars, refinery vessels/pipe bridge, and framed recessed spatial wall panels. Author: Frontier Systems project (Codex-assisted original procedural geometry); license: MIT. Tools: text editing, Godot BoxMesh/CylinderMesh/StandardMaterial3D and ordinary Godot 4.7.2 rendering. No source artwork, imported models/textures/fonts, third-party creative assets or generative image intermediates. Internal native captures remain ignored local diagnostics.

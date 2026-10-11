@@ -117,6 +117,7 @@ func _update_spatial_walls(walls: Dictionary) -> void:
 		material.albedo_color = Color("#b7c2c8")
 		mesh.material_override = material
 		body.add_child(mesh)
+		EngineeringObjectDetails.wall(body, mesh)
 		var collision := CollisionShape3D.new()
 		var shape := BoxShape3D.new()
 		shape.size = SpatialWallConstruction.SIZE
