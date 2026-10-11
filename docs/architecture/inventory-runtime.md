@@ -38,7 +38,7 @@ The owner permits at most 32 unfinished jobs, and at most one per actor. Retaine
 
 Resistance/movement updates action epochs, so a brief action invalidates existing attempts even after its flag clears. Same-completion-tick resistance cancels before ownership changes. Completed transfers and receipts commit through the shared owner; completed searches create scoped views. Finished jobs are removed, so the next world checkpoint contains either unfinished work or completed ownership/receipts, never a second completion candidate. No tick waits for storage or external services.
 
-The default simulation produces actual target action epochs, but its control epochs are static fixture values. Session/body control changes, item/tool activation and movement through real authoritative physics remain separate integrations.
+The default simulation produces actual target action epochs. Control epochs now advance through trusted canonical controller lifecycle operations when explicitly composed; the default fixture does not install that authority or the command gate. Production session/body admission and movement through real authoritative physics remain separate integrations.
 
 ## Observations and privacy
 

@@ -2,7 +2,12 @@ extends SceneTree
 
 class Sessions extends InventoryControllerSessionProvider:
 	var allowed: bool = true
+	var on_check: Callable
 	func permits_inventory(principal: StringName, session: StringName, world: StringName, region: StringName) -> bool:
+		if on_check.is_valid():
+			var callback: Callable = on_check
+			on_check = Callable()
+			callback.call()
 		return allowed and principal == &"local-inventory-actor" and session in [&"one", &"two"] and world == &"world.test" and region == &"region.test"
 
 const ACTOR: StringName = &"local-inventory-actor"
@@ -82,6 +87,10 @@ func _initialize() -> void:
 	_check(not _gate.apply(fresh, _context(), "movement", "move", {"x_millimetres": 10}, _tick + 1).is_success and _inventory.capture_snapshot().value == before, "gate excludes fixture locomotion")
 	_check(not _gate.apply(fresh, _context(), "wrong.tick", "self", _self(3), _tick).is_success and _inventory.capture_snapshot().value == before, "canonical fixed boundary preserved")
 	_check(not _gate.initialize(_inventory, &"world.test", &"region.test", _sessions).is_success, "cannot replace composed authority")
+	# Restore during trusted provider validation must still fence this dispatch.
+	saved = _inventory.capture_snapshot().value
+	_sessions.on_check = func() -> void: _check(_inventory.restore_snapshot_record(saved, _tick).is_success, "provider callback restore")
+	_check(not _gate.apply(fresh, _context(), "callback.restore", "self", _self(3), _tick + 1).is_success and _inventory.capture_snapshot().value == saved, "provider restore cannot slip between actor resolution and dispatch")
 	_check(_gate.profiling_counters()["rejections"] > 0 and _gate.profiling_counters()["applications"] > 0, "bounded gate profiling")
 	_inventory.free()
 	_denied(fresh, _context(), "freed runtime")
@@ -93,6 +102,8 @@ func _initialize() -> void:
 func _denied(token: InventoryControllerToken, context: AuthenticatedCommandContext, label: String) -> void:
 	var before: Dictionary = _inventory.capture_snapshot().value if is_instance_valid(_inventory) else {}
 	var counters: Dictionary = _inventory.profiling_counters() if is_instance_valid(_inventory) else {}
+	var observation: ServiceResult = _inventory.local_observation(_context()) if is_instance_valid(_inventory) else ServiceResult.success()
+	var view: ServiceResult = _inventory.read_search(_context(), "search.live") if is_instance_valid(_inventory) else ServiceResult.success()
 	var commands: Dictionary = {"self": _self(0), "world": {"operation": "drop", "item_id": "crowbar-1", "world_container_id": "world.tray-1", "destination_container_id": "world.tray-1", "slot_id": "", "expected_revision": 0},
 		"start": _search(), "cancel": {"job_id": "job.live"}, "resume": {"job_id": "job.restore"}, "resist": {}, "close_search": {"view_id": "search.live"},
 		"grip_join": _join(), "grip_release": {"session_id": "session.crate", "expected_revision": 0}, "grip_resume": {"session_id": "session.crate", "expected_revision": 0}}
@@ -100,6 +111,9 @@ func _denied(token: InventoryControllerToken, context: AuthenticatedCommandConte
 		_check(not _gate.apply(token, context, "denied." + operation, operation, commands[operation], _tick + 1).is_success, label + " / " + operation)
 	if is_instance_valid(_inventory):
 		_check(_inventory.capture_snapshot().value == before and _inventory.profiling_counters() == counters, label + " conserves complete snapshot jobs grips views items receipts and outcomes")
+		var after: ServiceResult = _inventory.local_observation(_context())
+		var after_view: ServiceResult = _inventory.read_search(_context(), "search.live")
+		_check(after.is_success == observation.is_success and after.value == observation.value and after_view.is_success == view.is_success and after_view.value == view.value, label + " conserves volatile outcome and search contents")
 
 
 func _send(token: InventoryControllerToken, context: AuthenticatedCommandContext, operation: String, payload: Dictionary, id: String) -> void:

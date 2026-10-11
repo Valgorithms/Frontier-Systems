@@ -16,7 +16,7 @@ A failed gate admission never invokes canonical command operations and preserves
 
 ## Acceptance and limitations
 
-The port-free `inventory_runtime_command_gate_test.gd` composes actual inventory and health runtimes with the runtime controller owner. It exercises bind, valid self receipt and retry, completed search, grip and pending job, replacement/revoke, identical-epoch restore, explicit reconciliation, fresh same-session success, denial matrices across every allowed operation, exact snapshot/counter conservation, client identity-field rejection, fixed-tick refusal, one-shot composition and freed-owner failure. Existing authority/lifecycle tests independently exercise restore fencing and scoped invalidation.
+The port-free `inventory_runtime_command_gate_test.gd` composes actual inventory and health runtimes with the runtime controller owner. It exercises bind, valid self receipt and retry, completed search, grip and pending job, replacement/revoke, identical-epoch restore, explicit reconciliation, fresh same-session success, denial matrices across every allowed operation, exact snapshot/counter and volatile observation conservation, client identity-field rejection, fixed-tick refusal, one-shot composition, provider-callback restore and freed-owner failure. Existing authority/lifecycle tests independently exercise restore fencing and scoped invalidation.
 
 Run the versioned `tools/ci/run-godot-checks.ps1` with pinned Godot 4.7.2 and the new test plus inventory authority, lifecycle, runtime, self/world/grip and checkpoint regression tests. `.github/workflows/ci.yml` discovers the test on Windows and Ubuntu. Report actual results and exact PR head separately from pending CI.
 
