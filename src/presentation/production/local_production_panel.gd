@@ -235,6 +235,9 @@ func refresh() -> void:
 	_fill_cargo_picker(_cargo_material, _record.get("store", {}).keys())
 	_fill_components(_record.get("components", []))
 	for button in _buttons:
+		# Source actions have independent reach rules. A transient disable here
+		# cancels their native held mouse/Enter gesture before release.
+		if button == _extract_button or button == _guide_button: continue
 		button.disabled = not _pending.is_empty() or _record.is_empty() or not _record.get("can_operate", false)
 	_fabricate_button.disabled = _fabricate_button.disabled or not _record.get("blueprints", {}).has(EquipmentPrerequisiteView.selected(_blueprint))
 	_salvage_button.disabled = _salvage_button.disabled or not _record.get("structures", {}).has(EquipmentPrerequisiteView.selected(_equipment))

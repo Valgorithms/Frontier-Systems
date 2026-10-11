@@ -27,7 +27,7 @@ func run() -> void:
 		client._habitat.production.workstation_selected.emit()
 		check(navigation.navigation_calls == calls + 1 and client._tabs.current_tab == 0, "one navigation effect after reconnect %d" % cycle)
 		await settle()
-		check(root.gui_get_focus_owner() == client._production_panel._recipe, "workstation navigation restores recipe keyboard focus after reconnect")
+		check(root.gui_get_focus_owner() == null, "world workstation navigation preserves gameplay input after reconnect")
 		check(client._habitat.production.workstation_selected.get_connections().size() == 1, "persistent emitter has one navigation owner")
 		var old_panel: LocalProductionPanel = client._production_panel
 		remote.connection_closed.emit("Fixture disconnect")

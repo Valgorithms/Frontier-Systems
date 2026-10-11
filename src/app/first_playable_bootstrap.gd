@@ -320,7 +320,8 @@ func _navigate_to_workstation() -> void:
 		return
 	_tabs.current_tab = 0
 	var target: Control = _production_panel.refining_focus_control()
-	target.grab_focus()
+	# World selection must retain gameplay input for target feedback and sky clearing.
+	# Keyboard focus follows the visible GUI controls when the player enters the pane.
 	_scroll.ensure_control_visible(target)
 
 

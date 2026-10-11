@@ -22,7 +22,19 @@ func activate_button(button: Button) -> SimulationCommand:
 	check(button.has_focus() and visible(button, ancestor), "keyboard action revealed in actual shell: " + button.text)
 	var sent: int = remote.sent.size()
 	var before: String = world.capture_world_snapshot_json().value
-	await key(KEY_ENTER)
+	var confirm := InputEventKey.new()
+	confirm.keycode = KEY_ENTER
+	confirm.physical_keycode = KEY_ENTER
+	confirm.pressed = true
+	root.push_input(confirm)
+	# Hold through the actual 100 ms observation refresh, not just a lucky frame.
+	await create_timer(0.2).timeout
+	check(button.button_pressed and remote.sent.size() == sent, "held Enter survives refresh without early activation: " + button.text)
+	confirm = InputEventKey.new()
+	confirm.keycode = KEY_ENTER
+	confirm.physical_keycode = KEY_ENTER
+	root.push_input(confirm)
+	await settle()
 	check(remote.sent.size() == sent + 1, "one Enter queues one intent: " + button.text + " sent=" + str(sent) + " now=" + str(remote.sent.size()) + " pressed=" + str(button.button_pressed) + " focused=" + str(button.has_focus()) + " disabled=" + str(button.disabled) + " pending=" + client._production_panel._pending + " feedback=" + client._production_panel._feedback.text)
 	check(world.capture_world_snapshot_json().value == before, "queued GUI intent cannot mutate canonical state")
 	button.release_focus()
@@ -44,7 +56,10 @@ func recipe(id: String) -> void:
 	client._habitat.production.workstation_selected.emit()
 	await settle()
 	var ui: LocalProductionPanel = client._production_panel
-	check(root.gui_get_focus_owner() == ui._recipe and visible(ui._recipe, client._scroll), "cross-panel workstation navigation gives visible recipe keyboard focus")
+	check(root.gui_get_focus_owner() == null, "world workstation selection retains gameplay input")
+	ui._recipe.grab_focus()
+	await settle()
+	check(root.gui_get_focus_owner() == ui._recipe and visible(ui._recipe, client._scroll), "recipe keyboard focus is revealed in actual shell")
 	choose(ui._recipe, id)
 	ui.refresh()
 	await paid_action(button_named(ui, "Run selected recipe"), "process")
