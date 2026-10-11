@@ -5,6 +5,13 @@ class_name ProceduralWorldInventoryPreview
 signal item_selected(container_id: String, item_id: String)
 signal pickup_requested(container_id: String, item_id: String)
 const MAX_VISIBLE_ITEMS_PER_CONTAINER: int = 8
+# Two items per original-size bay preserve habitat rim/support decoration.
+const TRAY_COLUMNS: int = 4
+const TRAY_COLUMN_PITCH: float = 0.46
+const TRAY_ROW_PITCH: float = 0.7
+const TRAY_BAY_PITCH: float = 1.1
+const TRAY_BAY_SIZE := Vector3(1.0, 0.08, 0.6)
+const TRAY_SIZE := Vector3(2.1, 0.08, 1.3)
 const DISPLAY_ORIGIN := Vector3(-6.0, 0.0, 2.0)
 var _record: Dictionary = {"schema_version": 2, "inventory_revision": 0, "containers": []}
 var _rendered: Node3D
@@ -60,7 +67,9 @@ func _rebuild() -> void:
 		if skip_machine_roots and String(container["container_id"]).begins_with("machine-root-"): continue
 		var coords: Array = container["position_millimetres"]
 		var origin: Vector3 = DISPLAY_ORIGIN + Vector3(float(coords[0]), float(coords[1]), float(coords[2])) / 1000.0
-		_box(_rendered, Vector3(1.0, 0.08, 0.6), origin + Vector3(0, 0.7, 0), Color("#788a96"))
+		for row in range(2):
+			for bay in range(2):
+				_box(_rendered, TRAY_BAY_SIZE, origin + Vector3((float(bay) - 0.5) * TRAY_BAY_PITCH, 0.7, (float(row) - 0.5) * TRAY_ROW_PITCH), Color("#788a96"))
 		var label := WorldContextLabel.new()
 		label.position = origin + Vector3(0, 0.7, 0)
 		label.text = "%s (logical fixture)\nClick to select; double-click to collect" % container["container_id"]
@@ -92,8 +101,9 @@ func _rebuild() -> void:
 			elif item["definition_id"] in ["item.extractor.prototype", "item.extractor.fabricated"]:
 				dimensions = Vector3(0.32, 0.16, 0.12)
 				color = Color("#dfa645")
-			var location: Vector3 = origin + Vector3(-0.3 + float(index % 4) * 0.2, 0.75 + dimensions.y / 2.0, -0.15 + float(index / 4) * 0.3)
+			var location: Vector3 = origin + Vector3((float((index % TRAY_COLUMNS) / 2) - 0.5) * TRAY_BAY_PITCH + (float(index % 2) - 0.5) * TRAY_COLUMN_PITCH, 0.75 + dimensions.y / 2.0, (float(index / TRAY_COLUMNS) - 0.5) * TRAY_ROW_PITCH)
 			var mesh: MeshInstance3D = _box(_rendered, dimensions, location, color)
+			InventoryItemSilhouettes.apply(mesh, item["definition_id"])
 			var key: String = JSON.stringify([container["container_id"], item["item_id"]])
 			_visible_items[key] = {"mesh": mesh, "color": color, "item_id": item["item_id"], "container_id": container["container_id"], "distance": container["distance_millimetres"]}
 			var area := Area3D.new()

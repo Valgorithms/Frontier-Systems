@@ -33,3 +33,26 @@ Source and prototype instructions: https://github.com/Valgorithms/Frontier-Syste
 ## Completion progress posts authorized — 2026-10-11
 
 The owner authorized factual text-only posts in Frontier #changelog (`1558871000383234182`) when existing tasks complete. Coordinator will batch related verified milestone closeouts, check actual channel history and this ledger to avoid duplicates, link exact merged evidence, and retain confirmed wording, message URL/time and acceptance limits. This is source-prototype progress, not a shipped-version or public-playtest announcement. Do not falsely satisfy the existing publisher's available-version confirmation gate or enable release publishing based on this authorization. Current game media remains internal. Avoid unnecessary em dashes and formulaic public copy. Other fundraising deadlines remain independent.
+
+## Completion batch — 2026-10-11
+
+- Audience: public Frontier Systems #changelog (`1558871000383234182`).
+- Confirmed message: https://discord.com/channels/1558661083131019364/1558871000383234182/1558972429093568512
+- Message ID: `1558972429093568512`; UI time October 11, 2026, 6:39 PM EDT. Exact creation timestamp is derived from the snowflake below in coordination state.
+- Deduplication: actual channel start and full history contained only the first progress update before submission. Authenticated Valithor submitted once; fresh accessibility readback confirmed full wording, five links and empty composer. Browser screenshot also confirmed rendered text and links. No mentions or media sent.
+- Verified merged evidence: PR103 `ee644374d897928e3bfd4617452addf9ad01c21d`, PR106 `919d3de6614fe7e80c28fda524eee07375db920c`, PR107 `7ff05363ad06ae08407685d714f2015e3cccbd43`, PR108 `a482de1637e2219c26173428678113eb45559f03`, PR109 `cb95c1cd8bbeb807780e5822da442979a119c97a`. Exact reviewed heads, CI and graphical limits remain in milestone coordination records.
+- Pending PR110/111/118 are not claimed complete. Release publisher activation and available-version gates remain unchanged. This does not reset Ko-fi deadlines.
+
+### Confirmed wording
+
+**Prototype progress: clearer controls and engineering objects**
+
+Several improvements are now merged:
+• The interface uses compact, on-demand panels so more of the scene stays visible, with clearer pending and recovery feedback.
+• Extractors, refineries and constructed walls have more distinct shapes.
+• Camera turning is smoother while movement and collision still respond immediately.
+• Checkpoint and reconnect tests now cover the paid wall construction, dismantling and recycling loop, including retry checks that prevent materials being counted twice.
+
+Merged work: <https://github.com/Valgorithms/Frontier-Systems/pull/106> <https://github.com/Valgorithms/Frontier-Systems/pull/108> <https://github.com/Valgorithms/Frontier-Systems/pull/109> <https://github.com/Valgorithms/Frontier-Systems/pull/107> <https://github.com/Valgorithms/Frontier-Systems/pull/103>
+
+These are improvements to the source prototype, not a release or public playtest announcement. Windows and Linux automated checks passed, and the UI and object changes were inspected in the running game. Fresh-player usability, camera comfort, controllers and VR still need testing.

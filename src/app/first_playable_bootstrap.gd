@@ -546,18 +546,11 @@ func _on_observation(record: Dictionary) -> void:
 			continue
 		visible[player["slot"]] = true
 		if not _avatars.has(player["slot"]):
-			var avatar := MeshInstance3D.new()
-			var mesh := CapsuleMesh.new()
-			mesh.radius = 0.3
-			mesh.height = 1.8
-			avatar.mesh = mesh
-			var material := StandardMaterial3D.new()
-			material.albedo_color = Color("#5dba87")
-			avatar.material_override = material
+			var avatar := ObservedAvatarPresentation.new()
 			_habitat.add_child(avatar)
 			_avatars[player["slot"]] = avatar
 		var coords: Array = player["position"]
-		_avatars[player["slot"]].position = ProceduralWorldInventoryPreview.DISPLAY_ORIGIN + Vector3(float(coords[0]), maxf(950.0, float(coords[1])), float(coords[2])) / 1000.0
+		_avatars[player["slot"]].observe_position(coords, int(record["tick_number"]))
 	for slot in _avatars.keys():
 		if not visible.has(slot):
 			_avatars[slot].queue_free()
