@@ -71,7 +71,7 @@ func receipt_before_observation(id: String, position: Array) -> bool:
 	for frame in remote.frames:
 		if frame.get("type") == "ack" and frame.get("request_id") == id:
 			received = true
-		elif received and frame.get("type") == "observation" and frame["position"] == position:
+		elif received and frame.get("type") == "observation" and InventorySpatialMath.normalized(frame["position"]) == position:
 			return true
 	return false
 
