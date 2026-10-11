@@ -262,7 +262,7 @@ func _send(operation: String, payload: Dictionary) -> void:
 	command.payload["expected_revision"] = _record["state_revision"]
 	var queued: ServiceResult = _world.enqueue_command(command)
 	_pending = String(command.command_id) if queued.is_success else ""
-	if queued.is_success and operation in ["load_cargo", "unload_cargo"]:
+	if queued.is_success and operation == "unload_cargo":
 		_cargo_pending = {"operation": operation, "payload": command.payload.duplicate(true), "store": _receiving_store()}
 	_feedback.text = "Queued " + operation if queued.is_success else EngineeringFailureGuidance.describe(queued, queued.message)
 	_reveal_receipt.call_deferred()

@@ -41,6 +41,11 @@ func run() -> void:
 	check(ui._unload_details.text.contains("ore.iron 1.000 kg") and ui._unload_details.text.contains("stock: 0 mg") and ui._unload_details.text.contains("500000 mg"), "exact observed stock, cargo and intended amount")
 	ui._cargo_action("unload_cargo")
 	var pinned: Dictionary = ui._cargo_pending.duplicate(true)
+	var other := ProductionDevelopmentCommand.new()
+	other.command_id = &"unrelated-receipt"
+	other.operation = "unload_cargo"
+	ui._on_completed(other, ServiceResult.success())
+	check(ui._cargo_pending == pinned and not ui._pending.is_empty(), "unrelated receipt cannot resolve pinned unload")
 	pick(ui._cargo_material, "ice")
 	ui._amount.value = 100
 	ui.refresh()
@@ -64,6 +69,13 @@ func run() -> void:
 	step()
 	check(not last.is_success and frame()["production"]["cargo"] == before["production"]["cargo"] and frame()["production"]["store"] == before["production"]["store"] and frame()["production"]["deposits"] == before["production"]["deposits"], "real rejected underflow conserves all finite material")
 	check(ui._feedback.text.contains(last.message) and ui._feedback.text.contains("ore.iron; 1000000 mg"), "rejection keeps exact intent and reason")
+	missing = frame()["production"].duplicate(true)
+	missing["cargo"].erase("resource-canister-1")
+	(world as ObservedWorld).override_view = missing
+	(world as ObservedWorld).override_enabled = true
+	ui.refresh()
+	ui._cargo_action("unload_cargo")
+	check(ui._pending.is_empty() and ui._feedback.text.contains("Unavailable selected"), "removed carrier blocks a new unload without choosing another")
 	missing = frame()["production"].duplicate(true)
 	missing.erase("store")
 	(world as ObservedWorld).override_view = missing
