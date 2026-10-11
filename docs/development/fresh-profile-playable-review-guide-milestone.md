@@ -29,13 +29,25 @@ The launcher stores invites and world checkpoints in the project-local ignored d
 
 ## Launch the source playable
 
-Open three PowerShell windows at the repository root. In the first, start the persistent host and initialize invite keys only if this project has not initialized them before:
-
-Copy the exact `$worldName` value printed during setup into the host command below. Variables do not carry between PowerShell windows; use that same copied value for every host launch and restart.
+Open three PowerShell windows at the repository root. In the host window, assign the exact world name printed during setup; this window keeps the variable for the later restart:
 
 ```powershell
+$worldName = Read-Host 'Paste the exact World value printed during setup'
+if ($worldName -notmatch '^review-[0-9a-f]{32}$') { throw 'Use the exact generated review world name.' }
+```
+
+Port 27840 is reserved exclusively by Coordinator for this review. Before every host launch, fail if any process already listens on that port; do not stop or terminate an existing listener:
+
+```powershell
+function Assert-CoordinatorPortAvailable {
+    $listeners = @(Get-NetTCPConnection -State Listen -LocalPort 27840 -ErrorAction SilentlyContinue)
+    if ($listeners.Count -gt 0) { throw 'Coordinator-reserved port 27840 already has a listener. Stop and contact Coordinator; do not terminate it.' }
+}
+Assert-CoordinatorPortAvailable
 ./tools/launch-first-playable.ps1 -Mode Host -Initialize -WorldName $worldName
 ```
+
+Initialize invite keys only if this project has not initialized them before. Keep the host PowerShell window open so the same `$worldName` and port-check function are available for restart.
 
 In the second and third windows, start each crew client:
 
@@ -58,9 +70,9 @@ Read the in-client **Controls** help before starting and use the labels shown th
 1. In **Overview**, locate the Iron ore deposit and workstation, then select a comfortable camera view. Approach the ore with the movement/look controls.
 2. Use the visible collection guide to collect its requested finite iron in two 1 kg actions into the carried canister. Read the on-screen response and wait for each action to finish before continuing. Do not assume an action succeeded while it is pending or after a rejection.
 3. Return to the workstation and follow its guide to unload the 2 kg and complete two refining batches. Wait for each batch to finish; the guide is session assistance, not a saved achievement.
-4. Follow the workstation guide to print a plate, collect the printed plate as a physical inventory item, recycle it, and print again. Confirm the guide reaches its seven completed stages.
+4. Follow the workstation guide to print a plate, collect it as a physical inventory item, recycle it, and print again. Then collect the reprinted plate too. In Inventory, wait for the updated host observation and confirm that the reprinted 1 kg plate is actually owned before continuing; printing alone does not establish that it is in your inventory. Confirm the guide reaches its seven completed stages.
 5. Open **Inventory** to inspect carried items and the two hands. Select an owned item before using **Equip** or **Switch hand**; the **Make selected hand active** and visible storage/tray controls operate on observed selections. Wait for the updated observation and matching result before treating an equip, switch or transfer as complete.
-6. For the finite engineering extension, use the observed Workstation requirements to fabricate a canister when its material/energy costs are available. Open **Construction**, choose **Place a new wall**, select the physical plate, set a valid floor target, and use **Build wall from selected physical plate**. Select the observed wall and use **Remove selected wall and recover plate**, then build it again if the host still observes the recovered plate and prerequisites. Stop on unavailable prerequisites or host rejection and record the exact visible reason; do not assume the base extraction/refining loop proves construction usability.
+6. The base loop extracts 2 kg ore and refines two 1 kg batches into 1.2 kg iron. Printing a 1 kg plate, recycling it, then printing again leaves 0.2 kg iron and one reprinted 1 kg physical plate. If the updated Inventory observation confirms you own that plate, open **Construction**, choose **Place a new wall**, select the observed owned plate, set a valid floor target, and use **Build wall from selected physical plate**; one wall consumes that 1 kg plate. Select the observed wall and use **Remove selected wall and recover plate**; recovery returns the plate for a rebuild if it remains observed and prerequisites still hold. The optional canister blueprint costs 1 kg iron and 1,000 J. The base loop leaves only 0.2 kg iron, so fabricate it only after gathering and refining two additional 1 kg ore batches (600 g iron each) and confirming the observed energy requirement; one extra batch is insufficient. Stop if finite deposit mass, materials, energy or another observed prerequisite is unavailable, or if the host rejects the action, and record the exact reason. Do not treat the base loop as proof that these optional actions are available.
 
 The base loop's quantities and guide stages are described in [`first-playable-running.md`](first-playable-running.md). The current inventory and equipment controls are summarized in its player-inventory section and the [player inventory UI contract](../architecture/player-inventory-ui.md). The injected PR46 route exercised visible fabrication and wall build/remove/rebuild buttons, but chose selectors and wall coordinates in the fixture; a human using these controls is still needed. This procedure is an evaluation aid, not a substitute for fresh unaided discovery: reviewers should log every prompt, rescue hint or step whose target/action was unclear.
 
@@ -71,6 +83,7 @@ At the workstation, activate **Save shared world now** and wait until the client
 Close both client processes, then stop the host cleanly. Restart it using the exact same world name and keys:
 
 ```powershell
+Assert-CoordinatorPortAvailable
 ./tools/launch-first-playable.ps1 -Mode Host -WorldName $worldName
 ```
 
