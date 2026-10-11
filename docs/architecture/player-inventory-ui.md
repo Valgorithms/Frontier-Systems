@@ -24,9 +24,11 @@ The host opts into `inventory-own-observation-v3.schema.json`: v2 fields plus in
 
 ## Saved worlds and verification status
 
+The component section integrates the observed prerequisite helper for fabrication, fit, detach and recycling. It distinguishes owned loose parts from mounted parts, quotes only observed stock/energy specifications, and shows current capability availability. Blueprint/component/mount/loose-part selections preserve stable IDs as unavailable when records disappear; changing the inspected tool requires explicit component/mount selection. All component pickers freeze while an action is pending, and pending component IDs/revisions remain pinned until the matching host receipt. See [inventory component prerequisites](../development/inventory-component-prerequisites-milestone.md) for authority and verification scope.
+
 New equipment is seeded **only for new cooperative worlds**. Existing saves preserve their items and are not silently granted tools/backpacks. Choose a new `-WorldName` to see the starter kit while retaining old worlds. Client and host should run the same source revision; protocol negotiation for mixed builds is future work.
 
-Godot editor import and script parsing were performed for this implementation. No gameplay test suites or graphical acceptance runs were executed for this UI update. Earlier first-playable screenshots/results describe the previous revision and must not be presented as verification of these new controls.
+Component presentation now wraps full selected IDs outside clipped pickers, flows action rows within the pane, follows keyboard focus while scrolling, and reveals labeled exact pending fields after layout settles. Focus the Inventory scroll pane to navigate long observed prerequisites with the configured UI Up/Down bindings. Component pending actions also retire item-list keyboard focus until the matching receipt. See [inventory panel usability](../development/inventory-panel-usability-milestone.md) for the seven focused Windows checks and native Default-theme engine fixture at desktop/narrow pane sizes. This evidence uses injected input and real paid domain commands; integrated client/network, human, controller/VR and Linux graphical acceptance remain unverified. Earlier first-playable screenshots describe their own revisions.
 
 ## Cursor and controls
 

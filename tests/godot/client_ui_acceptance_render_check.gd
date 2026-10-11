@@ -212,6 +212,10 @@ func _guide_action(client: FirstPlayableBootstrap) -> bool:
 
 func _press(button: Button, allow_stale_retry: bool = false) -> bool:
 	PlayerInputSettings.instance().release_all()
+	if button != null:
+		_reveal_task_section(button)
+		await process_frame
+		await process_frame
 	if button != null and button.is_visible_in_tree() and button.disabled:
 		if not await _wait_until(func() -> bool: return not button.disabled, 3.0):
 			push_error("Button remained disabled: " + button.text)
@@ -270,11 +274,25 @@ func _press(button: Button, allow_stale_retry: bool = false) -> bool:
 
 
 func _press_named(parent: Node, title: String) -> bool:
-	for child in parent.get_children():
-		if child is Button and child.text == title: return await _press(child)
-	push_error("Missing visible button: " + title)
-	return false
+	var matches: Array[Button] = []
+	for candidate in parent.find_children("*", "Button", true, false):
+		if candidate.text == title: matches.append(candidate)
+	if matches.size() != 1:
+		push_error("Expected one button in intended panel for '%s'; found %d." % [title, matches.size()])
+		return false
+	return await _press(matches[0])
 
+
+func _reveal_task_section(control: Control) -> void:
+	var ancestor: Node = control.get_parent()
+	while ancestor != null:
+		if ancestor is LocalProductionPanel:
+			for index in range(ancestor._sections.size()):
+				if ancestor._sections[index].is_ancestor_of(control):
+					ancestor._navigation.select(index)
+					ancestor._navigation.item_selected.emit(index)
+					return
+		ancestor = ancestor.get_parent()
 
 func _select(picker: OptionButton, id: String) -> void:
 	for index in range(picker.item_count):

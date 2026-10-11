@@ -1,7 +1,7 @@
 param(
     [string]$Godot = 'godot',
     [switch]$PortsReserved,
-    [ValidateSet('basic', 'terrain', 'walls', 'machinery', 'equipment-fabrication', 'tool-parts', 'input-acceptance', 'client-acceptance')]
+    [ValidateSet('basic', 'terrain', 'walls', 'machinery', 'equipment-fabrication', 'tool-parts', 'input-acceptance', 'client-acceptance', 'production-navigation')]
     [string]$Route = 'terrain',
     [ValidateRange(1, 300)][int]$TimeoutSeconds = 120
 )
@@ -16,6 +16,10 @@ $stderr = Join-Path $output 'stderr.log'
 $script = if ($Route -eq 'input-acceptance') { 'res://tests/godot/client_input_render_check.gd' } elseif ($Route -eq 'client-acceptance') { 'res://tests/godot/client_ui_acceptance_render_check.gd' } else { 'res://tests/godot/first_playable_client_render_check.gd' }
 $arguments = @('--xr-mode', 'off', '--audio-driver', 'Dummy', '--rendering-method', 'gl_compatibility', '--path', '.', '--script', $script, '--', "--$Route")
 if ($Route -eq 'client-acceptance') { $arguments += '--ports-reserved' }
+if ($Route -eq 'production-navigation') {
+    # Detached panel fixture: no client connection or listening ports.
+    $arguments = @('--xr-mode', 'off', '--audio-driver', 'Dummy', '--rendering-method', 'gl_compatibility', '--path', '.', '--script', 'res://tests/godot/production_panel_navigation_test.gd', '--', '--capture-production-navigation')
+}
 $launch = @{
     FilePath = $executable
     ArgumentList = $arguments

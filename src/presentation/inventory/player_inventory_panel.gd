@@ -28,18 +28,30 @@ var _equipment := Label.new()
 var _result := Label.new()
 var _buttons: Array[Button] = []
 var _pending: String = ""
+var _shown_pending: String = ""
 var _view_key: String = ""
 var _tools: Dictionary = {}
 var _tool_parts := OptionButton.new()
 var _tool_mounts := OptionButton.new()
 var _loose_parts := OptionButton.new()
 var _part_blueprints := OptionButton.new()
+var _component_details := Label.new()
+var _component_selections: Dictionary = {}
+var _component_buttons: Dictionary = {}
+var _pending_component: Dictionary = {}
+var _inspected_tool: String = ""
 var _work_cycles := SpinBox.new()
 var _work_status := Label.new()
 
 
 func configure(remote: RemoteWorldRuntime) -> void:
 	_remote = remote
+	if get_parent() is ScrollContainer:
+		var scroll := get_parent() as ScrollContainer
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		scroll.follow_focus = true
+		scroll.focus_mode = Control.FOCUS_ALL
+		scroll.gui_input.connect(_scroll_input)
 	for picker in [_source, _destination, _slot, _deposit, _carrier, _tool_parts, _tool_mounts, _loose_parts, _part_blueprints]:
 		picker.fit_to_longest_item = false
 		picker.clip_text = true
@@ -59,7 +71,7 @@ func configure(remote: RemoteWorldRuntime) -> void:
 	add_child(_details)
 	_label("Equipment slot")
 	add_child(_slot)
-	var equipment_actions := HBoxContainer.new()
+	var equipment_actions := HFlowContainer.new()
 	add_child(equipment_actions)
 	_button(equipment_actions, "Equip", _self_action.bind("equip"), "equip")
 	_button(equipment_actions, "Unequip", _self_action.bind("unequip"), "unequip")
@@ -82,7 +94,7 @@ func configure(remote: RemoteWorldRuntime) -> void:
 	add_child(_world_items)
 	_world_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_world_details)
-	var world_actions := HBoxContainer.new()
+	var world_actions := HFlowContainer.new()
 	add_child(world_actions)
 	_button(world_actions, "Collect selected", _world_action.bind("pickup"), "pickup")
 	_button(world_actions, "Drop selected", _world_action.bind("drop"), "drop")
@@ -106,18 +118,25 @@ func configure(remote: RemoteWorldRuntime) -> void:
 	_button(self, "Resume reserved extraction", _sustained_action.bind("resume_tool_extract"))
 	_button(self, "Cancel and release remaining source reservation", _sustained_action.bind("cancel_tool_extract"))
 	_label("Tool component maintenance · select a tool above, then a component")
-	add_child(_tool_parts)
+	_component_picker(_tool_parts, "Mounted component")
 	_button(self, "Maintain selected component at workstation", _repair_component)
 	_label("Tool parts · manufacture from workstation materials")
-	add_child(_part_blueprints)
-	_button(self, "Manufacture selected part", _part_action.bind("fabricate_tool_part"))
+	_component_picker(_part_blueprints, "Fabrication blueprint")
+	_button(self, "Manufacture selected part", _part_action.bind("fabricate_tool_part"), "fabricate_tool_part")
 	_label("Owned loose part · use an equipment mount to replace or upgrade")
-	add_child(_loose_parts)
-	add_child(_tool_mounts)
-	_button(self, "Fit loose part in selected tool mount", _part_action.bind("fit_tool_part"))
-	_button(self, "Detach selected tool mount into inventory", _part_action.bind("detach_tool_part"))
-	_button(self, "Recycle selected loose part", _part_action.bind("recycle_tool_part"))
+	_component_picker(_loose_parts, "Owned loose part")
+	_component_picker(_tool_mounts, "Equipment mount")
+	_button(self, "Fit loose part in selected tool mount", _part_action.bind("fit_tool_part"), "fit_tool_part")
+	_button(self, "Detach selected tool mount into inventory", _part_action.bind("detach_tool_part"), "detach_tool_part")
+	_button(self, "Recycle selected loose part", _part_action.bind("recycle_tool_part"), "recycle_tool_part")
+	_component_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_label("Observed component prerequisites · scroll to read all costs and host checks")
+	add_child(_component_details)
+	for picker in [_part_blueprints, _loose_parts, _tool_mounts, _tool_parts]:
+		picker.item_selected.connect(func(_index: int) -> void: _update_buttons())
 	_label("Equip the extractor in a hand, make that hand active, carry a canister and approach the source. Mounted extraction remains available through Workstation. Crowbar world interactions are a later integration.")
+	_result.focus_mode = Control.FOCUS_ALL
+	_result.tooltip_text = "Action feedback; Tab to review the exact pending target or host receipt."
 	add_child(_result)
 	remote.command_completed.connect(_completed)
 	remote.connection_closed.connect(_disconnected)
@@ -133,20 +152,17 @@ func observe(frame: Dictionary) -> void:
 	_work_status.text = "No sustained extraction reserved by you."
 	if not work.is_empty():
 		_work_status.text = "Extraction %s · %d completed, %d reserved · %s" % [work["status"], work["completed_cycles"], work["remaining_cycles"], work["pause_reason"]]
-	var loose_ids: Array = []
-	for part in _tools.get("loose_parts", []): loose_ids.append(part["part_id"])
-	_fill_picker(_loose_parts, loose_ids)
-	var previous_blueprint: String = str(_part_blueprints.get_item_metadata(_part_blueprints.selected)) if _part_blueprints.selected >= 0 else ""
-	_part_blueprints.clear()
-	for id in _tools.get("part_blueprints", {}):
-		var blueprint: Dictionary = _tools["part_blueprints"][id]
-		_part_blueprints.add_item("%s · %d J" % [blueprint["name"], blueprint["fabrication_energy_joules"]])
-		_part_blueprints.set_item_metadata(_part_blueprints.item_count - 1, id)
-		if id == previous_blueprint: _part_blueprints.select(_part_blueprints.item_count - 1)
+	var loose: Dictionary = {}
+	var blueprints: Dictionary = {}
+	if ToolObservationValidation.valid(_tools):
+		for part in _tools["loose_parts"]: loose[part["part_id"]] = part["name"] + " · " + part["material_name"]
+		for id in _tools["part_blueprints"]: blueprints[id] = _tools["part_blueprints"][id]["name"]
+	EquipmentPrerequisiteView.fill(_loose_parts, loose, "Select an owned loose part")
+	EquipmentPrerequisiteView.fill(_part_blueprints, blueprints, "Select a part blueprint")
 	var world_containers: Array = []
 	for container in _nearby.get("containers", []):
 		world_containers.append(container["container_id"])
-	var view_key: String = JSON.stringify([_record, _production["state_revision"], _tools.get("state_revision", -1), _nearby])
+	var view_key: String = JSON.stringify([_record, _production, _tools, _nearby])
 	if view_key == _view_key:
 		return
 	_view_key = view_key
@@ -235,10 +251,12 @@ func _fill_items() -> void:
 func _inspect() -> void:
 	var id: String = _selected_id(_items)
 	_details.text = "Select an item to inspect its condition, mass and contents."
-	var selected_part: String = str(_tool_parts.get_item_metadata(_tool_parts.selected)) if _tool_parts.selected >= 0 else ""
-	_tool_parts.clear()
-	var previous_mount: String = str(_tool_mounts.get_item_metadata(_tool_mounts.selected)) if _tool_mounts.selected >= 0 else ""
-	_tool_mounts.clear()
+	if id != _inspected_tool:
+		_tool_parts.clear()
+		_tool_mounts.clear()
+		_inspected_tool = id
+	var parts: Dictionary = {}
+	var mounts: Dictionary = {}
 	for detail in _record.get("item_details", []):
 		if detail["item"]["item_id"] != id:
 			continue
@@ -257,23 +275,20 @@ func _inspect() -> void:
 	for assembly in _tools.get("assemblies", []):
 		if assembly["assembly_id"] != id: continue
 		for slot in assembly["slots"]:
-			_tool_mounts.add_item("%s · %s" % [slot, "empty" if assembly["slots"][slot] == "" else "installed"])
-			_tool_mounts.set_item_metadata(_tool_mounts.item_count - 1, slot)
-			if slot == previous_mount: _tool_mounts.select(_tool_mounts.item_count - 1)
+			mounts[slot] = "Empty" if assembly["slots"][slot] == "" else "Installed " + str(assembly["slots"][slot])
 		_details.text += "\nComponent condition (authoritative):"
 		for part in assembly["parts"]:
 			var text: String = "%s · %s · %.4f%%" % [part["name"], part["material_name"], float(part["integrity_ppm"]) / 10000.0]
 			_details.text += "\n" + text
-			_tool_parts.add_item(text)
-			_tool_parts.set_item_metadata(_tool_parts.item_count - 1, part["part_id"])
-			if part["part_id"] == selected_part: _tool_parts.select(_tool_parts.item_count - 1)
+			parts[part["part_id"]] = text
 		for action in assembly["actions"]:
 			_details.text += "\n%s: %s" % [action, "available" if assembly["actions"][action]["available"] else "missing " + ", ".join(PackedStringArray(assembly["actions"][action]["missing_functions"]))]
 	for part in _tools.get("loose_parts", []):
 		if part["part_id"] != id: continue
 		_details.text += "\n%s · %s · component %.4f%%" % [part["name"], part["material_name"], float(part["integrity_ppm"]) / 10000.0]
-		_tool_parts.add_item(part["name"])
-		_tool_parts.set_item_metadata(0, part["part_id"])
+		parts[part["part_id"]] = part["name"]
+	EquipmentPrerequisiteView.fill(_tool_parts, parts, "Select a component")
+	EquipmentPrerequisiteView.fill(_tool_mounts, mounts, "Select a mount")
 
 
 func _open_storage(index: int) -> void:
@@ -355,6 +370,8 @@ func _disconnected(message: String) -> void:
 	_pending = ""
 	_pending_world.clear()
 	_pending_inventory.clear()
+	_pending_component.clear()
+	_inspected_tool = ""
 	_view_key = ""
 	_initialized_pickers.clear()
 	for list in [_items, _world_items]: list.clear()
@@ -381,7 +398,7 @@ func switch_active_hand() -> void:
 
 func _repair_component() -> void:
 	if not _pending.is_empty(): return
-	if _tool_parts.selected < 0 or _tools.is_empty():
+	if _picker_id(_tool_parts).is_empty() or _tool_parts.is_item_disabled(_tool_parts.selected) or _tools.is_empty():
 		_result.text = "Select a tool and component first."
 		return
 	_submit("repair_tool_component", {"part_id": _tool_parts.get_item_metadata(_tool_parts.selected), "amount_ppm": 1000000, "expected_revision": _production["state_revision"], "expected_tool_revision": _tools["state_revision"]}, true)
@@ -397,9 +414,51 @@ func _sustained_action(operation: String) -> void:
 	_submit(operation, payload, true)
 
 
+func _component_prerequisite(operation: String) -> String:
+	if not ToolObservationValidation.valid(_tools) or not WorkstationResourceView.valid(_production):
+		return "Wait for current component and workstation observations."
+	if not _production["can_operate"]: return "Workstation access unavailable in the host view."
+	var station: String = "printer" if operation == "fabricate_tool_part" else ("recycler" if operation == "recycle_tool_part" else "construction")
+	if not _production["powered"].get(station, false): return station + " power is off in the host view."
+	if operation == "fabricate_tool_part":
+		var id: String = _picker_id(_part_blueprints)
+		if not _tools["part_blueprints"].has(id): return "Select an observed part blueprint."
+		var blueprint: Dictionary = _tools["part_blueprints"][id]
+		if _production["energy_joules"] < blueprint["fabrication_energy_joules"]: return "Observed station energy is below fabrication cost."
+		for material in blueprint["materials"]:
+			if _production["store"].get(material, 0) < blueprint["materials"][material]: return "Shared stock shortfall: " + material
+	if operation in ["fit_tool_part", "recycle_tool_part"]:
+		var found: bool = false
+		for part in _tools["loose_parts"]:
+			if part["part_id"] != _picker_id(_loose_parts): continue
+			found = true
+			if operation == "recycle_tool_part":
+				var matched: bool = false
+				for blueprint in _tools["part_blueprints"].values():
+					if blueprint["definition_id"] != part["definition_id"] or blueprint["material_id"] != part["material_id"]: continue
+					matched = true
+					if _production["energy_joules"] < blueprint["salvage_energy_joules"]: return "Observed station energy is below recycling cost."
+					break
+				if not matched: return "No observed matching recycling specification."
+		if not found: return "Select a currently owned loose part."
+	if operation in ["fit_tool_part", "detach_tool_part"]:
+		if not _production["structures"].has(_selected_id(_items)): return "Starter shells cannot use manufactured-part actions. Select owned fabricated equipment."
+		var found: bool = false
+		for assembly in _tools["assemblies"]:
+			if assembly["assembly_id"] != _selected_id(_items): continue
+			if not assembly["slots"].has(_picker_id(_tool_mounts)): continue
+			if operation == "detach_tool_part" and assembly["slots"][_picker_id(_tool_mounts)] == "": return "Selected mount is already empty."
+			found = true
+		if not found: return "Select an owned manufactured tool and its observed mount."
+	return ""
+
+
 func _part_action(operation: String) -> void:
 	if not _pending.is_empty(): return
-	if _tools.is_empty() or _production.is_empty(): return
+	var reason: String = _component_prerequisite(operation)
+	if not reason.is_empty():
+		_result.text = reason
+		return
 	var payload: Dictionary = {"expected_revision": _production["state_revision"], "expected_tool_revision": _tools["state_revision"]}
 	if operation == "fabricate_tool_part":
 		if _part_blueprints.selected < 0: return
@@ -416,6 +475,11 @@ func _part_action(operation: String) -> void:
 		payload["item_id"] = _selected_id(_items)
 		payload["slot_id"] = _tool_mounts.get_item_metadata(_tool_mounts.selected)
 	_submit(operation, payload, true)
+	if not _pending.is_empty():
+		_pending_component = payload.duplicate(true)
+		_pending_component["operation"] = operation
+		_result.text = "Waiting for host\n" + _pending_component_text() + "\nNo output or mount change confirmed."
+		_update_buttons()
 
 
 func use_active_tool() -> void:
@@ -444,26 +508,85 @@ func _completed(command: SimulationCommand, result: ServiceResult) -> void:
 		_pending = ""
 		_pending_world.clear()
 		_pending_inventory.clear()
+		_pending_component.clear()
 		_result.text = "Host accepted action. Inventory follows the latest host view." if result.is_success else "Host rejected action: " + result.message
 		if was_world: _world_status.text = _result.text
 		_update_buttons()
 
 
 func _update_buttons() -> void:
+	if _shown_pending != _pending:
+		_shown_pending = _pending
+		if not _pending.is_empty() and get_parent() is ScrollContainer:
+			_reveal_feedback.call_deferred(_pending)
 	for button in _buttons:
 		button.disabled = _record.is_empty() or not _pending.is_empty()
+	for operation in _component_buttons:
+		var component_button: Button = _component_buttons[operation]
+		var reason: String = _component_prerequisite(operation)
+		component_button.disabled = component_button.disabled or not reason.is_empty()
+		component_button.tooltip_text = reason if not reason.is_empty() else "Host rechecks current prerequisites at the tick."
+	_update_component_selections()
+	_component_details.text = EquipmentPrerequisiteView.part_text(_tools, _production, _picker_id(_part_blueprints), _selected_id(_items), _picker_id(_tool_mounts), _picker_id(_loose_parts), not _pending.is_empty())
+	if not _pending_component.is_empty(): _component_details.text += "\nPending exact targets\n" + _pending_component_text()
 	for operation in _inventory_buttons:
 		var button: Button = _inventory_buttons[operation]
 		var reason: String = _inventory_prerequisite(operation)
 		button.disabled = button.disabled or not reason.is_empty()
 		button.tooltip_text = reason if not reason.is_empty() else "Host rechecks current ownership, reach, capacity, compatibility and revision."
-	for picker in [_source, _destination, _slot, _world_root]:
+	for picker in [_source, _destination, _slot, _world_root, _part_blueprints, _loose_parts, _tool_mounts, _tool_parts]:
 		picker.disabled = _record.is_empty() or not _pending.is_empty()
 	_items.mouse_filter = Control.MOUSE_FILTER_IGNORE if not _pending.is_empty() else Control.MOUSE_FILTER_STOP
 	_world_items.mouse_filter = _items.mouse_filter
+	_items.focus_mode = Control.FOCUS_ALL if _pending.is_empty() else Control.FOCUS_NONE
+	_world_items.focus_mode = _items.focus_mode
 	_items.set_process_input(_pending.is_empty())
 	_world_items.set_process_input(_pending.is_empty())
 	_storage_status.text = PlayerInventoryPresentation.storage_hint(_record, _picker_id(_destination)) if not _record.is_empty() else ""
+
+func _pending_component_text() -> String:
+	var lines := PackedStringArray(["Action: " + str(_pending_component.get("operation", ""))])
+	for field: String in ["blueprint_id", "item_id", "slot_id", "part_id", "expected_revision", "expected_tool_revision"]:
+		if not _pending_component.has(field): continue
+		var title: String = {"blueprint_id": "Blueprint ID", "item_id": "Tool ID", "slot_id": "Mount ID", "part_id": "Loose part ID", "expected_revision": "Production revision", "expected_tool_revision": "Tool revision"}[field]
+		lines.append(title + ": " + str(_pending_component[field]))
+	return "\n".join(lines)
+
+
+func _scroll_input(event: InputEvent) -> void:
+	var scroll := get_parent() as ScrollContainer
+	if scroll == null or not scroll.has_focus(): return
+	var direction: int = 1 if event.is_action_pressed("ui_down") else (-1 if event.is_action_pressed("ui_up") else 0)
+	if direction != 0:
+		scroll.scroll_vertical += direction * 80
+		scroll.accept_event()
+
+
+func _reveal_feedback(request_id: String) -> void:
+	# Wrapped text changes height after container sorting; reveal its final bounds.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if _pending == request_id and get_parent() is ScrollContainer:
+		(get_parent() as ScrollContainer).ensure_control_visible(_result)
+
+
+func _component_picker(picker: OptionButton, title: String) -> void:
+	_label(title)
+	add_child(picker)
+	var selection := Label.new()
+	selection.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	add_child(selection)
+	_component_selections[picker] = selection
+
+
+func _update_component_selections() -> void:
+	for picker: OptionButton in _component_selections:
+		var selection: Label = _component_selections[picker]
+		var id: String = _picker_id(picker)
+		selection.text = "No selection; choose explicitly above."
+		if not id.is_empty():
+			selection.text = "%s\nID: %s%s" % [picker.get_item_text(picker.selected), id, " · unavailable in latest host view" if picker.is_item_disabled(picker.selected) else ""]
+		picker.tooltip_text = selection.text
 
 
 func _label(text: String) -> void:
@@ -476,11 +599,14 @@ func _label(text: String) -> void:
 func _button(parent: Node, text: String, callback: Callable, inventory_operation: String = "") -> void:
 	var button := Button.new()
 	button.text = text
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(callback)
 	parent.add_child(button)
 	_buttons.append(button)
-	if not inventory_operation.is_empty(): _inventory_buttons[inventory_operation] = button
+	if inventory_operation in ["fabricate_tool_part", "fit_tool_part", "detach_tool_part", "recycle_tool_part"]:
+		_component_buttons[inventory_operation] = button
+	elif not inventory_operation.is_empty(): _inventory_buttons[inventory_operation] = button
 
 
 static func _selected_id(list: ItemList) -> String:
