@@ -13,11 +13,11 @@ Copy reviewed against source revision `4e36a10bb4f73cebfda3e3b37bf0e4a82f3d1908`
 | Date (UTC) | Destination | Status | Receipt / next action |
 | --- | --- | --- | --- |
 | 2026-10-11, observed publication interval 16:26:04 to 16:31:01 | Owned Ko-fi, everyone/public | Published once; full title/body read back with Published marker | [Confirmed post](https://ko-fi.com/post/Frontier-Systems-engineering-a-game-and-a-future-N6E728M173); exact wording below, linked from campaign ledger. Coordinator notified. |
-| 2026-10-11 | Zoho Mail | Sign-in required; no sender verified; zero emails sent | Owner must complete existing account sign-in. Verify From `valithor@discordphp.org` before composing/sending. |
-| 2026-10-11 | IndieDB | Guest session; no listing created | Owner must sign into an existing appropriate creator account. Do not create an account or accept new terms without the necessary human action. |
-| 2026-10-11 | itch.io | Dashboard redirected to login; security verification page remained | Owner must complete security verification and existing account sign-in. No listing created. |
+| 2026-10-11, verified by 16:39:38 | Zoho Mail | Owner sign-in complete; compose From verified `valithor@discordphp.org`; three emails sent individually and read back in Sent | Confirmed receipts and wording below. No follow-ups sent. |
+| 2026-10-11 | IndieDB | Still a guest session after owner login report and one refresh; no listing created | `valithorobsidion` profile exists, but header still says Hello guest and Sign In. Actual sign-in panel left open for owner; Coordinator notified. |
+| 2026-10-11 | itch.io | Owner signed in as `valzargaming`; no existing projects; listing not created | New-project form explicitly requires a cover image (minimum 315x250). Text-only scope prevents image upload. Coordinator notified; preserve draft pending cover policy decision. |
 
-Private account discovery was initially rejected twice by automatic approval review because the delegated brief and retrieved transcript did not establish trusted account-access permission. Direct owner permission resolved that blocker; the remaining blockers are actual login/security states. No workaround was used.
+Private account discovery was initially rejected twice by automatic approval review because the delegated brief and retrieved transcript did not establish trusted account-access permission. Direct owner permission resolved that blocker. The owner subsequently completed Zoho and itch.io sign-in; remaining listing blockers are IndieDB authentication and itch.io's required cover. No workaround was used.
 
 The Ko-fi page exposes the date "11 October", not an exact posting time. The observed interval is bounded by this outreach turn's recorded start (`2026-10-11T16:26:04Z`) and the clock check after successful publication/readback (`2026-10-11T16:31:01Z`). This is an observation interval, not a claimed exact platform timestamp. For conservative rolling 24-hour scheduling use its lower bound. Local public-page screenshot proof is retained outside Git in the outreach chat's visualization directory; no gameplay media was captured or uploaded.
 
@@ -41,15 +41,17 @@ https://ko-fi.com/valgorithms
 
 Sharing the project or giving specific feedback is helpful too.
 
-## Small email set
+## Confirmed small email set
 
-Public professional contact sources refreshed 2026-10-11. All three entries are **unsent drafts**. No reply, delivery, endorsement or consent to future notifications is inferred. Never use CC/BCC to combine recipients. Check Sent for these exact recipients/subjects before sending to avoid duplicate delivery after an interruption. Record the actual send time and scoped receipt only after verified sending. A sent receipt proves submission, not inbox delivery or readership. Keep private mailbox contents and credentials out of repository records.
+Public professional contact sources refreshed 2026-10-11. All three entries were **sent individually once** from the compose form's verified `valithor@discordphp.org` sender. A search for "Frontier Systems" returned no messages before composing. Each expected recipient/subject appeared in Sent afterward, and each message body was opened and read back. The exact wording below was sent without attachments or CC/BCC. Zoho showed 12:37 PM for Keen and 12:38 PM for Nookrium/Eleon on today's Sent list; the receipts were verified by `2026-10-11T16:39:38Z`. Displayed minute-level times are recorded as shown, not invented exact UTC send timestamps. No reply, endorsement or consent to future notifications is inferred. Do not resend these messages. A Sent receipt proves submission, not inbox delivery or readership. Keep private mailbox contents and credentials out of repository records.
 
 | Recipient | Public source / fit | Disposition | Send receipt |
 | --- | --- | --- | --- |
-| `info@keenswh.com` | [Keen official contact](https://www.keenswh.com/contact/), general queries; Space Engineers engineering audience | Unsent, mail sign-in blocked; use only this Keen inbox | None |
-| `Nook@nookrium.com` | [Creator's Steam profile](https://steamcommunity.com/id/Nookrium/) explicitly lists address; [itch.io partner identity](https://itch.io/partners/profile/nookrium) links the same Steam/YouTube creator and indie/strategy focus | Unsent, mail sign-in blocked | None |
-| `info@empyriongame.com` | [Empyrion official press kit](https://empyriongame.com/press-kit/), general information; resource gathering and construction audience | Unsent, mail sign-in blocked; use only this Eleon inbox | None |
+| `info@keenswh.com` | [Keen official contact](https://www.keenswh.com/contact/), general queries; Space Engineers engineering audience | Sent once; no reply claimed; only this Keen inbox used | Zoho Sent visible record ID `1791736663638138300`; expected subject/body read back; 12:37 PM displayed |
+| `Nook@nookrium.com` | [Creator's Steam profile](https://steamcommunity.com/id/Nookrium/) explicitly lists address; [itch.io partner identity](https://itch.io/partners/profile/nookrium) links the same Steam/YouTube creator and indie/strategy focus | Sent once; no reply claimed | Zoho Sent visible record ID `1791736691653138300`; expected subject/body read back; 12:38 PM displayed |
+| `info@empyriongame.com` | [Empyrion official press kit](https://empyriongame.com/press-kit/), general information; resource gathering and construction audience | Sent once; no reply claimed; only this Eleon inbox used | Zoho Sent visible record ID `1791736707243138300`; expected subject/body read back; 12:38 PM displayed |
+
+Scoped screenshots `keen-sent.png`, `nookrium-sent.png` and `eleon-sent.png` are retained outside Git in the outreach chat's visualization directory. They show only the relevant opened message pane; unrelated mailbox data is excluded from those saved proofs.
 
 Splitsie, CaptainJack and LastStandGamers are excluded until a public business route is verified. Do not guess their addresses, use unrelated contacts or pay for contact unlocks. No automated reminder or repeated follow-up is authorized by these drafts.
 
@@ -144,6 +146,8 @@ This page introduces a project in development. There is no packaged demo or anno
 The long-term aim is to make the game a sustainable funding source for open source API work such as DiscordPHP. Optional support currently funds the initial game-development campaign under its published allocation: https://ko-fi.com/valgorithms . Support is not a preorder or a promise of game keys.
 
 Intended setup, subject to actual editor verification: in development, Public restricted, no uploads, purchases or new payment setup. No unsupported platform-ready claims, fabricated release date or media upload. If the listing requires artwork or a date incompatible with these limits, preserve the draft and report the exact requirement.
+
+Actual editor inspection on 2026-10-11: cover image is marked Required, minimum 315x250. No image was uploaded and no project saved. The form also asks for disclosure of generative AI output, explicitly including LLMs and hand-edited output. A future listing must truthfully disclose applicable AI-assisted code/text; the art policy prohibits generated imagery. No false "No AI" declaration was selected. Required cover permission is a Coordinator decision; it is not inferred from general advertising permission.
 
 ### IndieDB introduction/news
 
