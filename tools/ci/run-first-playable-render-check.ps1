@@ -29,8 +29,9 @@ $previousEventUrl = [Environment]::GetEnvironmentVariable('FRONTIER_EVENT_URL', 
 $previousEventToken = [Environment]::GetEnvironmentVariable('FRONTIER_EVENT_TOKEN', 'Process')
 $env:FRONTIER_EVENT_URL = ''
 $env:FRONTIER_EVENT_TOKEN = ''
-$process = Start-Process @launch
+$process = $null
 try {
+    $process = Start-Process @launch
     if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
         $process.Kill($true)
         $process.WaitForExit()
@@ -43,8 +44,10 @@ try {
     }
     Write-Host "PASS graphical $Route route (native renderer; logs at $output)"
 } finally {
-    if (-not $process.HasExited) { $process.Kill($true) }
-    $process.Dispose()
+    if ($null -ne $process) {
+        if (-not $process.HasExited) { $process.Kill($true) }
+        $process.Dispose()
+    }
     [Environment]::SetEnvironmentVariable('FRONTIER_EVENT_URL', $previousEventUrl, 'Process')
     [Environment]::SetEnvironmentVariable('FRONTIER_EVENT_TOKEN', $previousEventToken, 'Process')
 }
