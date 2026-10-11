@@ -66,3 +66,9 @@ Review weekly: useful technical replies, people explicitly asking for future upd
 A new Godot Forum post requires direct authorization for that destination and this concrete draft under this chat's instruction. Existing outreach permission elsewhere is not treated as a new publication grant here. IndieDB sign-in and an itch cover-policy decision are already recorded with the gameplay coordinator; do not repeat identical approval questions unless ownership or evidence changes.
 
 Initialization verification: repository/read-only records and live Godot primary-source rules reviewed; no external posts, messages to outside people, account/financial changes or gameplay tests performed by this coordinator. Internal progress report sent to the owner-created gameplay coordinator under standing authorization.
+
+## Authorization and publishing checkpoint: 2026-10-11
+
+Owner approved required-image reuse from the website SVG or Discord station derivative (attached station.png), preserving conceptual-branding status and non-generative preparation. Gameplay captures remain internal. Owner subsequently authorized the concrete Godot In Development draft. No repeat publication approval is needed for that draft/destination.
+
+Opened official Godot Forum in the owner's Edge session, then its Log In / Register flow. Godot SSO shows an unsigned-in username/password form and identity-provider options; no authenticated forum account was available. No credentials entered, identity-provider access granted, new account created or post submitted. Sign-in tab retained for owner handoff. Required action: owner completes Godot account sign-in; then resume deduplication, category selection, exact approved draft submission and live readback. Authorization persists after sign-in.
