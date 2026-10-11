@@ -94,3 +94,79 @@ Deduplication receipt from gameplay coordinator: Civ13 announcements advertiseme
 Owner answered Yes to this chat's exact public-visibility question; gameplay coordinator independently relayed direct owner instruction Publish this itch.io listing. Selected Public and saved existing project5139717. Owner-facing page shows Published. Independent signed-out in-app browser opened https://valzargaming.itch.io/frontier-systems without secret URL or credentials and rendered complete five-paragraph reviewed description, source/support links and station cover; visible update time17:11 UTC. No download/purchase control. This confirms public availability, not search indexing or audience engagement.
 
 Exact public text matches prior saved five-paragraph draft and itch-published.png receipt. In development / No payments and AI Code+Text classification preserved. No binaries, promises, price changes, current gameplay media or additional advertisements. Previous explicit-publication blocker resolved; Godot moderation remains pending as last observed. Do not recreate or republish this itch project.
+
+
+## Additional personalized emails submitted: 2026-10-11
+
+Owner directly requested more emails to established figures in inspiration-game communities. Verified Zoho compose From valithor@discordphp.org. Existing outreach ledger and Sent list contain prior Keen/Nookrium/Eleon submissions; none of the new recipients below had a Frontier entry before this batch. Initial search was in Streams and is not email-search evidence; deduplication relies on actual Sent inventory and ledger. Sent each message individually once, no attachments/CC/BCC, no repeated follow-ups. All three Sent subjects/recipients/body receipts were opened and read back; displayed13:19 (1:19 PM). These confirm submission, not inbox delivery/readership/replies or endorsement.
+
+| Recipient | Public contact evidence | Sent record |
+| --- | --- | --- |
+| contactsplitsie@gmail.com | https://www.youtube.com/@Splitsie/about; owner completed human check and supplied address; then revealed link verified on channel | 1791739150317138300 |
+| tomatoandbusiness@gmail.com | https://www.twitch.tv/tomato/about; own profile directs contact through assistant Katey | 1791739176804138300 |
+| contact@systemera.net | https://www.systemera.net/ Contact Us uses reversed obfuscated ten.aremetsys@tcatnoc, decoded to contact@systemera.net; Astroneer Rails inspiration is in project reference manifest | 1791739190346138300 |
+
+Captain Jack own YouTube description invites developers/press and links https://linktr.ee/captainjackyt, but no address was successfully revealed; no guessed email or send. Criken profile inspection did not establish a usable public email in this pass; no send. RocketWerkz verified routes are scoped to support/press/streaming their games, so no unrelated pitch sent there.
+
+Scoped screenshots splitsie-sent.png, tomato-sent.png, systemera-sent.png retained in this chat visualization directory, excluded from Git. Exact sent wording:
+
+### contactsplitsie@gmail.com
+
+Subject: Frontier Systems: an early cooperative engineering project
+
+Hi Splitsie,
+
+I'm Valithor, maintainer of DiscordPHP and developer of Frontier Systems. Your focus on teaching survival and engineering games, including Space Engineers, makes you a relevant person to ask about making cooperative systems understandable.
+
+Our source prototype has a finite loop from extraction and portable containers through refining, plate crafting, walls and recycling, with two authenticated local clients and save/reconnect recovery. Fresh-player usability and public-server playtesting remain unverified; colonies and spacecraft are future work. There is no packaged demo or release date.
+
+If you're interested, the project overview is here: https://valzargaming.itch.io/frontier-systems
+Source and development instructions: https://github.com/Valgorithms/Frontier-Systems
+
+I'd welcome your perspective on what makes resource transfers and machinery feedback readable. You're welcome to inspect now or try the source build when you feel comfortable, with no expectation of coverage.
+
+My long-term aim is for the game to help sustain open-source API work, including DiscordPHP. Current optional support funds initial game development under the published campaign plan.
+
+Thanks,
+Valithor
+
+### tomatoandbusiness@gmail.com
+
+Subject: For Tomato: an early cooperative engineering prototype
+
+Hi Katey,
+
+I'm Valithor, maintainer of DiscordPHP and developer of Frontier Systems. I'm reaching out through the contact Tomato lists on Twitch because his Space Station 13 community is a relevant audience for a game about shared engineering systems.
+
+Frontier is still a small source prototype: extract finite material, carry it in containers, refine it, craft plates, build or dismantle walls, and recycle what you recover. Two authenticated local clients and save/reconnect recovery are tested. Fresh-player usability and public-server playtesting are still unverified. The broader station, colony and spacecraft direction is future work, not current SS13 feature parity.
+
+Overview: https://valzargaming.itch.io/frontier-systems
+Source and development instructions: https://github.com/Valgorithms/Frontier-Systems
+
+Would this be of interest for Tomato to keep on his radar? He can inspect it now or try a source build when he judges it comfortable. There is no packaged demo, key offer, release date or expectation of coverage.
+
+The long-term aim is to help sustain open-source API work such as DiscordPHP; current support funds initial game development under its existing campaign plan.
+
+Thanks,
+Valithor
+
+### contact@systemera.net
+
+Subject: An Astroneer-inspired logistics direction in Frontier Systems
+
+Hello System Era team,
+
+I'm Valithor, maintainer of DiscordPHP and developer of Frontier Systems, an early cooperative engineering game. Astroneer's Rails Update is a documented inspiration for our later logistics direction: connected tracks, cargo transfer and readable station behavior. That work is planned, and we are developing our own implementation without importing Astroneer code or assets.
+
+Today the source prototype has finite extraction, portable containers, refining, plate and wall construction, recycling, and save/reconnect recovery with two authenticated local clients. Fresh-player usability and public-server playtesting remain unverified. Trains, colonies and spacecraft are not advertised as available.
+
+Overview: https://valzargaming.itch.io/frontier-systems
+Source and development instructions: https://github.com/Valgorithms/Frontier-Systems
+
+If a community-facing colleague is interested, I'd welcome a look or feedback on explaining cooperative material logistics. There is no packaged demo or release date, and no expectation of promotion, endorsement or a partnership.
+
+My long-term aim is for the game to help sustain open-source API work, including DiscordPHP. Current optional support remains for initial game development under the published campaign allocation.
+
+Thanks,
+Valithor
+
