@@ -275,7 +275,3 @@ func exercise() -> void:
 	resources()
 	conserved()
 	if failures == 0: print("Active-hand extraction transport: explicit owned tool/carrier, exact receipts, denials, interruption, retained retries, finite conservation passed.")
-
-
-
-
