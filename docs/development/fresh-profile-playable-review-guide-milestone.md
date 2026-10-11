@@ -36,7 +36,7 @@ $worldName = Read-Host 'Paste the exact World value printed during setup'
 if ($worldName -notmatch '^review-[0-9a-f]{32}$') { throw 'Use the exact generated review world name.' }
 ```
 
-Port 27840 is reserved exclusively by Coordinator for this review. Before every host launch, fail if any process already listens on that port; do not stop or terminate an existing listener:
+No port lease has been granted and no human run has been performed as of this revision. Request and receive an exclusive lease for port 27840 from Coordinator before launching any host. The listener probe below is an additional fail-fast safety check; it does not acquire or confirm a lease. If a process already listens on the port, stop and contact Coordinator; do not terminate it:
 
 ```powershell
 function Assert-CoordinatorPortAvailable {
@@ -89,7 +89,7 @@ Assert-CoordinatorPortAvailable
 
 Restart the clients with their corresponding slots and confirm they reconnect to their persistent crew bodies. Recheck deposit depletion, inventory items, printed output and any construction state exercised during the session. The source launcher uses the same `config/local/first-playable/worlds/<WorldName>` directory for that name. Periodic checkpoints run every five seconds, so work after the last completed checkpoint can be lost if the host stops unexpectedly. See [first-playable save and restart details](first-playable-running.md#save-and-restart) for alternating checksummed checkpoint behavior and its limits.
 
-After all three processes have exited, remove only the `override.cfg` created by this procedure:
+After all three processes have exited, report the review session ended to Coordinator and request release of the exclusive port lease. Do not assume the lease was released automatically. Then remove only the `override.cfg` created by this procedure:
 
 ```powershell
 if (Test-Path -LiteralPath $overridePath) { Remove-Item -LiteralPath $overridePath }
