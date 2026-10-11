@@ -117,5 +117,3 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try { await run(JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH,'utf8')),process.env); }
   catch(error) { console.error(error.message); process.exitCode=1; }
 }
-
-
