@@ -225,7 +225,7 @@ func _send(action: String) -> void:
 		_pending_wall = payload.duplicate(true)
 		_pending_wall["operation"] = action
 		if action == "wall_remove":
-			_pending_wall.merge(_record["production"]["walls"].get(payload["wall_id"], {}))
+			_pending_wall.merge(_record["production"]["walls"].get(payload["wall_id"], {}).duplicate(true))
 	_refresh_placement()
 
 

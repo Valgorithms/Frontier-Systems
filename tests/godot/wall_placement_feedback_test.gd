@@ -107,6 +107,8 @@ func finish() -> void:
 	panel.select_wall(wall)
 	panel._send("wall_remove")
 	held = panel._pending_wall.duplicate(true)
+	panel._record["production"]["walls"][wall]["position"][0] = 12345
+	check(panel._pending_wall == held, "submitted removal pose owns a detached copy of observed coordinates")
 	var pending_snapshot: String = JSON.stringify(world.capture_world_snapshot_json().value)
 	var lost_wall: Dictionary = view_record()
 	lost_wall["production"]["walls"].clear()
