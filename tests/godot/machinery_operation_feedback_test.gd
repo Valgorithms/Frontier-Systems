@@ -32,6 +32,7 @@ func finish() -> void:
 	panel.configure(world)
 	var own: Dictionary = inventory.own_inventory_observation(context).value
 	var record: Dictionary = {"production": observed, "inventory": own, "position": [0, 0, 0]}
+	await check_paid_shell(record, carrier_machine)
 	panel.observe(record)
 	panel.select_machine(observed["machinery"]["placements"].keys()[0])
 	var selected_machine: String = panel._selected(panel._machine)
@@ -135,3 +136,33 @@ func finish() -> void:
 	world.free()
 	print("Machinery operation feedback: %d failures" % failures)
 	quit(1 if failures else 0)
+
+
+## Reuse the no-listener real shell with this richer paid deployed fixture.
+func check_paid_shell(record: Dictionary, machine_id: String) -> void:
+	var shell = preload("res://tests/godot/integrated_panel_layout_test.gd").FixtureClient.new()
+	root.add_child(shell)
+	shell.set_process(false)
+	shell.set_process_unhandled_input(false)
+	shell._remote.set_process(false)
+	shell._habitat.character.read_local_keyboard = false
+	shell._habitat.character.set_physics_process(false)
+	var panel: MachineryPanel = shell._machinery_panel
+	panel.observe(record)
+	panel.select_machine(machine_id)
+	for index in range(panel._recipe.item_count):
+		if panel._recipe.get_item_metadata(index) == "refine.iron": panel._recipe.select(index)
+	panel._choose_group(1)
+	shell._tabs.current_tab = 3
+	var snapshot: String = world.capture_world_snapshot_json().value
+	for viewport_size: Vector2i in [Vector2i(1920, 1080), Vector2i(1100, 720)]:
+		root.size = viewport_size
+		for _frame in range(6): await process_frame
+		var scroll := panel.get_parent() as ScrollContainer
+		scroll.ensure_control_visible(panel._recipe_prerequisites)
+		for _frame in range(6): await process_frame
+		check(panel._recipe_prerequisites.text.contains("resource-canister-1") and panel._recipe_prerequisites.text.contains("ore.iron"), "real paid shell shows selected fitted canister and recipe")
+		check(panel._recipe_prerequisites.size.x <= scroll.size.x + 1 and panel._recipe_prerequisites.get_line_count() == panel._recipe_prerequisites.get_visible_line_count(), "paid desktop/narrow canister prerequisites wrap within shell")
+		check(scroll.get_global_rect().encloses(panel._recipe_prerequisites.get_global_rect()), "paid desktop/narrow prerequisite text fully revealed by shell scroll")
+	check(world.capture_world_snapshot_json().value == snapshot, "paid shell recipe display preserves canonical matter energy and provenance")
+	shell.free()
