@@ -73,9 +73,9 @@ func observe(record: Dictionary) -> void:
 			_box(body, Vector3(0.65, 0.25, 0.5), Color(0.6, 0.65, 0.7), Vector3(0, 0.48, 0))
 			_cylinder(body, Vector3(-0.2, 0.7, 0), Color(0.85, 0.55, 0.1), 0.12, 0.18)
 		if fitted.has("refinery"):
-			for x in [-0.2, 0.2]: _cylinder(body, Vector3(x, 0.6, 0), Color(0.5, 0.65, 0.68), 0.15, 0.45)
+			EngineeringObjectDetails.refinery(body)
 		if fitted.has("extractor"):
-			_box(body, Vector3(0.2, 0.65, 0.2), Color(0.95, 0.65, 0.1), Vector3(0, 0.6, 0))
+			EngineeringObjectDetails.extractor(body)
 		if fitted.has("router"):
 			_box(body, Vector3(0.6, 0.08, 0.4), Color(0.2, 0.7, 0.45), Vector3(0, 0.45, 0))
 		var index: int = 0
