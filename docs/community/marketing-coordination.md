@@ -80,3 +80,11 @@ Owner reported Godot signed in and itch project form ready. Godot authenticated 
 Prepared itch.io creation form for authenticated valzargaming: Frontier Systems; requested slug frontier-systems; reviewed short description; In development; No payments; Draft visibility; no game uploads/trailer/screenshots. Applied truthful Yes AI disclosure with Code and Text & Dialog, leaving Graphics/Sounds unchecked. Description follows existing outreach draft plus conceptual-cover and AI-assistance disclosures. It explicitly separates current support allocation from future OSS sustainability and packaged-demo/readiness limits.
 
 Tried approved station.png upload through normal file chooser. Edge extension rejected file access: Allow access to file URLs is disabled. No cover uploaded, project saved or public listing claimed. Filled form preserved for owner handoff. Owner can upload C:/Users/valza/Downloads/station.png directly in that form, or explicitly enable extension file-URL access to permit tool upload. Then resume save/preview and publication with honest availability settings. No duplicate itch project creation.
+
+## itch draft created: 2026-10-11
+
+Owner uploaded approved cover. Created one itch project ID5139717 at https://valzargaming.itch.io/frontier-systems, still Draft. Initial saved preview omitted description; corrected via native rich editor, saved and read back all five paragraphs, source/support links and conceptual-brand/AI disclosure. Cover persisted. In development, No payments, AI Yes Code+Text remain selected. No downloads, trailer, screenshots or payments configured.
+
+Automatic approval review rejected selecting Public: trusted messages were judged to authorize project creation but not clearly public publication. No workaround or retry attempted. Concrete remaining decision: approve making this exact reviewed itch page public to everyone. Owner preview retained, screenshot itch-draft.png in this chat visualization directory. No public publication claimed. Godot remains pending moderator approval.
+
+Deduplication receipt from gameplay coordinator: Civ13 announcements advertisement already posted once at https://discord.com/channels/468979034571931648/468979680607731723/1558887545952272457; exact text is in docs/community/advertisement-publications.md at primary53fc49e. Do not duplicate.
