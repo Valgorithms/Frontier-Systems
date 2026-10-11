@@ -11,4 +11,3 @@ The complete graphical route additionally verifies native root-window picking, t
 Reproduce with Godot `--path . --xr-mode off --audio-driver Dummy --script res://tools/godot/capture_world_context.gd --resolution 1440x900`. Separate port 27864 must be free; the tool fails on bind rather than stopping another process, uses ephemeral invite-authenticated in-memory host/client/world state, clears external event configuration and frees them at exit. No gameplay images were published externally.
 
 The original is retained in ignored `var/captures/world-context/selected.png`. The gallery PNG uses Git LFS; `.gdignore` excludes it from Godot import.
-

@@ -32,4 +32,3 @@ func observe(record: Dictionary) -> void:
 		var coords: Array = cell["position_millimetres"]
 		_markers[id].position = ProceduralWorldInventoryPreview.DISPLAY_ORIGIN + Vector3(float(coords[0]), float(coords[1]) + 30.0, float(coords[2])) / 1000.0
 		(_markers[id].get_child(0) as WorldContextLabel).text = "%s [%s]\n%.3f kg\nDig/fill controls in Terrain overlay" % ["Dirt source" if id == "terrain.dirt.source" else "Dirt fill", id, float(cell["state"]["mass_milligrams"]) / 1000000.0]
-

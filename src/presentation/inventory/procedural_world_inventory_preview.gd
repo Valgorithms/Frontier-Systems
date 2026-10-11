@@ -151,4 +151,3 @@ func _box(parent: Node3D, dimensions: Vector3, location: Vector3, color: Color) 
 	instance.position = location
 	parent.add_child(instance)
 	return instance
-

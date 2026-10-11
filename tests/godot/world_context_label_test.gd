@@ -85,4 +85,3 @@ func run() -> void:
 	viewport.free()
 	print("World context labels: %d failures" % failures)
 	quit(1 if failures else 0)
-

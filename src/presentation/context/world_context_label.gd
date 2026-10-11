@@ -122,4 +122,3 @@ class Layout extends Control:
 			draw_line(edge, anchor, Color("#18232f"), 4.0, true)
 			draw_line(edge, anchor, Color("#91bbc9"), 1.5, true)
 			draw_circle(anchor, 3.0, Color("#91bbc9"))
-

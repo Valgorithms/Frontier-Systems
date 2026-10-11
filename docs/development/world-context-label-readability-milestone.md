@@ -19,4 +19,3 @@ A clean overview was visually inspected and retained as an [internal LFS gallery
 Draft [PR #20](https://github.com/Valgorithms/Frontier-Systems/pull/20) targets `dev-master`. Branch `codex/world-context-labels` is isolated in a managed worktree. Primary checkout edits were untouched. Initial connector PR creation failed with 403 and local CLI authentication was invalid; the Coordinator created the draft through its authorized working route. No credential helper probing.
 
 Windows/Ubuntu CI is required for the final pushed head. Local checks do not establish Linux execution. No human input, VR/controller, Linux graphical, real occlusion or authoritative geometry/reach acceptance is claimed. No merge, integration-branch push, release or deployment is authorized or performed.
-

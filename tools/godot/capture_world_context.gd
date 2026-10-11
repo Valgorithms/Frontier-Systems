@@ -172,4 +172,3 @@ func run() -> void:
 	world.free()
 	print("Graphical world context route: %d failures" % failures)
 	quit(1 if failures else 0)
-

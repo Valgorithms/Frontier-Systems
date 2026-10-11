@@ -150,5 +150,3 @@ func _box(size: Vector3, location: Vector3, color: Color) -> MeshInstance3D:
 	mesh.material_override = material
 	add_child(mesh)
 	return mesh
-
-

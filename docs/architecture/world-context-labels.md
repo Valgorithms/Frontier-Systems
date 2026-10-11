@@ -9,4 +9,3 @@ Leaders terminate at the existing display proxies: tray surface, resource mesh c
 All controls ignore mouse input. Native pick areas, selected item identity card/leader, selection handlers and command validation remain unchanged. Removed targets retire their cards; observation rebuilds and parent visibility changes are honored on the next frame. Profiling is opt-in through existing engine tools; `shown`, `cards` and `anchors` expose bounded presentation counts for checks without affecting simulation.
 
 Headless layout checks are in `world_context_label_test.gd`; the existing inventory preview and first-playable interaction checks cover the command bridge. Graphical acceptance requires the actual root-window capture route documented in the milestone.
-
