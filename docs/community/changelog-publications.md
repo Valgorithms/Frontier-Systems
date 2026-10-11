@@ -29,3 +29,7 @@ Next: finish the current inventory/placement feedback work, strengthen recovery 
 
 Source and prototype instructions: https://github.com/Valgorithms/Frontier-Systems
 
+
+## Completion progress posts authorized — 2026-10-11
+
+The owner authorized factual text-only posts in Frontier #changelog (`1558871000383234182`) when existing tasks complete. Coordinator will batch related verified milestone closeouts, check actual channel history and this ledger to avoid duplicates, link exact merged evidence, and retain confirmed wording, message URL/time and acceptance limits. This is source-prototype progress, not a shipped-version or public-playtest announcement. Do not falsely satisfy the existing publisher's available-version confirmation gate or enable release publishing based on this authorization. Current game media remains internal. Avoid unnecessary em dashes and formulaic public copy. Other fundraising deadlines remain independent.
