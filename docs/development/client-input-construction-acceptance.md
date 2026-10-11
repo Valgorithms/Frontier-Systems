@@ -74,3 +74,9 @@ Start the existing launcher from that worktree in separate terminals, replacing 
 | Repeat from another fresh profile/world using only reviewed instructions | Record assistance and blockers; this is the remaining human tutorial gate |
 
 After all processes exit, confirm 27840 is no longer listening and report lease release to Coordinator. Remove only the setup's `override.cfg`, retain exact local evidence/profile until reviewed, and do not publish media. Human result fields remain **not performed** until a reviewer completes this procedure. No final tutorial video or public readiness claim is authorized by automated success.
+
+## Integration follow-up after PR #41/#42
+
+Updated from `origin/dev-master` at `2036a8e`. Preserve the upstream detached `production-navigation` capture route and observed guide behavior. The acceptance fixture now searches only the intended panel's button descendants, requires exactly one matching title, and selects the containing workstation task section through its navigation control before checking visibility/focus and activating Enter. No imported runtime or panel changes were edited by this successor.
+
+Focused Windows import/startup, `production_panel_navigation_test` and `first_playable_task_guide_test` passed (four checks, zero failures); the updated graphical fixture passes Godot check-only compilation. Earlier input/runtime evidence is reused within its original scope. A fresh 27850 Coordinator lease is requested here; the recorded reservation currently has no holder and does not grant a lease. Updated native finite-loop/recovery acceptance remains pending that grant. Exact final-head execution evidence belongs in the PR handoff; the previous native pass does not establish compatibility with grouped controls.
