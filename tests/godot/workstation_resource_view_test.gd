@@ -39,7 +39,7 @@ func run() -> void:
 	for index in range(panel._recipe.item_count):
 		if panel._recipe.get_item_metadata(index) == "craft.plate": panel._recipe.select(index)
 	panel.refresh()
-	check(panel._status.text.contains("Selected: craft.plate"), "current stable recipe selection shown")
+	check(panel._recipe_details.text.contains("Selected: craft.plate") and panel.get_children().find(panel._recipe_details) == panel.get_children().find(panel._recipe) + 1, "current recipe details beside stable selector")
 	panel.refresh()
 	check(panel._recipe.get_item_metadata(panel._recipe.selected) == "craft.plate", "poll retains recipe ID")
 	move([-3000, 0, -1000])

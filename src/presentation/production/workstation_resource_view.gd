@@ -23,7 +23,7 @@ static func valid(record: Dictionary) -> bool:
 	return accepted
 
 
-func describe(record: Dictionary, recipe_id: String, pending: bool = false) -> String:
+func describe(record: Dictionary, recipe_id: String, pending: bool = false, include_recipe: bool = true) -> String:
 	if not valid(record):
 		_had_job = false
 		_ended = false
@@ -59,7 +59,7 @@ func describe(record: Dictionary, recipe_id: String, pending: bool = false) -> S
 		lines.append("Previously observed job ended; completion or cancellation is unconfirmed here. Use current resource counts.")
 	else:
 		lines.append("No active job observed; this does not confirm past completion.")
-	lines.append(recipe_text(record, recipe_id))
+	if include_recipe: lines.append(recipe_text(record, recipe_id))
 	return "\n".join(lines)
 
 

@@ -4,7 +4,7 @@
 
 `LocalProductionPanel` now delegates resource/status text to `WorkstationResourceView`. The helper owns disposable presentation history only: whether a previously observed job disappeared. Production remains the canonical owner of mass, energy and batches; inventory owns physical item identities and containment. The existing 10 Hz panel poll uses detached observations, validates with `RemoteProductionProjection`, and submits existing fixed-tick commands unchanged. No core, networking, schema, persistence or bootstrap contract changes.
 
-The existing tool diagnosis and maintenance section is preserved. Source reach and remaining mass, station power, vessel contents/pressure and legacy wall counts remain visible. Recipe pickers retain stable IDs across polling/reordering and clip long titles rather than imposing a wide minimum; labels wrap inside the existing scrollable workstation tab.
+The existing tool diagnosis and maintenance section is preserved. Source reach and remaining mass, station power, vessel contents/pressure and legacy wall counts remain visible. Recipe pickers retain stable IDs across polling/reordering and clip long titles rather than imposing a wide minimum; labels wrap inside the existing scrollable workstation tab. Recipe details sit immediately below the selector and above its action button.
 
 ## Observed facts versus fixture hints
 

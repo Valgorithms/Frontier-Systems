@@ -23,6 +23,7 @@ var _deposit: OptionButton
 var _blueprint: OptionButton
 var _equipment: OptionButton
 var _recipe: OptionButton
+var _recipe_details: Label
 var _chemical: OptionButton
 var _station: OptionButton
 var _amount: SpinBox
@@ -81,6 +82,7 @@ func configure(world: WorldRuntime) -> ServiceResult:
 	_extract_button = _button("Extract selected mass into canister (up to 1 kg)", _extract_action)
 	_recipe = _picker()
 	_recipe.item_selected.connect(func(_index: int) -> void: refresh())
+	_recipe_details = _label()
 	var production := _world.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID) as ProductionSimulationSystem
 	production.batch_completed.connect(_on_batch_completed)
 	var observed: ServiceResult = production.observation(_context())
@@ -185,7 +187,8 @@ func refresh() -> void:
 	_guide_button.disabled = not _pending.is_empty() or suggested["operation"] == "" or _record.is_empty() or (not _record.get("can_operate", false) if suggested["operation"] != "extract" else not _record.get("extractable_sources", []).has("deposit.iron"))
 	_refresh_maintenance()
 	var recipe_id: String = str(_recipe.get_item_metadata(_recipe.selected)) if _recipe.selected >= 0 else ""
-	_status.text = _resource_view.describe(_record, recipe_id, not _pending.is_empty())
+	_status.text = _resource_view.describe(_record, recipe_id, not _pending.is_empty(), false)
+	_recipe_details.text = WorkstationResourceView.recipe_text(_record, recipe_id) if valid_observation else "Recipe prerequisites unavailable: wait for a valid current observation."
 
 
 func _send(operation: String, payload: Dictionary) -> void:
@@ -345,6 +348,7 @@ func _on_closed() -> void:
 	observation_changed.emit({})
 	_pending = ""
 	_status.text = "Production unavailable: world closed"
+	_recipe_details.text = "Recipe prerequisites unavailable: world closed; command outcome requires a fresh observation."
 	_guide_label.text = "Collection guide closed; progress was session-only."
 	_fill_carriers([])
 	_fill_components([])
