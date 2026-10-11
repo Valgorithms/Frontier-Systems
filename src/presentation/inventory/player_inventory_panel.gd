@@ -264,11 +264,11 @@ func _process(_delta: float) -> void:
 
 func _update_active_equipment() -> void:
 	var text: String = PlayerInventoryPresentation.active_equipment(_equipment_record, _selected_id(_items), _picker_id(_slot))
-	text += "\n" + PlayerInventoryPresentation.equipment_access(_equipment_record, _selected_id(_items), _picker_id(_slot), _picker_id(_destination))
 	if not _pending_inventory.is_empty() and _pending_inventory.get("operation") in ["equip", "unequip", "select_hand", "switch_hand"]:
 		text += "\n" + _pending_equipment_observation
 		text += "\nEquipment command pending; outcome unconfirmed until its matching host receipt. Display follows fresh observations."
 	_active_tool.text = text
+	text += "\n" + PlayerInventoryPresentation.equipment_access(_equipment_record, _selected_id(_items), _picker_id(_slot), _picker_id(_destination))
 	var equipped := PackedStringArray()
 	for binding in _equipment_record.get("equipped", []):
 		equipped.append("%s: %s" % [binding["slot_id"], binding["item_id"]])
@@ -455,6 +455,7 @@ func _self_action(operation: String) -> void:
 		_pending_inventory = payload.duplicate(true)
 		_pending_equipment_observation = PlayerInventoryPresentation.equipment_submission(_equipment_record, payload) if operation in ["equip", "unequip", "select_hand", "switch_hand"] else ""
 		_result.text = PlayerInventoryPresentation.pending_text(_pending_inventory)
+		if not _pending_equipment_observation.is_empty(): _result.text += "\n" + _pending_equipment_observation
 		_update_active_equipment()
 
 func _world_action(operation: String) -> void:
@@ -662,7 +663,7 @@ func _completed(command: SimulationCommand, result: ServiceResult) -> void:
 			_closure_feedback.text += "\nClosure follows fresh host observations." if result.is_success else "\n" + result.message
 			_pending_closure.clear()
 		var was_world: bool = not _pending_world.is_empty()
-		var exact_targets: String = _pending_component_text() if not _pending_component.is_empty() else ""
+		var exact_targets: String = _pending_component_text() if not _pending_component.is_empty() else _pending_equipment_observation
 		_pending = ""
 		_pending_world.clear()
 		_pending_inventory.clear()

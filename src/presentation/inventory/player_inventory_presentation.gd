@@ -63,6 +63,7 @@ static func equipment_access(record: Dictionary, selected_item: String, slot: St
 	var lines := PackedStringArray([
 		"Equip item: %s · source: %s · target slot: %s" % [selected_item if not selected.is_empty() else "unavailable", selected.get("container_id", "unavailable"), slot if record.get("slot_ids", []).has(slot) else "unavailable"],
 		access_hint(record, str(selected.get("container_id", "")), "Equip source"),
+		access_hint(record, str(record.get("body_container_id", "")), "Equip body-root target"),
 		"Equip uses the body root and selected slot; the storage destination selection is not used.",
 		"Unequip slot item: %s · source: %s · destination: %s" % [occupant if not equipped_item.is_empty() else "unavailable", equipped_item.get("container_id", "unavailable"), destination if record.get("container_ids", []).has(destination) else "unavailable"],
 		access_hint(record, str(equipped_item.get("container_id", "")), "Unequip source"),
