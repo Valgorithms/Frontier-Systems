@@ -41,4 +41,3 @@ Five baseline Windows headless checks passed at c78c3bd: import/startup, integra
 ## Native dedicated result
 
 Clean immutable 76d0755fb0a732b13de91636ea6a4a9e6d940416 passed Windows Godot 4.7.2 Compatibility native execution: zero fixture failures. Rejected and accepted captures were visually inspected: full matching host message fits the narrow actual shell; no private data or generated artwork. Profile override removed and child process exited. This verifies the logical inventory body supplied by the injected observer; it does not verify physical habitat-body binding or real network transport. Integrated ClientOnly failure above remains unresolved and requires owning-scope triage. Later documentation-only head retains identical fixture/runner bytes.
-
