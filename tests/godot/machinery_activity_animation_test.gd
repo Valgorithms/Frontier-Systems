@@ -1,0 +1,81 @@
+extends "res://tests/godot/machinery_runtime_test.gd"
+
+
+func finish() -> void:
+	var extractor: String = ""
+	var workshop: Dictionary = production.capture_snapshot().value["machinery"]
+	for module in workshop["mounts"]:
+		if workshop["parts"][module]["kind"] == "extractor": extractor = workshop["mounts"][module]
+	move([-6000, 0, -1000])
+	command("machine_run", {"machine_id": extractor, "recipe": "extract.ice"})
+	var helper := MachineryActivityAnimation.new()
+	var first: Dictionary = production.observation(context).value
+	check(helper.observe(first) and helper.state(extractor) == "unknown", "accepted job alone does not certify running")
+	step(8)
+	var running: Dictionary = production.observation(context).value
+	check(helper.observe(running) and helper.state(extractor) == "running", "paid finite extraction advancing observation earns motion")
+	var snapshot: String = world.capture_world_snapshot_json().value
+	var record_bytes: String = JSON.stringify(running)
+	helper.advance(0.05)
+	check(helper.phase(extractor) > 0.0, "observed running moves cosmetic phase")
+	var partitioned := MachineryActivityAnimation.new()
+	partitioned.observe(first)
+	partitioned.observe(running)
+	partitioned.advance(0.025)
+	partitioned.advance(0.025)
+	check(is_equal_approx(partitioned.phase(extractor), helper.phase(extractor)), "normal frame partition has equal phase")
+	var phase: float = helper.phase(extractor)
+	for delta in [NAN, INF, -INF, -1.0, 0.0]: helper.advance(delta)
+	check(helper.phase(extractor) == phase and is_finite(helper.phase(extractor)), "nonfinite and nonpositive deltas cannot corrupt transforms")
+	helper.advance(0.5)
+	check(is_equal_approx(helper.phase(extractor), phase + 0.1 * TAU), "large valid frame delta clamps cosmetic motion")
+	helper.observe(running)
+	helper.advance(0.5)
+	check(helper.state(extractor) == "unknown", "duplicate tick cannot renew expired evidence")
+	phase = helper.phase(extractor)
+	helper.advance(1000000.0)
+	check(helper.phase(extractor) == phase, "long gap expires before animating")
+	check(world.capture_world_snapshot_json().value == snapshot and JSON.stringify(running) == record_bytes, "animation never changes canonical snapshot or source observation")
+	command("machine_enable", {"machine_id": extractor, "enabled": false})
+	check(helper.observe(production.observation(context).value) and helper.state(extractor) == "blocked", "host isolation freezes")
+	step(8)
+	helper.observe(production.observation(context).value)
+	helper.advance(0.1)
+	check(helper.phase(extractor) == phase, "blocked job stays still")
+	var paused_world := WorldRuntime.new()
+	paused_world.resource_carriers_enabled = true
+	root.add_child(paused_world)
+	check(paused_world.restore_world_snapshot_json(world.capture_world_snapshot_json().value).is_success, "real restart restore accepted")
+	var paused_production: ProductionSimulationSystem = paused_world.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)
+	var paused: Dictionary = paused_production.observation(context).value
+	check(helper.observe(paused) and helper.state(extractor) == "paused", "actual restored paused job freezes")
+	helper.advance(0.1)
+	check(helper.phase(extractor) == phase, "paused transform stays still")
+	paused_world.free()
+	check(not helper.observe({}) and helper.state(extractor) == "unknown", "disconnect forgets evidence")
+	helper.advance(0.1)
+	check(helper.phase(extractor) == phase, "disconnect freezes retained cosmetic pose")
+	helper.observe(production.observation(context).value)
+	command("machine_enable", {"machine_id": extractor, "enabled": true})
+	step(8)
+	helper.observe(production.observation(context).value)
+	step(8)
+	helper.observe(production.observation(context).value)
+	check(helper.state(extractor) == "running", "fresh progress after reconnect earns motion again")
+	step(180)
+	var completed: Dictionary = production.observation(context).value
+	check(not completed["machinery"]["jobs"].has(extractor), "actual finite paid job completed")
+	helper.observe(completed)
+	check(helper.state(extractor) == "outcome_unknown", "completed host job disappearance never fabricates completion certificate")
+	command("machine_run", {"machine_id": extractor, "recipe": "extract.ice"})
+	helper.observe(production.observation(context).value)
+	command("machine_cancel", {"machine_id": extractor})
+	helper.observe(production.observation(context).value)
+	check(helper.state(extractor) == "outcome_unknown", "actual cancellation also remains outcome-unconfirmed")
+	check(not helper.observe(first) and helper.state(extractor) == "unknown", "older tick discards activity")
+	var malformed: Dictionary = completed.duplicate(true)
+	malformed["machinery"]["jobs"] = "invalid"
+	check(not helper.observe(malformed), "malformed observation discarded without motion")
+	world.free()
+	print("Machinery activity animation: %d failures" % failures)
+	quit(1 if failures else 0)
