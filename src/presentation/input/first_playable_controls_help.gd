@@ -44,6 +44,14 @@ func _ready() -> void:
 	_details.custom_minimum_size.y = 180
 	_details.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_details.follow_focus = true
+	_details.focus_mode = Control.FOCUS_ALL
+	_details.gui_input.connect(func(event: InputEvent) -> void:
+		if PlayerInputSettings.instance().rebinding or not event is InputEventKey:
+			return
+		if event.is_action_pressed("ui_down") or event.is_action_pressed("ui_up"):
+			_details.scroll_vertical += 48 if event.is_action_pressed("ui_down") else -48
+			_details.accept_event()
+	)
 	add_child(_details)
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_details.add_child(_body)
@@ -83,9 +91,9 @@ func _refresh() -> void:
 	_text.text = "\n".join(PackedStringArray([
 		"Look and move: hold %s to capture the camera. Move with %s / %s / %s / %s; %s jumps, %s sprints. Overview uses %s / %s to zoom." % [controls.binding_label("look"), controls.binding_label("move_forward"), controls.binding_label("move_back"), controls.binding_label("move_left"), controls.binding_label("move_right"), controls.binding_label("jump"), controls.binding_label("sprint"), controls.binding_label("zoom_in"), controls.binding_label("zoom_out")],
 		"Hold %s to expose the UI cursor and pause movement/look. Releasing it resumes capture only while look stays held. %s releases capture; window focus loss also releases it." % [controls.binding_label("ui_cursor"), controls.binding_label("release_cursor")],
-		"World interaction: %s selects. With a mouse, double-click deposits/stations/items to use or collect; selecting a machine or wall opens Construction. A keyboard/controller selection activates the pointed object. The host checks reach and permissions." % controls.binding_label("world_select"),
+		"World interaction: %s selects. Click a station to open Workstation. With a mouse, double-click deposits/items to use or collect; selecting a machine or wall opens Construction. A keyboard/controller selection activates the pointed object. The host checks reach and permissions." % controls.binding_label("world_select"),
 		"Inventory: %s toggles the Inventory tab. %s switches active hand; %s uses the active tool. Inventory buttons manage observed items." % [controls.binding_label("inventory"), controls.binding_label("switch_hand"), controls.binding_label("use_tool")],
 		"Guide shows the current finite engineering loop and prerequisites; it does not perform actions or remember completed steps. Construction provides machine and wall controls; select a world machine/wall to inspect it.",
-		"Choose any existing panel with the selector above. Focus controls with %s / %s; confirm with %s and navigate choices with %s / %s. Close focused help with %s or Close help. No extra gameplay shortcuts are added." % [controls.binding_label("ui_focus_next"), controls.binding_label("ui_focus_prev"), controls.binding_label("ui_accept"), controls.binding_label("ui_left"), controls.binding_label("ui_right"), controls.binding_label("ui_cancel")],
+		"Choose any existing panel with the selector above. Focus controls with %s / %s; confirm with %s and navigate choices with %s / %s. Focus the help scroll area and use %s / %s to scroll. Close focused help with %s or Close help. No extra gameplay shortcuts are added." % [controls.binding_label("ui_focus_next"), controls.binding_label("ui_focus_prev"), controls.binding_label("ui_accept"), controls.binding_label("ui_left"), controls.binding_label("ui_right"), controls.binding_label("ui_up"), controls.binding_label("ui_down"), controls.binding_label("ui_cancel")],
 		"Settings (%s) edits local bindings and sensitivity. It pauses navigation while visible. Camera shortcuts: %s first person, %s third person, %s overview." % [controls.binding_label("settings"), controls.binding_label("camera_first"), controls.binding_label("camera_third"), controls.binding_label("camera_overview")]
 	]))

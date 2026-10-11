@@ -22,3 +22,22 @@ Use the existing bounded Godot runner; logs stay ignored in var/ci.
 Local and exact-head CI results will be recorded before handoff.
 No graphical, human, controller or VR acceptance is claimed without captured evidence.
 No media upload, release, deployment, merge or integration-branch push is in scope.
+
+## Recorded local verification
+
+Windows Godot 4.7.2 bounded runner passed editor import, startup and
+desktop_controls_help_test (including focus-scoped keyboard scrolling).
+The same source baseline also passed first_playable_task_guide_test,
+habitat_preview_test, wall_input_usability_test and world_inventory_preview_test.
+Guide tests include unavailable/partial observations and disconnect clearing.
+Those unchanged subsystem tests were not repeated after help-only scrolling edits.
+
+The first click-pass-through assertion failed because Godot's physics-picking
+queue marks mouse events handled. The corrected fixture isolates GUI handling
+before that queue; this is not actual rendered-world picking evidence.
+InputMap remapping stays in memory; no preference save or live connection is used.
+No graphical capture, human playthrough, VR/controller or local Linux test was run.
+The helper owns no connection-dependent status to retain after disconnect.
+
+CI must be checked on the final PR head; earlier green runs do not certify it.
+No fixed ports were acquired, so no port reservation requires release.
