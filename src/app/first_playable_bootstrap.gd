@@ -70,8 +70,13 @@ func _start_host() -> void:
 	print("First playable host listening on loopback port 27840; two invite slots and checkpoint persistence enabled.")
 
 
+## Presentation fixtures may supply a transport adapter without opening sockets.
+func _create_client_remote() -> RemoteWorldRuntime:
+	return RemoteWorldRuntime.new()
+
+
 func _start_client() -> void:
-	_remote = RemoteWorldRuntime.new()
+	_remote = _create_client_remote()
 	_remote.terrain_retry_directory = "user://terrain-client-intents"
 	add_child(_remote)
 	_remote.observation_received.connect(_on_observation)
