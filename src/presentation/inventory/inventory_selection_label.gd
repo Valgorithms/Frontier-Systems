@@ -3,12 +3,13 @@ class_name InventorySelectionLabel
 
 ## One bounded screen card; the leader terminates at the actual display proxy.
 const MARGIN: float = 12.0
-const CARD_SIZE := Vector2(320, 104)
+const CARD_SIZE := Vector2(320, 144)
 var target: Node3D
 var enabled: bool = true
 var _card: PanelContainer
 var _lines: Array[Label] = []
 var _anchor := Vector2.ZERO
+var _selected: bool = false
 
 
 func _ready() -> void:
@@ -28,20 +29,26 @@ func _ready() -> void:
 	var rows := VBoxContainer.new()
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_card.add_child(rows)
-	for index in range(3):
+	for index in range(4):
 		var line := Label.new()
 		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		line.add_theme_font_size_override("font_size", 18)
 		line.add_theme_color_override("font_color", Color("#fff3be") if index == 0 else Color.WHITE)
 		line.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		line.clip_text = true
+		if index == 3:
+			line.add_theme_font_size_override("font_size", 16)
+			line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			line.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+			line.clip_text = false
 		rows.add_child(line)
 		_lines.append(line)
 	visible = false
 
 
-func select_proxy(proxy: Node3D, item_id: String, container_id: String, distance_mm: int, definition_id: String = "") -> void:
+func select_proxy(proxy: Node3D, item_id: String, container_id: String, distance_mm: int, definition_id: String = "", selected: bool = false) -> void:
 	target = proxy
+	_selected = selected
 	_lines[0].text = "%s: %s" % [observed_role(definition_id), item_id]
 	_lines[1].text = "Root: " + container_id
 	_lines[2].text = "Host observed: %.2f m" % (float(distance_mm) / 1000.0)
@@ -60,6 +67,16 @@ static func observed_role(definition_id: String) -> String:
 	return "Item"
 
 
+## Describes the existing input route, never host eligibility or success.
+func interaction_hint() -> String:
+	var events: Array[InputEvent] = InputMap.action_get_events("world_select")
+	if events.is_empty(): return "Selection unbound — open Controls"
+	var binding: String = PlayerInputSettings.instance().binding_label("world_select")
+	if events[0] is InputEventMouseButton:
+		return "Double-click %s: request pickup" % binding if _selected else "%s: select · double-click: request pickup" % binding
+	return "%s: select and request pickup" % binding
+
+
 func _process(_delta: float) -> void:
 	var viewport: Viewport = get_viewport()
 	var camera: Camera3D = viewport.get_camera_3d()
@@ -74,6 +91,7 @@ func _process(_delta: float) -> void:
 	if not Rect2(Vector2.ZERO, extent).has_point(_anchor):
 		visible = false
 		return
+	_lines[3].text = interaction_hint()
 	size = extent
 	_card.size = Vector2(minf(CARD_SIZE.x, extent.x - MARGIN * 2), CARD_SIZE.y)
 	_card.position = Vector2(extent.x - _card.size.x - MARGIN, MARGIN)
