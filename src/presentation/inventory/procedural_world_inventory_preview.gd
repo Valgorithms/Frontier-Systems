@@ -179,7 +179,7 @@ func _highlight() -> void:
 		_selection_label.enabled = labels_visible and _label_observation_available
 		if _visible_items.has(context_key):
 			var selected: Dictionary = _visible_items[context_key]
-			_selection_label.select_proxy(selected["mesh"], selected["item_id"], selected["container_id"], selected["distance"], selected["definition_id"])
+			_selection_label.select_proxy(selected["mesh"], selected["item_id"], selected["container_id"], selected["distance"], selected["definition_id"], context_key == _selected_key)
 		else:
 			_selection_label.visible = false
 

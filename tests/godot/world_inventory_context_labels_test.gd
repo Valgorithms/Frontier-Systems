@@ -63,6 +63,7 @@ func verify() -> void:
 	camera.set_process(false)
 	view = client._habitat.world_inventory
 	var panel: PlayerInventoryPanel = client._inventory_panel
+	check(not view.labels_visible and not view._selection_label.visible, "context hints remain opt-in in the actual shell")
 	# Exercise the actual opt-in captions setting; default remains quiet.
 	for control in client.find_children("*", "CheckButton", true, false):
 		if control.text == "Show world captions": control.button_pressed = true
@@ -98,6 +99,7 @@ func verify() -> void:
 	if DisplayServer.get_name() == "headless": area.mouse_entered.emit()
 	check(view._hovered_key == JSON.stringify(["world.tray-1", paid_ids[0]]), "Area3D hover retains exact identity (native OS pointer in graphical mode)")
 	check(view._selection_label.visible and view._selection_label._lines[0].text == "Canister: " + paid_ids[0], "observed role and exact short identity on hover")
+	check(view._selection_label._lines[3].text == PlayerInputSettings.instance().binding_label("world_select") + ": select · double-click: request pickup", "hover explains the existing mouse route without promising success")
 	check(view._selected_key.is_empty() and selected.is_empty() and pickup.is_empty() and remote.sent.is_empty(), "hover selects nothing and queues no intent")
 	check(not view._tray_labels["world.tray-1"].visible, "ordinary tray identity does not duplicate the item card or cover neighbors")
 	await snap("hover")
@@ -112,6 +114,7 @@ func verify() -> void:
 	root.push_input(click, true)
 	await settle()
 	check(selected == "world.tray-1:" + paid_ids[0] and pickup.is_empty(), "ordinary click emits exact selection only")
+	check(view._selection_label.interaction_hint() == "Double-click %s: request pickup" % PlayerInputSettings.instance().binding_label("world_select"), "selected hint describes pickup request only")
 	# World selection has its own identity card; overlay selection is independent.
 	for index in range(panel._world_items.item_count):
 		if panel._world_items.get_item_metadata(index)["item_id"] == paid_ids[0]:
@@ -136,6 +139,25 @@ func verify() -> void:
 		for line in view._selection_label._lines:
 			check(view._selection_label._card.get_global_rect().encloses(line.get_global_rect()), "all identity rows bounded by opaque card")
 		await snap("selected-%d" % extent.x)
+	# Local remaps update the caption without changing selection or sending work.
+	InputMap.action_erase_events("world_select")
+	var key_binding := InputEventKey.new()
+	key_binding.physical_keycode = KEY_K
+	InputMap.action_add_event("world_select", key_binding)
+	await settle()
+	check(view._selection_label._lines[3].text == "%s: select and request pickup" % PlayerInputSettings.instance().binding_label("world_select"), "keyboard remap uses the existing activate route")
+	InputMap.action_erase_events("world_select")
+	var pad_binding := InputEventJoypadButton.new()
+	pad_binding.button_index = JOY_BUTTON_A
+	InputMap.action_add_event("world_select", pad_binding)
+	await settle()
+	check(view._selection_label._lines[3].text == "%s: select and request pickup" % PlayerInputSettings.instance().binding_label("world_select"), "controller remap has no misleading double-click advice")
+	InputMap.action_erase_events("world_select")
+	await settle()
+	check(view._selection_label._lines[3].text == "Selection unbound — open Controls", "unbound input gives neutral settings guidance")
+	PlayerInputSettings.instance()._reset_map()
+	await settle()
+	check(view._selection_label.target == mesh and remote.sent.is_empty() and panel._pending_world == pending_before and panel._world_details.text == details_before, "binding hint changes preserve exact context and pending details without requests")
 	view.labels_visible = false
 	await settle()
 	check(not view._selection_label.visible and not view._tray_labels["world.tray-1"].visible, "label setting hides every context without geometry changes")
