@@ -139,6 +139,15 @@ func verify() -> void:
 		for line in view._selection_label._lines:
 			check(view._selection_label._card.get_global_rect().encloses(line.get_global_rect()), "all identity rows bounded by opaque card")
 		await snap("selected-%d" % extent.x)
+		view.clear_selection()
+		area.mouse_entered.emit()
+		await settle()
+		check(view._selection_label.visible and view._selection_label._lines[3].text.contains(": select · double-click:"), "hover hint remains readable in resized real shell")
+		check(viewport.get_visible_rect().encloses(Rect2(view._selection_label._card.position, view._selection_label._card.size)), "longer hover hint card fits narrow viewport")
+		check(view._selection_label._card.get_global_rect().encloses(view._selection_label._lines[3].get_global_rect()), "wrapped hint fits its existing card")
+		click.pressed = true
+		area.input_event.emit(camera, click, mesh.global_position, Vector3.UP, 0)
+		await settle()
 	# Local remaps update the caption without changing selection or sending work.
 	InputMap.action_erase_events("world_select")
 	var key_binding := InputEventKey.new()
