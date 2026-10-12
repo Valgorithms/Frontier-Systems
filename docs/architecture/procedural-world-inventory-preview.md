@@ -46,3 +46,13 @@ Tray identity/instructions now use the shared [world context layout](world-conte
 ## Ordinary client pointer ownership
 
 The client viewport forwarding surface uses `FOCUS_NONE`; world clicks therefore do not create a GUI focus owner that blocks native physics picking. Actual GUI controls still own focus and consume their pointer activation before world handlers. Habitat target feedback clears local visual selection for an unhandled empty-space click and clears obsolete inventory highlighting on a switch to another target. Its event-local ray never consumes input or queues an intent. `ProceduralWorldInventoryPreview.clear_selection()` clears only the selected proxy key/card and highlight; observed storage, overlay choices, commands and canonical records remain unchanged. The dedicated [pointer milestone](../development/world-pointer-picking-milestone.md) verifies root Window dispatch through the actual client shell with socket-free injected events and canonical snapshot assertions.
+
+## Contextual inventory captions
+
+With the existing **Show world captions** setting enabled, inventory has one bounded identity card for the selected proxy, or the hovered proxy when nothing is selected. Native Area3D hover emits no selection/pickup signal. The item role comes only from its observed definition (unknown definitions use Item); exact item/root IDs and host-observed distance retain the existing card contract. Selection wins over incidental hover. The full overlay and existing target guidance retain full IDs when card text ellipsizes.
+
+Ordinary trays no longer allocate visible persistent identity/instruction cards. The tray context is shown only for a relevant item when there are more than eight observed direct items, preserving the exact count available in the overlay. No nested contents, capacity, physical reach or capability is inferred. Empty trays remain as geometry and in the existing overlay.
+
+Hover is retired on rebuild, clear-selection and projection withdrawal. Stable selection still rebinds while the same displayed IDs remain. Bootstrap's existing empty disconnect observation suppresses all inventory identity context until fresh valid data, while preserving the existing invalid-observation geometry behavior. Partial malformed records continue to preserve the previous display atomically. Label toggles, hover and selection never rebuild geometry or change native pick shapes, transforms, layers, signal arguments or commands. No simulation, schema, input/camera or machinery contract changes.
+
+Verification is tracked in [contextual label milestone](../development/world-inventory-context-labels-milestone.md).

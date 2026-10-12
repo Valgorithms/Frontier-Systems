@@ -35,4 +35,17 @@ Before adding an external art, audio, font, model, texture, or code asset, recor
 ## Procedural habitat visual details
 
 The resource clusters/prism, workbench supports/surfaces, tray rims/pedestals and terrain outlines in src/presentation/habitat/habitat_visual_details.gd are independently authored first-party MIT GDScript/Godot primitive geometry and materials. Creation tools: text editing and ordinary Godot 4.7.2 engine rendering. No imported source artwork, new fonts, third-party creative assets, AI image generation or generative intermediate assets are used. Internal graphical captures are ignored local diagnostics and are not shipped or uploaded.
-| `docs/community/indiedb/cards/*.svg` | Valithor / Frontier Systems project; hand-authored vector diagrams, no imported source artwork or gameplay captures | MIT |
+
+## Engineering object recognition geometry
+
+`src/presentation/production/engineering_object_details.gd` independently authors extractor gantry/auger collars, refinery vessels/pipe bridge, and framed recessed spatial wall panels. Author: Frontier Systems project (Codex-assisted original procedural geometry); license: MIT. Tools: text editing, Godot BoxMesh/CylinderMesh/StandardMaterial3D and ordinary Godot 4.7.2 rendering. No source artwork, imported models/textures/fonts, third-party creative assets or generative image intermediates. Internal native captures remain ignored local diagnostics.
+
+## Observed machinery activity geometry
+
+`src/presentation/production/machinery_activity_parts.gd` supplies original extractor drive vanes, refinery pump rotor and activity indicator geometry. Author: Frontier Systems project (Codex-assisted original procedural geometry); license: MIT. Creation tools: text editing, Godot BoxMesh/StandardMaterial3D and bounded ordinary transforms, native Godot 4.7.2 rendering. No source artwork, imported creative assets or generative imagery/intermediates. These cosmetic nodes have no collision or persistence. Internal native still captures remain ignored local diagnostics; no videos or uploads.
+
+## Portable tool and resource item geometry
+
+`src/presentation/inventory/inventory_item_silhouettes.gd` independently authors hooked crowbars, extractor body/grip/nozzle and cylindrical resource canisters with base/shoulder/neck. Author: Frontier Systems project (Codex-assisted original procedural geometry); license: MIT. Creation tools: text editing, Godot BoxMesh/CylinderMesh/StandardMaterial3D and ordinary Godot 4.7.2 rendering. No source artwork, imported models/textures/fonts, third-party creative dependencies or generative image intermediates. Shape denotes catalog role only, without claims about contents, capabilities or part condition. Internal native stills remain ignored local diagnostics.
+
+The same original MIT helper also authors the backpack rigid body, rounded shoulders, front/side pockets, rear straps and grab handle using BoxMesh/CylinderMesh. Author: Frontier Systems project (Codex-assisted original procedural geometry); creation tools: text editing and ordinary Godot rendering. No source artwork, generative intermediates or third-party creative dependencies. These parts denote the backpack catalog role only.

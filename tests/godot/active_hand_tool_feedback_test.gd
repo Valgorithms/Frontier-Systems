@@ -32,7 +32,7 @@ func run() -> void:
 	remote.server_slot = 0
 	observe_shell()
 	panel = client._inventory_panel
-	client._tabs.current_tab = 1
+	client._open_panel(1)
 	await settle()
 	choose(panel._source, "storage.pouch-1")
 	panel._fill_items()
@@ -147,6 +147,8 @@ func run() -> void:
 	for size: Vector2i in [Vector2i(1920, 1080), Vector2i(1100, 720), Vector2i(900, 640)]:
 		root.size = size
 		await settle()
+		print("Equipment layout %s: guidance %s px / %s lines; shell %s px" % [size, panel._equipment.size.y, panel._equipment.get_line_count(), (panel.get_parent() as ScrollContainer).size.y])
+		check(panel._equipment.get_line_count() < 36, "compact guidance stays below measured 36-38 line baseline with full IDs")
 		var scroll := panel.get_parent() as ScrollContainer
 		for label: Label in [panel._equipment, panel._active_tool]:
 			check(label.text.contains(long_id), "full observed active item ID retained")

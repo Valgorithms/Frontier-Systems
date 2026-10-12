@@ -149,7 +149,7 @@ func _receive(id: int, value: Dictionary) -> void:
 		production_command.operation = value["operation"] if typeof(value["operation"]) == TYPE_STRING else ""
 		production_command.payload = value["payload"]
 		command = production_command
-	elif value["system"] == "inventory" and value["operation"] in ["move_to", "world", "self"]:
+	elif value["system"] == "inventory" and value["operation"] in ["move_to", "world", "self", "open_container", "close_container"]:
 		if value["operation"] == "move_to":
 			var position: Variant = value["payload"].get("position_millimetres")
 			var inventory := _world.get_simulation_system(InventorySimulationSystem.SYSTEM_ID) as InventorySimulationSystem
@@ -159,8 +159,6 @@ func _receive(id: int, value: Dictionary) -> void:
 			if peer["pending_move"] or not inside_region or not current.is_success or InventorySpatialMath.distance_millimetres(current.value, position) > maxi(100, int(elapsed * 8000.0)):
 				_ack(id, value["request_id"], ServiceResult.failure(&"movement_rejected", "Movement exceeds the server step budget."))
 				return
-			peer["pending_move"] = true
-			peer["last_move"] = Time.get_ticks_msec()
 		var inventory_command := InventoryDevelopmentCommand.new()
 		inventory_command.operation = value["operation"]
 		inventory_command.payload = value["payload"]
@@ -175,14 +173,15 @@ func _receive(id: int, value: Dictionary) -> void:
 		_ack(id, value["request_id"], ServiceResult.failure(&"request_pending", "That request is already queued."))
 		return
 	if _pending.size() >= 32:
-		peer["pending_move"] = false
 		_ack(id, value["request_id"], ServiceResult.failure(&"host_backpressure", "Host pending request budget exhausted."))
 		return
 	var queued: ServiceResult = _world.enqueue_command(command)
 	if queued.is_success:
+		if command is InventoryDevelopmentCommand and command.operation == "move_to":
+			peer["pending_move"] = true
+			peer["last_move"] = Time.get_ticks_msec()
 		_pending[route] = {"peer": id, "request_id": value["request_id"]}
 	else:
-		peer["pending_move"] = false
 		_ack(id, value["request_id"], queued)
 
 
