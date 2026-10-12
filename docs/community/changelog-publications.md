@@ -56,3 +56,26 @@ Several improvements are now merged:
 Merged work: <https://github.com/Valgorithms/Frontier-Systems/pull/106> <https://github.com/Valgorithms/Frontier-Systems/pull/108> <https://github.com/Valgorithms/Frontier-Systems/pull/109> <https://github.com/Valgorithms/Frontier-Systems/pull/107> <https://github.com/Valgorithms/Frontier-Systems/pull/103>
 
 These are improvements to the source prototype, not a release or public playtest announcement. Windows and Linux automated checks passed, and the UI and object changes were inspected in the running game. Fresh-player usability, camera comfort, controllers and VR still need testing.
+
+## Completion batch: machinery and equipment — 2026-10-12 UTC
+
+- Audience: public Frontier Systems #changelog (`1558871000383234182`).
+- Confirmed message: https://discord.com/channels/1558661083131019364/1558871000383234182/1558996880862486631
+- Authenticated Valithor posted once after actual channel history showed only the two previous updates. Fresh rendered readback confirmed the complete wording, eight merged PR links and empty composer; screenshot verified placement. UI time October 11, 2026, 8:17 PM EDT.
+- Fresh GitHub inspection confirmed PR110/111/115/116/117/118/119/120 merged. Exact heads, merge commits, CI revisions and graphical limits remain in the milestone coordination ledger. PR121/122/123 are not claimed complete. No media or mentions sent; release publisher stays disabled and Ko-fi deadlines remain independent.
+- Receipt correction: the previous completion batch's actual DOM message ID is `1558972429945020468`, observed in the full channel history during this publication. Its wording is unchanged; the previously recorded snowflake/link was inaccurate.
+
+### Confirmed wording
+
+**Prototype progress: moving machinery and clearer equipment**
+
+The latest merged changes make the engineering scene easier to read:
+• Extractor vanes and refinery indicators now move when fresh observations show work advancing. They stop when progress is paused or stale.
+• Observed characters have a simple humanoid shape and a walking pose driven by actual movement.
+• Tools, canisters and backpacks have more recognizable shapes. Dense inventory trays give nearby items room to be picked individually.
+• Airlock flow ordering, service cache failure handling and panel layout cleanup have new regression coverage.
+
+Merged work: <https://github.com/Valgorithms/Frontier-Systems/pull/110> <https://github.com/Valgorithms/Frontier-Systems/pull/111> <https://github.com/Valgorithms/Frontier-Systems/pull/118> <https://github.com/Valgorithms/Frontier-Systems/pull/119> <https://github.com/Valgorithms/Frontier-Systems/pull/120>
+Maintenance: <https://github.com/Valgorithms/Frontier-Systems/pull/115> <https://github.com/Valgorithms/Frontier-Systems/pull/116> <https://github.com/Valgorithms/Frontier-Systems/pull/117>
+
+Windows and Linux automated checks passed. The visual changes were inspected in the running prototype. These are source-prototype improvements; there is no new release or public playtest. Fresh-player usability, controllers and VR still need testing.
