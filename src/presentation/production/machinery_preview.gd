@@ -199,7 +199,7 @@ func _update_labels(workshop: Dictionary) -> void:
 		_labels[id]["base_text"] = _labels[id]["label"].text
 		var job: Dictionary = workshop["jobs"].get(id, {})
 		var batch: String = "No batch observed; no completion receipt"
-		if not job.is_empty(): batch = "Observed %s · %d ticks" % [job["recipe"], job["progress"]]
+		if not job.is_empty(): batch = "Observed %d ticks · %s" % [job["progress"], job["recipe"]]
 		_context_lines[id] = PackedStringArray([
 			id.right(8) + " · " + (" / ".join(roles) if not roles.is_empty() else "MACHINE FRAME"),
 			"Last observed: " + String(_operation_feedback.machines[id]["preview_text"]).split("\n")[0] + " · Buffer %d J" % workshop["placements"][id]["energy"],

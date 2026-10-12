@@ -106,6 +106,7 @@ func finish() -> void:
 	preview._process(0.0)
 	card._process(0.0)
 	check(card.visible and Rect2(Vector2.ZERO, card.size).encloses(card._panel.get_rect()), "card remains bounded in actual narrow shell viewport")
+	check(card._lines[3].get_line_count() == card._lines[3].get_visible_line_count(), "narrow uncertainty statement remains fully readable")
 	await snap("narrow")
 	check(preview.find_children("*", "CollisionShape3D", true, false) == shapes, "context preserves exact colliders")
 	var snapshot: String = world.capture_world_snapshot_json().value

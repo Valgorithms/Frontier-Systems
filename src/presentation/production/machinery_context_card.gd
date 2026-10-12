@@ -26,8 +26,11 @@ func _ready() -> void:
 		var line := Label.new()
 		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		line.add_theme_font_size_override("font_size", 16)
-		line.clip_text = true
-		line.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		if index == 3:
+			line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		else:
+			line.clip_text = true
+			line.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		rows.add_child(line)
 		_lines.append(line)
 	visible = false
