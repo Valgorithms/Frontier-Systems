@@ -344,4 +344,28 @@ func _present_context() -> void:
 	if not _labels.has(id):
 		_context_card.present(null, PackedStringArray())
 		return
-	_context_card.present(_labels[id]["body"], _context_lines.get(id, PackedStringArray()))
+	_context_card.present(_labels[id]["body"], _context_lines.get(id, PackedStringArray()), _interaction_hint())
+
+## Describe only existing routes. Machinery bodies currently have native mouse
+## picking; the shared keyboard/controller ray router accepts Area3D only.
+func _interaction_hint() -> String:
+	if not WorldSelectionInput.gameplay_allowed(get_viewport()): return ""
+	var ancestor: Node = get_parent()
+	while ancestor != null:
+		if ancestor is FirstPlayableBootstrap:
+			var panel: MachineryPanel = ancestor._machinery_panel
+			if is_instance_valid(panel) and panel.is_visible_in_tree(): return ""
+			break
+		ancestor = ancestor.get_parent()
+	var controls := PlayerInputSettings.instance()
+	var events: Array[InputEvent] = InputMap.action_get_events("world_select")
+	if events.is_empty(): return "World select unbound · choose machine in Construction"
+	var binding: String = controls.binding_label("world_select")
+	if not events[0] is InputEventMouseButton:
+		return "%s cannot pick machinery · choose machine in Construction" % binding
+	var hint: String = "%s: select machine · opens Construction" % binding
+	var cursor_events: Array[InputEvent] = InputMap.action_get_events("ui_cursor")
+	if cursor_events.is_empty():
+		if InputMap.action_get_events("release_cursor").is_empty(): return "Cursor controls unbound · open Controls settings"
+		return "%s: release camera · then %s" % [controls.binding_label("release_cursor"), hint]
+	return "Hold %s for cursor · %s" % [controls.binding_label("ui_cursor"), hint]
