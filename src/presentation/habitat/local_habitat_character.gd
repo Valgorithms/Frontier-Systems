@@ -21,7 +21,7 @@ var _view_yaw: float = 0.0
 var _rig: Node3D
 var _arm: SpringArm3D
 var _camera: Camera3D
-var _mesh: MeshInstance3D
+var _mesh: LocalWalkerVisual
 
 
 func _ready() -> void:
@@ -106,7 +106,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 	_jump = false
+	var before: Vector3 = global_position
 	move_and_slide()
+	_mesh.observe_motion(before, global_position, delta, is_on_floor())
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -153,6 +155,8 @@ func _process(delta: float) -> void:
 
 
 func release_controls() -> void:
+	if _mesh != null:
+		_mesh.reset_motion()
 	# Discard residual look intent at release; never settle while the cursor is free.
 	if _rig != null:
 		_view_yaw = rotation.y + _rig.rotation.y
