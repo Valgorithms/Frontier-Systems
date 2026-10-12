@@ -10,15 +10,19 @@ var _feedback_signature: String = ""
 var _labels: Dictionary = {}
 var _socket_labels: Dictionary = {}
 var _operation_feedback := MachineryOperationFeedback.new()
+var _activity := MachineryActivityAnimation.new()
+var _activity_parts: Dictionary = {}
 const ROLES: Dictionary = {"autolathe": "AUTOLATHE","solar": "SOLAR GENERATOR", "printhead": "3D PRINTER", "refinery": "REFINERY", "extractor": "RESOURCE EXTRACTOR", "router": "POWER ROUTER"}
 
 
 func observe(record: Dictionary) -> void:
 	if not _operation_feedback.observe(record): record = {}
+	_activity.observe(record)
 	if record.is_empty():
 		_signature = ""
 		_labels.clear()
 		_socket_labels.clear()
+		_activity_parts.clear()
 		for child in get_children():
 			if child == _feedback_root: continue
 			remove_child(child)
@@ -34,10 +38,12 @@ func observe(record: Dictionary) -> void:
 	var signature: String = JSON.stringify([poses, workshop["mounts"], workshop["links"], physical_layout], "", true)
 	if signature == _signature:
 		_update_labels(workshop)
+		_present_activity()
 		return
 	_signature = signature
 	_labels.clear()
 	_socket_labels.clear()
+	_activity_parts.clear()
 	for child in get_children():
 		if child == _feedback_root: continue
 		remove_child(child)
@@ -78,6 +84,8 @@ func observe(record: Dictionary) -> void:
 			EngineeringObjectDetails.extractor(body)
 		if fitted.has("router"):
 			_box(body, Vector3(0.6, 0.08, 0.4), Color(0.2, 0.7, 0.45), Vector3(0, 0.45, 0))
+		if fitted.has("extractor") or fitted.has("refinery"):
+			_activity_parts[id] = MachineryActivityParts.build(body, fitted)
 		var index: int = 0
 		for module in workshop["mounts"]:
 			if workshop["mounts"][module] != id: continue
@@ -133,6 +141,25 @@ func observe(record: Dictionary) -> void:
 		cable.position = (a + b) / 2.0
 		if a.distance_to(b) > 0.01: cable.quaternion = Quaternion(Vector3.UP, (b - a).normalized())
 	_update_labels(workshop)
+	_present_activity()
+
+
+func _process(delta: float) -> void:
+	_activity.advance(delta)
+	_present_activity()
+
+
+func _present_activity() -> void:
+	for id in _activity_parts:
+		MachineryActivityParts.present(_activity_parts[id], {"extractor": _activity.phase(id, "extractor"), "refinery": _activity.phase(id, "refinery")}, _activity.indicator(id))
+		var text: String = "Motion unknown · waiting for fresh progress"
+		match _activity.state(id):
+			"running": text = "Drive active · observed progress" if not _activity.drive_kind(id).is_empty() else "Batch active · drive telemetry unavailable"
+			"paused": text = "Drive paused · Resume required"
+			"blocked": text = "Drive stopped · no progress confirmed"
+			"idle": text = "Drive idle · no batch observed"
+			"outcome_unknown": text = "Drive stopped · batch outcome unconfirmed"
+		_labels[id]["label"].text = _labels[id].get("base_text", "") + "\n" + text
 
 
 func _update_labels(workshop: Dictionary) -> void:
@@ -144,6 +171,7 @@ func _update_labels(workshop: Dictionary) -> void:
 		if _labels[id]["fitted"].has("autolathe"):
 			_labels[id]["label"].text += "\nHOPPER %.3f kg IRON" % (float(workshop["cargo"].get(id, {}).get("iron", 0)) / 1000000.0)
 		if int(_labels[id]["outputs"]) > 0: _labels[id]["label"].text += "\n%d PRINTED OUTPUT" % _labels[id]["outputs"]
+		_labels[id]["base_text"] = _labels[id]["label"].text
 	for carrier in _socket_labels:
 		var lines: PackedStringArray = []
 		for material in workshop["cargo"].get(carrier, {}):
