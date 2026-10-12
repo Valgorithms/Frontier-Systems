@@ -40,12 +40,24 @@ func _ready() -> void:
 	visible = false
 
 
-func select_proxy(proxy: Node3D, item_id: String, container_id: String, distance_mm: int) -> void:
+func select_proxy(proxy: Node3D, item_id: String, container_id: String, distance_mm: int, definition_id: String = "") -> void:
 	target = proxy
-	_lines[0].text = "Item: " + item_id
+	_lines[0].text = "%s: %s" % [observed_role(definition_id), item_id]
 	_lines[1].text = "Root: " + container_id
 	_lines[2].text = "Host observed: %.2f m" % (float(distance_mm) / 1000.0)
 	_process(0.0)
+
+
+## Only known observed definitions receive a role; unknown items remain neutral.
+static func observed_role(definition_id: String) -> String:
+	match definition_id:
+		"item.backpack.prototype", "item.backpack.fabricated": return "Backpack"
+		"item.pouch.prototype", "item.pouch.fabricated": return "Pouch"
+		"item.crowbar.prototype", "item.crowbar.fabricated": return "Crowbar"
+		"item.resource-canister.prototype", "item.resource-canister.fabricated": return "Canister"
+		"item.extractor.prototype", "item.extractor.fabricated": return "Extractor"
+		"item.plate.prototype": return "Plate"
+	return "Item"
 
 
 func _process(_delta: float) -> void:

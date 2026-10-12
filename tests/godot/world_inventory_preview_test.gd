@@ -99,6 +99,16 @@ func _run() -> void:
 	for index in range(12):
 		crowded["containers"][0]["items"].append({"item_id": "visual-%d" % index, "definition_id": "item.crowbar.prototype", "definition_revision": 1, "condition_permille": 1000, "container_id": "world.tray-1"})
 	_check(preview.observe(crowded).is_success and preview.presentation_snapshot()["visible_items"] == 8, "per-container proxy allocation must stay bounded")
+	var overflow_label: WorldContextLabel = preview._tray_labels["world.tray-1"]
+	_check(not overflow_label.visible and overflow_label.text.contains("4 more items available in overlay"), "quiet context retains exact observed overflow disclosure")
+	var crowded_entry: Dictionary = preview._visible_items.values()[0]
+	crowded_entry["area"].mouse_entered.emit()
+	_check(overflow_label.visible and preview._selection_label._lines[0].text.begins_with("Crowbar:"), "relevant hover reveals observed role and overflow")
+	var incomplete: Dictionary = crowded.duplicate(true)
+	incomplete.erase("inventory_revision")
+	_check(not preview.observe(incomplete).is_success and overflow_label.visible and preview._selection_label.target == crowded_entry["mesh"], "malformed partial observations preserve context atomically")
+	preview.clear_selection()
+	_check(not overflow_label.visible and preview._selection_label.target == null, "context reset retires hover and overflow card")
 	camera.queue_free()
 	preview.queue_free()
 	panel.queue_free()
