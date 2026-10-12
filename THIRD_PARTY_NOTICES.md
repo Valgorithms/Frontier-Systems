@@ -7,6 +7,7 @@ First-party game code, schemas, and created assets are licensed under MIT. This 
 | Asset | Creator and provenance | License |
 |---|---|---|
 | `icon.svg` | Frontier Systems project; original geometric artwork created for this repository | MIT |
+| `docs/community/indiedb/cards/*.svg`, `*.png` | Valithor / Frontier Systems project; hand-authored vector diagrams and raster renders, no imported source artwork or gameplay captures; PNGs rendered with Microsoft Edge | MIT |
 
 ## Planned dependencies
 
