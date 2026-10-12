@@ -79,3 +79,26 @@ Merged work: <https://github.com/Valgorithms/Frontier-Systems/pull/110> <https:/
 Maintenance: <https://github.com/Valgorithms/Frontier-Systems/pull/115> <https://github.com/Valgorithms/Frontier-Systems/pull/116> <https://github.com/Valgorithms/Frontier-Systems/pull/117>
 
 Windows and Linux automated checks passed. The visual changes were inspected in the running prototype. These are source-prototype improvements; there is no new release or public playtest. Fresh-player usability, controllers and VR still need testing.
+
+## Completion batch: interactions and movement (2026-10-12 UTC)
+
+- Confirmed message: https://discord.com/channels/1558661083131019364/1558871000383234182/1559031231063261215
+- Posted by authenticated Valithor in Edge at 2026-10-12T02:33:30.885Z. Actual channel history contained exactly the three prior updates; no duplicate batch existed. Complete rendered wording and all nine PR links were verified after sending.
+- Covers merged PR121/122/123/124/125/126 and reliability PR112/113/114. Merge, exact-head CI and focused combined-check evidence remain in the coordination ledger.
+- Screenshot: ignored var/ci/milestone-coordination/changelog-1559031231063261215.png. Text only, no mentions. One-off owner-requested publication while holding; development and heartbeat remain paused. Release publisher remains disabled.
+
+### Confirmed wording
+
+**Prototype progress: clearer interactions and character movement**
+
+The latest work is merged:
+• Inventory and machinery labels now appear when you hover over or select something, rather than covering the scene with permanent captions.
+• Contextual hints explain how to select and pick up items or open machinery controls, using your current bindings.
+• The local character now has a simple humanoid shape, with a walking pose driven by actual movement. Blocked movement and position corrections do not produce walking animation.
+• Rejected movement commands no longer consume the next movement opportunity.
+• Save recovery rejects malformed machinery records, and PHP/Godot command decoding agrees on integer JSON fields.
+
+Controls and character work: <https://github.com/Valgorithms/Frontier-Systems/pull/121> <https://github.com/Valgorithms/Frontier-Systems/pull/122> <https://github.com/Valgorithms/Frontier-Systems/pull/123> <https://github.com/Valgorithms/Frontier-Systems/pull/124> <https://github.com/Valgorithms/Frontier-Systems/pull/125> <https://github.com/Valgorithms/Frontier-Systems/pull/126>
+Reliability fixes: <https://github.com/Valgorithms/Frontier-Systems/pull/112> <https://github.com/Valgorithms/Frontier-Systems/pull/113> <https://github.com/Valgorithms/Frontier-Systems/pull/114>
+
+Required Windows and Linux checks passed, along with focused checks of the combined changes. These are source-prototype improvements. There is no new release or public playtest; fresh-player usability, controllers and VR still need testing.
