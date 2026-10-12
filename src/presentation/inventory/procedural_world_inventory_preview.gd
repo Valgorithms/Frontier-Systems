@@ -17,6 +17,9 @@ var _record: Dictionary = {"schema_version": 2, "inventory_revision": 0, "contai
 var _rendered: Node3D
 var _visible_items: Dictionary = {}
 var _selected_key: String = ""
+var _hovered_key: String = ""
+var _tray_labels: Dictionary = {}
+var _label_observation_available: bool = true
 var _rebuilds: int = 0
 var player_facing_labels: bool = false
 var skip_machine_roots: bool = false
@@ -24,9 +27,6 @@ var _selection_label: InventorySelectionLabel
 var labels_visible: bool = true:
 	set(value):
 		labels_visible = value
-		if _rendered != null:
-			for child in _rendered.get_children():
-				if child is WorldContextLabel: child.visible = value
 		_highlight()
 
 
@@ -39,14 +39,22 @@ func _ready() -> void:
 
 
 func observe(record: Dictionary) -> ServiceResult:
+	# Bootstrap uses an empty record to withdraw the disconnected projection.
+	# Preserve the existing invalid-record geometry contract, but retire identity.
+	if record.is_empty():
+		_label_observation_available = false
+		clear_selection()
 	var validated: ServiceResult = WorldStorageObservation.from_record(record)
 	if not validated.is_success:
 		return validated
 	var next: Dictionary = validated.value.to_record()
+	_label_observation_available = true
 	var changed: bool = JSON.stringify(next["containers"]) != JSON.stringify(_record["containers"])
 	_record = next
 	if changed:
 		_rebuild()
+	else:
+		_highlight()
 	return ServiceResult.success()
 
 
@@ -61,6 +69,8 @@ func _rebuild() -> void:
 	_rendered = Node3D.new()
 	add_child(_rendered)
 	_visible_items.clear()
+	_tray_labels.clear()
+	_hovered_key = ""
 	_rebuilds += 1
 	for container in _record["containers"]:
 		# The machinery adapter renders these physical roots as assemblies, not trays.
@@ -72,13 +82,13 @@ func _rebuild() -> void:
 				_box(_rendered, TRAY_BAY_SIZE, origin + Vector3((float(bay) - 0.5) * TRAY_BAY_PITCH, 0.7, (float(row) - 0.5) * TRAY_ROW_PITCH), Color("#788a96"))
 		var label := WorldContextLabel.new()
 		label.position = origin + Vector3(0, 0.7, 0)
-		label.text = "%s (logical fixture)\nClick to select; double-click to collect" % container["container_id"]
-		if player_facing_labels:
-			label.text = "Storage tray [%s]\nDouble-click an item to collect" % container["container_id"]
+		# Identity is already in the single item card. Reserve tray context for
+		# essential overflow rather than covering neighboring proxies twice.
 		if container["items"].size() > MAX_VISIBLE_ITEMS_PER_CONTAINER:
-			label.text += "\n%d more items available in overlay" % (container["items"].size() - MAX_VISIBLE_ITEMS_PER_CONTAINER)
+			label.text = "Storage tray [%s]\n%d more items available in overlay" % [container["container_id"], container["items"].size() - MAX_VISIBLE_ITEMS_PER_CONTAINER]
 		_rendered.add_child(label)
-		label.visible = labels_visible
+		_tray_labels[String(container["container_id"])] = label
+		label.visible = false
 		for index in range(mini(container["items"].size(), MAX_VISIBLE_ITEMS_PER_CONTAINER)):
 			var item: Dictionary = container["items"][index]
 			var dimensions := Vector3(0.15, 0.15, 0.15)
@@ -105,7 +115,7 @@ func _rebuild() -> void:
 			var mesh: MeshInstance3D = _box(_rendered, dimensions, location, color)
 			InventoryItemSilhouettes.apply(mesh, item["definition_id"])
 			var key: String = JSON.stringify([container["container_id"], item["item_id"]])
-			_visible_items[key] = {"mesh": mesh, "color": color, "item_id": item["item_id"], "container_id": container["container_id"], "distance": container["distance_millimetres"]}
+			_visible_items[key] = {"mesh": mesh, "color": color, "item_id": item["item_id"], "definition_id": item["definition_id"], "container_id": container["container_id"], "distance": container["distance_millimetres"]}
 			var area := Area3D.new()
 			area.position = location
 			area.collision_layer = 4
@@ -117,6 +127,9 @@ func _rebuild() -> void:
 			shape.shape = box
 			area.add_child(shape)
 			area.input_event.connect(_on_item_input.bind(container["container_id"], item["item_id"]))
+			_visible_items[key]["area"] = area
+			area.mouse_entered.connect(_on_item_hover.bind(key, true, area))
+			area.mouse_exited.connect(_on_item_hover.bind(key, false, area))
 			_rendered.add_child(area)
 	if not _visible_items.has(_selected_key):
 		_selected_key = ""
@@ -126,6 +139,18 @@ func _rebuild() -> void:
 ## Local visual selection only; never changes observed storage or queues an intent.
 func clear_selection() -> void:
 	_selected_key = ""
+	_hovered_key = ""
+	_highlight()
+
+
+## Native hover is transient presentation; no selection or pickup signal is emitted.
+func _on_item_hover(key: String, entered: bool, area: Area3D) -> void:
+	if not _label_observation_available or not _visible_items.has(key) or _visible_items[key]["area"] != area:
+		return
+	if entered:
+		_hovered_key = key
+	elif _hovered_key == key:
+		_hovered_key = ""
 	_highlight()
 
 
@@ -141,16 +166,20 @@ func _on_item_input(_camera: Node, event: InputEvent, _position: Vector3, _norma
 
 
 func _highlight() -> void:
+	var context_key: String = _selected_key if _visible_items.has(_selected_key) else _hovered_key
+	var context_root: String = String(_visible_items[context_key]["container_id"]) if _visible_items.has(context_key) else ""
+	for id in _tray_labels:
+		_tray_labels[id].visible = labels_visible and _label_observation_available and id == context_root and not _tray_labels[id].text.is_empty()
 	for key in _visible_items:
 		var entry: Dictionary = _visible_items[key]
 		var material: StandardMaterial3D = entry["mesh"].material_override
 		material.albedo_color = Color("#ffe066") if key == _selected_key else entry["color"]
 	if _selection_label != null:
 		_selection_label.target = null
-		_selection_label.enabled = labels_visible
-		if _visible_items.has(_selected_key):
-			var selected: Dictionary = _visible_items[_selected_key]
-			_selection_label.select_proxy(selected["mesh"], selected["item_id"], selected["container_id"], selected["distance"])
+		_selection_label.enabled = labels_visible and _label_observation_available
+		if _visible_items.has(context_key):
+			var selected: Dictionary = _visible_items[context_key]
+			_selection_label.select_proxy(selected["mesh"], selected["item_id"], selected["container_id"], selected["distance"], selected["definition_id"])
 		else:
 			_selection_label.visible = false
 
