@@ -22,11 +22,11 @@ func _ready() -> void:
 	var rows := VBoxContainer.new()
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(rows)
-	for index in range(4):
+	for index in range(5):
 		var line := Label.new()
 		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		line.add_theme_font_size_override("font_size", 16)
-		if index == 3:
+		if index >= 3:
 			line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		else:
 			line.clip_text = true
@@ -35,10 +35,12 @@ func _ready() -> void:
 		_lines.append(line)
 	visible = false
 
-func present(proxy: Node3D, lines: PackedStringArray) -> void:
+func present(proxy: Node3D, lines: PackedStringArray, hint: String = "") -> void:
 	target = proxy
 	for index in range(_lines.size()):
 		_lines[index].text = lines[index] if index < lines.size() else ""
+	_lines[4].text = hint
+	_lines[4].visible = not hint.is_empty()
 	_process(0.0)
 
 func _process(_delta: float) -> void:
@@ -57,7 +59,8 @@ func _process(_delta: float) -> void:
 	visible = Rect2(Vector2.ZERO, extent).has_point(_anchor)
 	if not visible: return
 	size = extent
-	_panel.size = Vector2(minf(420, extent.x - MARGIN * 2), 116)
+	_panel.size = Vector2(minf(420, extent.x - MARGIN * 2), 0)
+	_panel.size.y = maxf(116, _panel.get_combined_minimum_size().y)
 	_panel.position = Vector2(MARGIN, extent.y - _panel.size.y - MARGIN)
 	queue_redraw()
 
