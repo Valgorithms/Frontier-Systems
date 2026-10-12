@@ -34,14 +34,7 @@ func _ready() -> void:
 	var collider := CollisionShape3D.new()
 	collider.shape = capsule
 	add_child(collider)
-	var body_mesh := CapsuleMesh.new()
-	body_mesh.radius = 0.3
-	body_mesh.height = 1.8
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("#6cb8c5")
-	_mesh = MeshInstance3D.new()
-	_mesh.mesh = body_mesh
-	_mesh.material_override = material
+	_mesh = LocalWalkerVisual.new()
 	add_child(_mesh)
 	_rig = Node3D.new()
 	_rig.position.y = 0.7

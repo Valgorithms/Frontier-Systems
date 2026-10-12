@@ -1,0 +1,13 @@
+# Local walker humanoid silhouette
+
+Replace the local third-person capsule with original MIT primitive head, torso, arms and legs. The visual helper owns disposable geometry only. The exact existing capsule collider, movement/input, camera rig, canonical host position, command sampler and persistence remain unchanged. A static neutral silhouette is deliberate: this milestone adds no inferred locomotion or pose state.
+
+Scope: local_habitat_character.gd visual construction, a local-only helper, focused socket-free actual-shell tests and this milestone. Observed avatars/bootstrap, machinery and backpack presentation are excluded.
+
+Provenance: independently authored Frontier Systems MIT GDScript geometry using Godot primitives and plain text editing. No source artwork, third-party creative assets or generative imagery.
+
+Acceptance: real shell physics and barriers, first-person subtree hiding, third-person visibility and camera arm behavior, unchanged world snapshots and command queue. Windows local runner and exact-head Windows/Linux CI are required. Native internal stills resolve silhouette readability only if needed; no videos, publication or deployment.
+
+Local iteration: Windows Godot 4.7.2 official ed1daf0bf. Existing collision/barrier navigation, movement-feedback, camera-motion and world-picking fixtures passed. The new actual-shell physics fixture passes after using approximate comparisons for single-precision shape/snap values. Native Compatibility/OpenGL stills revealed a neck gap and workstation occlusion; the geometry now includes a connecting neck and the fixture walks farther using real local physics to show the full body with its unchanged camera. No extra camera, teleport or host command is used for framing.
+
+Final verification and limits: existing Windows checks cover closed/open airlock barriers, floor/jump, collision-aware third-person spring arm, input release, camera smoothing, movement rejection reconciliation and picking. The new no-port actual-shell fixture checks the exact collider transform/dimensions/filter/snap, full humanoid subtree visibility in both camera modes, real physics movement, disabled navigation and immutable canonical snapshot/transport queue. Ordinary native Compatibility rendering on RTX 3080 Ti verifies internal first/third-person stills using the existing local Camera3D. Captures/logs remain ignored under var/captures/local-walker and var/ci/local-walker*. No human keyboard/controller/VR, Linux graphical, live network or video acceptance is claimed. No configuration/example, dependency, simulation/schema or persistence changes. Exact published-head CI is reported separately after publication.
