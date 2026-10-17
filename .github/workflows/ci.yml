@@ -70,7 +70,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up PHP and Composer
-        uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: ${{ matrix.php-version }}
           tools: composer:v2
@@ -180,7 +180,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up PHP and Composer
-        uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: '8.3'
           tools: composer:v2
@@ -250,7 +250,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Set up PHP for local telemetry integration
-        uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: '8.3'
           tools: composer:v2
