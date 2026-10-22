@@ -1,7 +1,7 @@
 param(
     [string]$Godot = 'godot',
     [switch]$PortsReserved,
-    [ValidateSet('basic', 'terrain', 'walls', 'machinery', 'equipment-fabrication', 'tool-parts', 'input-acceptance', 'client-acceptance', 'production-navigation', 'manual-reconnect')]
+    [ValidateSet('basic', 'terrain', 'walls', 'machinery', 'equipment-fabrication', 'tool-parts', 'input-acceptance', 'client-acceptance', 'production-navigation', 'manual-reconnect', 'camera-motion')]
     [string]$Route = 'terrain',
     [ValidateRange(1, 300)][int]$TimeoutSeconds = 120
 )
@@ -26,6 +26,10 @@ if ($Route -eq 'production-navigation') {
 }
 if ($Route -eq 'manual-reconnect') {
     $arguments = @('--xr-mode', 'off', '--audio-driver', 'Dummy', '--rendering-method', 'gl_compatibility', '--path', '.', '--script', 'res://tests/godot/manual_reconnect_acceptance.gd', '--', '--capture-reconnect')
+}
+if ($Route -eq 'camera-motion') {
+    # Actual integrated client with recording transport, no sockets or captures.
+    $arguments = @('--xr-mode', 'off', '--audio-driver', 'Dummy', '--rendering-method', 'gl_compatibility', '--path', '.', '--script', 'res://tests/godot/camera_motion_smoothing_test.gd')
 }
 $launch = @{
     FilePath = $executable

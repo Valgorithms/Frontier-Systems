@@ -7,6 +7,8 @@ const WALK_SPEED: float = 4.0
 const RUN_SPEED: float = 7.0
 const GRAVITY: float = 3.71
 const JUMP_SPEED: float = 2.5
+## Angular settling only; body/arm translation remains collision-owned.
+const LOOK_RESPONSE: float = 24.0
 var read_local_keyboard: bool = true
 var camera_mode: CameraMode = CameraMode.FIRST_PERSON
 var _active: bool = false
@@ -15,10 +17,11 @@ var _axes := Vector2.ZERO
 var _jump: bool = false
 var _sprint: bool = false
 var _pitch: float = 0.0
+var _view_yaw: float = 0.0
 var _rig: Node3D
 var _arm: SpringArm3D
 var _camera: Camera3D
-var _mesh: MeshInstance3D
+var _mesh: LocalWalkerVisual
 
 
 func _ready() -> void:
@@ -31,14 +34,7 @@ func _ready() -> void:
 	var collider := CollisionShape3D.new()
 	collider.shape = capsule
 	add_child(collider)
-	var body_mesh := CapsuleMesh.new()
-	body_mesh.radius = 0.3
-	body_mesh.height = 1.8
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("#6cb8c5")
-	_mesh = MeshInstance3D.new()
-	_mesh.mesh = body_mesh
-	_mesh.material_override = material
+	_mesh = LocalWalkerVisual.new()
 	add_child(_mesh)
 	_rig = Node3D.new()
 	_rig.position.y = 0.7
@@ -51,6 +47,7 @@ func _ready() -> void:
 	_camera = Camera3D.new()
 	_camera.fov = 75.0
 	_arm.add_child(_camera)
+	_view_yaw = rotation.y
 	set_camera_mode(CameraMode.FIRST_PERSON)
 	set_navigation_enabled(false)
 
@@ -109,7 +106,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 	_jump = false
+	var before: Vector3 = global_position
 	move_and_slide()
+	_mesh.observe_motion(before, global_position, delta, is_on_floor())
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -132,12 +131,36 @@ func _input(event: InputEvent) -> void:
 		_jump = true
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseMotion:
+		if not event.relative.is_finite():
+			return
+		var displayed_yaw: float = rotation.y + _rig.rotation.y
 		rotation.y = fposmod(rotation.y - event.relative.x * PlayerInputSettings.instance().sensitivity, TAU)
+		_rig.rotation.y = angle_difference(rotation.y, displayed_yaw)
+		_view_yaw = rotation.y
 		_pitch = clampf(_pitch - event.relative.y * PlayerInputSettings.instance().sensitivity, -1.3, 1.3)
-		_rig.rotation.x = _pitch
+
+
+## Evaluate the same Camera3D transform used by world selection, once per frame.
+func _process(delta: float) -> void:
+	if not _active or not PlayerInputSettings.instance().can_navigate(self):
+		_view_yaw = rotation.y + _rig.rotation.y
+		_pitch = _rig.rotation.x
+		return
+	if not is_finite(delta) or delta <= 0.0:
+		return
+	var weight: float = 1.0 - exp(-LOOK_RESPONSE * minf(delta, 0.1))
+	var yaw: float = lerp_angle(rotation.y + _rig.rotation.y, _view_yaw, weight)
+	_rig.rotation.y = angle_difference(rotation.y, yaw)
+	_rig.rotation.x = lerpf(_rig.rotation.x, _pitch, weight)
 
 
 func release_controls() -> void:
+	if _mesh != null:
+		_mesh.reset_motion()
+	# Discard residual look intent at release; never settle while the cursor is free.
+	if _rig != null:
+		_view_yaw = rotation.y + _rig.rotation.y
+		_pitch = _rig.rotation.x
 	PlayerInputSettings.instance().release_capture(self)
 	_looking = false
 	_jump = false

@@ -8,19 +8,36 @@ var _signature: String = ""
 var _feedback_root: Node3D
 var _feedback_signature: String = ""
 var _labels: Dictionary = {}
+var _hovered_id: String = ""
+var _selected_id: String = ""
+var _context_card: MachineryContextCard
+var _context_lines: Dictionary = {}
 var _socket_labels: Dictionary = {}
 var _operation_feedback := MachineryOperationFeedback.new()
+var _activity := MachineryActivityAnimation.new()
+var _activity_parts: Dictionary = {}
 const ROLES: Dictionary = {"autolathe": "AUTOLATHE","solar": "SOLAR GENERATOR", "printhead": "3D PRINTER", "refinery": "REFINERY", "extractor": "RESOURCE EXTRACTOR", "router": "POWER ROUTER"}
+
+
+func _ready() -> void:
+	var layer := CanvasLayer.new()
+	add_child(layer)
+	_context_card = MachineryContextCard.new()
+	layer.add_child(_context_card)
 
 
 func observe(record: Dictionary) -> void:
 	if not _operation_feedback.observe(record): record = {}
+	_activity.observe(record)
+	_context_lines.clear()
 	if record.is_empty():
 		_signature = ""
+		clear_context()
 		_labels.clear()
 		_socket_labels.clear()
+		_activity_parts.clear()
 		for child in get_children():
-			if child == _feedback_root: continue
+			if child == _feedback_root or child is CanvasLayer: continue
 			remove_child(child)
 			child.queue_free()
 		present_feedback({})
@@ -34,18 +51,23 @@ func observe(record: Dictionary) -> void:
 	var signature: String = JSON.stringify([poses, workshop["mounts"], workshop["links"], physical_layout], "", true)
 	if signature == _signature:
 		_update_labels(workshop)
+		_present_activity()
 		return
 	_signature = signature
+	_hovered_id = "" # A rebuilt body must earn a new native hover.
 	_labels.clear()
 	_socket_labels.clear()
+	_activity_parts.clear()
 	for child in get_children():
-		if child == _feedback_root: continue
+		if child == _feedback_root or child is CanvasLayer: continue
 		remove_child(child)
 		child.queue_free()
 	for id in poses:
 		var body := StaticBody3D.new()
 		body.position = _position(poses[id]) + Vector3(0, 0.4, 0)
 		add_child(body)
+		body.mouse_entered.connect(func() -> void: _set_hover(id))
+		body.mouse_exited.connect(func() -> void: _clear_hover(id))
 		body.input_event.connect(func(_camera: Node, event: InputEvent, _position: Vector3, _normal: Vector3, _shape: int) -> void:
 			if PlayerInputSettings.instance().accepts_gameplay_input() and event.is_action_pressed("world_select"): machine_selected.emit(id)
 		)
@@ -73,11 +95,13 @@ func observe(record: Dictionary) -> void:
 			_box(body, Vector3(0.65, 0.25, 0.5), Color(0.6, 0.65, 0.7), Vector3(0, 0.48, 0))
 			_cylinder(body, Vector3(-0.2, 0.7, 0), Color(0.85, 0.55, 0.1), 0.12, 0.18)
 		if fitted.has("refinery"):
-			for x in [-0.2, 0.2]: _cylinder(body, Vector3(x, 0.6, 0), Color(0.5, 0.65, 0.68), 0.15, 0.45)
+			EngineeringObjectDetails.refinery(body)
 		if fitted.has("extractor"):
-			_box(body, Vector3(0.2, 0.65, 0.2), Color(0.95, 0.65, 0.1), Vector3(0, 0.6, 0))
+			EngineeringObjectDetails.extractor(body)
 		if fitted.has("router"):
 			_box(body, Vector3(0.6, 0.08, 0.4), Color(0.2, 0.7, 0.45), Vector3(0, 0.45, 0))
+		if fitted.has("extractor") or fitted.has("refinery"):
+			_activity_parts[id] = MachineryActivityParts.build(body, fitted)
 		var index: int = 0
 		for module in workshop["mounts"]:
 			if workshop["mounts"][module] != id: continue
@@ -100,6 +124,7 @@ func observe(record: Dictionary) -> void:
 				body.add_child(canister_collision)
 				var cargo_label := Label3D.new()
 				cargo_label.position = offset + Vector3(0, 0.35, 0)
+				cargo_label.visible = false
 				cargo_label.font_size = 30
 				cargo_label.pixel_size = 0.0035
 				cargo_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -113,12 +138,13 @@ func observe(record: Dictionary) -> void:
 				if physical["container_id"] == InventorySimulationSystem.factory_storage_id(id) and not workshop["mounts"].has(physical["item_id"]) and not workshop["links"].has(physical["item_id"]):
 					_box(body, Vector3(0.14, 0.12, 0.14), Color(0.9, 0.6, 0.2), Vector3(-0.2 + outputs * 0.18, 0.55, 0.15))
 					outputs += 1
+		title.visible = false
 		title.position.y = 1.4
 		title.font_size = 30
 		title.pixel_size = 0.003
 		title.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		body.add_child(title)
-		_labels[id] = {"label": title, "fitted": fitted, "outputs": outputs}
+		_labels[id] = {"label": title, "fitted": fitted, "outputs": outputs, "body": body}
 	for link in workshop["links"].values():
 		if not poses.has(link["a"]) or not poses.has(link["b"]): continue
 		var a: Vector3 = _position(poses[link["a"]]) + Vector3(0, 0.08, 0)
@@ -133,6 +159,32 @@ func observe(record: Dictionary) -> void:
 		cable.position = (a + b) / 2.0
 		if a.distance_to(b) > 0.01: cable.quaternion = Quaternion(Vector3.UP, (b - a).normalized())
 	_update_labels(workshop)
+	_present_activity()
+
+
+func _process(delta: float) -> void:
+	_activity.advance(delta)
+	_present_activity()
+
+
+func _present_activity() -> void:
+	for id in _activity_parts:
+		MachineryActivityParts.present(_activity_parts[id], {"extractor": _activity.phase(id, "extractor"), "refinery": _activity.phase(id, "refinery")}, _activity.indicator(id))
+	for id in _labels:
+		var text: String = "Motion unknown · stale / waiting for fresh progress"
+		match _activity.state(id):
+			"running": text = "Drive active · observed progress" if not _activity.drive_kind(id).is_empty() else "Batch active · drive telemetry unavailable"
+			"paused": text = "Drive paused · Resume required"
+			"blocked": text = "Drive stopped · no progress confirmed"
+			"idle": text = "Drive idle · no batch observed"
+			"outcome_unknown": text = "Drive stopped · batch outcome unconfirmed"
+		_labels[id]["label"].text = _labels[id].get("base_text", "") + "\n" + text
+		var lines: PackedStringArray = _context_lines.get(id, PackedStringArray())
+		var status: String = {"running": "Running · observed progress", "paused": "Paused · Resume required", "blocked": "Blocked · no progress confirmed", "idle": "Idle · no batch observed", "outcome_unknown": "Batch outcome unconfirmed"}.get(_activity.state(id), "Stale / progress unknown")
+		if lines.size() == 3: lines.append(status)
+		elif lines.size() == 4: lines[3] = status
+		_context_lines[id] = lines
+	_present_context()
 
 
 func _update_labels(workshop: Dictionary) -> void:
@@ -144,6 +196,14 @@ func _update_labels(workshop: Dictionary) -> void:
 		if _labels[id]["fitted"].has("autolathe"):
 			_labels[id]["label"].text += "\nHOPPER %.3f kg IRON" % (float(workshop["cargo"].get(id, {}).get("iron", 0)) / 1000000.0)
 		if int(_labels[id]["outputs"]) > 0: _labels[id]["label"].text += "\n%d PRINTED OUTPUT" % _labels[id]["outputs"]
+		_labels[id]["base_text"] = _labels[id]["label"].text
+		var job: Dictionary = workshop["jobs"].get(id, {})
+		var batch: String = "No batch observed; no completion receipt"
+		if not job.is_empty(): batch = "Observed %d ticks · %s" % [job["progress"], job["recipe"]]
+		_context_lines[id] = PackedStringArray([
+			id.right(8) + " · " + (" / ".join(roles) if not roles.is_empty() else "MACHINE FRAME"),
+			"Last observed: " + String(_operation_feedback.machines[id]["preview_text"]).split("\n")[0] + " · Buffer %d J" % workshop["placements"][id]["energy"],
+			batch])
 	for carrier in _socket_labels:
 		var lines: PackedStringArray = []
 		for material in workshop["cargo"].get(carrier, {}):
@@ -185,6 +245,8 @@ static func _box(parent: Node3D, size: Vector3, color: Color, offset: Vector3) -
 
 ## Decorative geometry never has collision, input picking, inventory or save data.
 func present_feedback(feedback: Dictionary) -> void:
+	_selected_id = String(feedback.get("selected_id", ""))
+	_present_context()
 	var signature: String = var_to_str(feedback)
 	if signature == _feedback_signature: return
 	_feedback_signature = signature
@@ -205,6 +267,7 @@ func present_feedback(feedback: Dictionary) -> void:
 	if not feedback["ghost_visible"]: return
 	var target: Vector3 = MachineryPlacementFeedback.display_position(feedback["position"])
 	var color := Color(0.2, 0.85, 0.95, 0.24) if feedback["advisory_ok"] else Color(1.0, 0.35, 0.2, 0.24)
+	if feedback.get("wall_draft", false): color = Color(0.6, 0.7, 0.95, 0.24)
 	if feedback["pending"]: color = Color(1.0, 0.8, 0.2, 0.24)
 	_feedback_box(_feedback_root, size, color, target + Vector3(0, size.y / 2.0, 0))
 	var ghost: MeshInstance3D = _feedback_root.get_child(_feedback_root.get_child_count() - 1)
@@ -218,7 +281,7 @@ func present_feedback(feedback: Dictionary) -> void:
 		var extent: Vector3 = Vector3(0.018, 0.018, 0.018) + axes[index] * 0.9
 		_feedback_box(_feedback_root, extent, colors[index], target + Vector3(0, 0.04, 0) + axes[index] * 0.45)
 		_feedback_label(_feedback_root, target + Vector3(0, 0.1, 0) + axes[index], ["+X", "+Y", "+Z"][index], colors[index])
-	_feedback_label(_feedback_root, target + Vector3(0, size.y + 0.35, 0), "PENDING HOST" if feedback["pending"] else ("ADVISORY ENVELOPE" if feedback.get("machine_envelope", false) else "PLACEMENT PREVIEW"), Color(color, 1.0))
+	_feedback_label(_feedback_root, target + Vector3(0, size.y + 0.35, 0), "PENDING HOST" if feedback["pending"] else ("ADVISORY ENVELOPE" if feedback.get("machine_envelope", false) else ("UNSUBMITTED WALL PREVIEW" if feedback.get("wall_draft", false) else "PLACEMENT PREVIEW")), Color(color, 1.0))
 
 
 static func _footprint(parent: Node3D, base: Vector3, size: Vector3, color: Color) -> void:
@@ -255,3 +318,54 @@ static func _envelope_edges(parent: Node3D, base: Vector3, size: Vector3, color:
 	for side in [-1.0, 1.0]:
 		_feedback_box(parent, Vector3(size.x, 0.025, 0.025), color, base + Vector3(0, size.y, side * size.z / 2.0))
 		_feedback_box(parent, Vector3(0.025, 0.025, size.z), color, base + Vector3(side * size.x / 2.0, size.y, 0))
+
+
+## Local context only: presentation never queues a machine command.
+func clear_context() -> void:
+	_hovered_id = ""
+	_selected_id = ""
+	if is_instance_valid(_context_card): _context_card.present(null, PackedStringArray())
+
+
+func _set_hover(id: String) -> void:
+	_hovered_id = id if WorldSelectionInput.gameplay_allowed(get_viewport()) else ""
+	_present_context()
+
+
+func _clear_hover(id: String) -> void:
+	if _hovered_id == id: _hovered_id = ""
+	_present_context()
+
+
+func _present_context() -> void:
+	if not is_instance_valid(_context_card) or not is_inside_tree(): return
+	if not WorldSelectionInput.gameplay_allowed(get_viewport()): _hovered_id = ""
+	var id: String = _hovered_id if _labels.has(_hovered_id) else _selected_id
+	if not _labels.has(id):
+		_context_card.present(null, PackedStringArray())
+		return
+	_context_card.present(_labels[id]["body"], _context_lines.get(id, PackedStringArray()), _interaction_hint())
+
+## Describe only existing routes. Machinery bodies currently have native mouse
+## picking; the shared keyboard/controller ray router accepts Area3D only.
+func _interaction_hint() -> String:
+	if not WorldSelectionInput.gameplay_allowed(get_viewport()): return ""
+	var ancestor: Node = get_parent()
+	while ancestor != null:
+		if ancestor is FirstPlayableBootstrap:
+			var panel: MachineryPanel = ancestor._machinery_panel
+			if is_instance_valid(panel) and panel.is_visible_in_tree(): return ""
+			break
+		ancestor = ancestor.get_parent()
+	var controls := PlayerInputSettings.instance()
+	var events: Array[InputEvent] = InputMap.action_get_events("world_select")
+	if events.is_empty(): return "World select unbound · choose machine in Construction"
+	var binding: String = controls.binding_label("world_select")
+	if not events[0] is InputEventMouseButton:
+		return "%s cannot pick machinery · choose machine in Construction" % binding
+	var hint: String = "%s: select machine · opens Construction" % binding
+	var cursor_events: Array[InputEvent] = InputMap.action_get_events("ui_cursor")
+	if cursor_events.is_empty():
+		if InputMap.action_get_events("release_cursor").is_empty(): return "Cursor controls unbound · open Controls settings"
+		return "%s: release camera · then %s" % [controls.binding_label("release_cursor"), hint]
+	return "Hold %s for cursor · %s" % [controls.binding_label("ui_cursor"), hint]
