@@ -212,11 +212,22 @@ func _make_captions() -> void:
 
 func _shot(frame: int) -> void:
 	var segment: int = frame / 180
+	var local_frame: int = frame % 180
 	var starts: Array[Vector3] = [Vector3(-4.4, 3.2, 1), Vector3(3.8, 3.3, 1), Vector3(-8.4, 2.3, 0.7), Vector3(-5, 4, 0.3)]
 	var targets: Array[Vector3] = [Vector3(-2, 0.9, 2.5), Vector3(1.4, 0.7, -1), Vector3(-6, 0.8, -2), Vector3(-2.7, 0.9, 2.5)]
+	# Deliberate cuts separate activities; each shot settles on its subject before
+	# the command fires. Ease a small dolly rather than orbiting away from it.
+	var travel: float = smoothstep(0.0, 179.0, float(local_frame))
+	var target: Vector3 = targets[segment]
+	if segment == 3:
+		# The plate is removed at 580 and rebuilt at 630. Follow its destination
+		# during that empty interval, then hold on the rebuilt wall.
+		var relocation: float = smoothstep(580.0, 620.0, float(frame))
+		target = Vector3(-2, 0.9, 2.5).lerp(Vector3(-3.5, 0.9, 2.5), relocation)
 	var display_origin: Vector3 = ProceduralWorldInventoryPreview.DISPLAY_ORIGIN
-	habitat.camera.position = display_origin + starts[segment]
-	habitat.camera.look_at(display_origin + targets[segment])
+	var camera_start: Vector3 = starts[segment]
+	habitat.camera.position = display_origin + camera_start.lerp(target + (camera_start - target) * 0.94, travel)
+	habitat.camera.look_at(display_origin + target)
 	match segment:
 		0:
 			title.text = "A physical plate becomes a wall"

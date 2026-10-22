@@ -13,3 +13,9 @@ Run in a clean isolated worktree after import:
 The wrapper owns one bounded native process, disables external telemetry, isolates the user directory and removes its temporary override. It never opens a socket or touches the regular saved world. Capture is graphical on Windows using GL compatibility. Automated fixture and camera operation are disclosed onscreen; this is not footage of human play, controller/VR acceptance or a published build. Local media can be given to the owner for the explicitly requested personal teaser; no Telegram upload is performed by this route.
 
 Review native keyframes before encoding. Use H.264/yuv420p MP4, 1280x720, 30 fps and faststart for mobile sharing. Keep raw provenance and output hashes alongside ignored local media; do not add current internal gallery images to the teaser or upload it to other services.
+
+## Resumed camera pass, 2026-10-22
+
+The capture branch now includes the current integration branch's improved assets, machinery activity, walker poses and contextual UI. Four deliberate cuts separate construction, printer relocation, head replacement and material recovery. Each shot holds its subject while a small eased dolly adds depth; the last shot reframes toward the rebuilt wall before its placement command. Captions remain at the edges and the normal HUD stays hidden. This is an automated workshop demonstration, not first-person player footage.
+
+Acceptance requires a new native render showing each commanded object clearly before and after the change, no subject hidden by captions or geometry, smooth within-shot motion, and the existing finite-material assertions passing. Native verification and rendering are deferred while the independently owned Gaia restore holds runtime capacity. The source change alone is not visual acceptance or a finished video.
