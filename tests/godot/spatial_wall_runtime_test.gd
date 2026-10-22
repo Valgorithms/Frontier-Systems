@@ -42,6 +42,12 @@ func run() -> void:
 	check(production.capture_snapshot().value["cargo"] == before["cargo"], "failed unowned plate construction is atomic")
 	command("wall_build", intent)
 	var wall_id: String = production.capture_snapshot().value["walls"].keys()[0]
+	var boundary_snapshot: Dictionary = production.capture_snapshot().value
+	var boundaries: ServiceResult = production.construction_boundaries(context)
+	check(boundaries.is_success and boundaries.value["boundaries"].size() == 1 and boundaries.value["boundaries"][0]["wall_id"] == wall_id, "paid construction exposes its actual stable wall boundary")
+	check(boundaries.value["production_revision"] == boundary_snapshot["state_revision"], "boundary input identifies its production revision")
+	check(production.capture_snapshot().value == boundary_snapshot, "boundary description cannot debit matter or change canonical state")
+	check(not production.construction_boundaries(AuthenticatedCommandContext.new()).is_success, "boundary description does not bypass observation authorization")
 	check(not production.capture_snapshot().value["cargo"].has(plates[0]) and not production.observation(context).value["components"].has(plates[0]), "wall consumes physical plate and payload exactly once")
 	check(production.capture_snapshot().value["wall_mass_milligrams"] == 0, "spatial wall is distinct from legacy aggregate mass")
 	# A retained retry acknowledges the same result without another consumed plate.
