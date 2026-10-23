@@ -248,6 +248,21 @@ func resolve_paid_floor_locomotion(context: AuthenticatedCommandContext, environ
 	return PaidFloorSupportAdapter.resolve(pose.value, surfaces, int(_state["state_revision"]), int(_state["last_tick"]), environment, equipment)
 
 
+## Server-internal complete geometry, unlike the own-only observation below.
+## Transient synchronous read: revision/ticks are provenance, never cache tokens.
+func paid_panel_collision_descriptors(context: AuthenticatedCommandContext, expected_revision: Variant) -> ServiceResult:
+	if typeof(expected_revision) != TYPE_INT or not ControlContractValidation.is_integer(expected_revision, 0, MAX_REVISION): return _failure("Expected a bounded integer Production revision.")
+	if _inventory == null or _state.is_empty() or get_parent() == null or _inventory.get_parent() != get_parent(): return _failure("Collision owners must share the current simulation runtime.")
+	var pose: ServiceResult = _inventory.own_floor_support_pose(context)
+	if not pose.is_success: return pose
+	if expected_revision != _state["state_revision"]: return _failure("Paid panel geometry requires the current Production revision.")
+	var geometry: ServiceResult = PaidPanelCollisionDescriptors.describe(_state["panels"])
+	if not geometry.is_success: return geometry
+	return ServiceResult.success({"schema_version": 1, "world_id": String(context.world_id), "region_id": String(context.region_id),
+		"coordinate_frame": "station_millimetres", "production_revision": int(_state["state_revision"]), "production_tick": int(_state["last_tick"]),
+		"inventory_tick": pose.value["inventory_tick"], "boxes": geometry.value, "profiling": {"inspected_panels": geometry.value.size()}})
+
+
 func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 	var allowed: ServiceResult = _inventory.production_capability(context, false, []) if _inventory != null else _failure("Inventory is unavailable.")
 	if not allowed.is_success:
