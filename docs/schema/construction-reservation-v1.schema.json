@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frontier-systems.local/schema/construction-reservation-v1.schema.json",
+  "title": "Detached construction reservation ledger v1",
+  "description": "Trusted owner checkpoint fragment. No material balance is stored here. Semantic validation and atomic owner integration are additionally required.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "revision", "jobs", "receipts"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "revision": {"type": "integer", "minimum": 0, "maximum": 9007199254740990},
+    "jobs": {
+      "type": "object", "maxProperties": 16,
+      "propertyNames": {"$ref": "#/$defs/id"},
+      "additionalProperties": {"$ref": "#/$defs/job"}
+    },
+    "receipts": {
+      "type": "object", "maxProperties": 2048,
+      "propertyNames": {"$ref": "#/$defs/id"},
+      "additionalProperties": {"$ref": "#/$defs/receipt"}
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "\\S"},
+    "job": {
+      "type": "object", "additionalProperties": false,
+      "required": ["actor_id", "blueprint_id", "state", "progress_ticks", "last_tick"],
+      "properties": {
+        "actor_id": {"$ref": "#/$defs/id"},
+        "blueprint_id": {"const": "equipment.canister"},
+        "state": {"enum": ["active", "paused", "ready", "cancelled", "completed"]},
+        "progress_ticks": {"type": "integer", "minimum": 0, "maximum": 120},
+        "last_tick": {"type": "integer", "minimum": 0, "maximum": 9007199254740990}
+      },
+      "allOf": [
+        {"if": {"properties": {"state": {"enum": ["ready", "completed"]}}}, "then": {"properties": {"progress_ticks": {"const": 120}}}},
+        {"if": {"properties": {"state": {"const": "active"}}}, "then": {"properties": {"progress_ticks": {"maximum": 119}}}}
+      ]
+    },
+    "receipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["actor_id", "intent", "job_id", "operation", "revision"],
+      "properties": {
+        "actor_id": {"$ref": "#/$defs/id"},
+        "intent": {"type": "string", "minLength": 64, "maxLength": 64},
+        "job_id": {"$ref": "#/$defs/id"},
+        "operation": {"enum": ["reserve", "advance", "interrupt", "resume", "cancel", "complete"]},
+        "revision": {"type": "integer", "minimum": 1, "maximum": 9007199254740990}
+      }
+    }
+  }
+}
