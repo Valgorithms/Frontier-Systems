@@ -200,7 +200,13 @@ func reload_playable(snapshot: String, label: String) -> void:
 	if not restored.is_success:
 		target.free()
 		return
-	check(target.capture_world_snapshot_json().value == snapshot, label + " preserves complete record")
+	var restored_snapshot: String = target.capture_world_snapshot_json().value
+	DirAccess.make_dir_recursive_absolute("res://var/ci/godot")
+	for entry in [["candidate", snapshot], ["restored", restored_snapshot]]:
+		var record := FileAccess.open("res://var/ci/godot/finite-bootstrap-roundtrip-%d-%s.json" % [runner.tick_number, entry[0]], FileAccess.WRITE)
+		record.store_string(entry[1])
+		record.close()
+	check(restored_snapshot == snapshot, label + " preserves complete record")
 	world.free()
 	world = target
 	world.command_completed.connect(func(_command: SimulationCommand, result: ServiceResult) -> void: last = result)
