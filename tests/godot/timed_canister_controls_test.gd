@@ -238,6 +238,13 @@ func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	remote_controls.configure(remote)
 	remote_controls.observe(remote.production_observation(context).value)
 	check(not remote_controls._record.is_empty(), "remote UI reads real completed host projection")
+	for version in [true, 10.5, 12, "11"]:
+		var bad_version: Dictionary = remote.production_observation(context).value.duplicate(true)
+		bad_version.schema_version = version
+		remote_controls.observe(bad_version)
+		check(remote_controls._record.is_empty(), "timed UI rejects boolean/fractional/unknown/string version")
+		remote_controls.observe(remote.production_observation(context).value)
+		check(not remote_controls._record.is_empty(), "current integral JSON version restores timed UI")
 	remote.connection_closed.emit("test disconnect")
 	check(remote_controls._record.is_empty() and remote_controls._buttons["complete"].disabled, "remote disconnect clears timed UI authority")
 	remote_controls.free()
