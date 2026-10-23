@@ -144,7 +144,7 @@ func run() -> void:
 	var own: Dictionary = inventory.own_inventory_observation(context).value
 	check(own["items"].any(func(item: Dictionary) -> bool: return item["item_id"] == output and item["definition_revision"] == 2), "completed UI job creates actual revision-2 canister")
 	check(production.capture_snapshot().value["store"]["iron"] == 200000, "completion debits exactly one real bill")
-	check(JSON.parse_string(world.capture_world_snapshot_json().value)["systems"]["production"]["schema_version"] == 8, "UI does not change v8 save contract")
+	check(JSON.parse_string(world.capture_world_snapshot_json().value)["systems"]["production"]["schema_version"] == 9, "UI preserves v9 save contract")
 	panel.observe(paused)
 	check(controls._record.is_empty() and controls._buttons["resume"].disabled, "stale panel observation disables actions")
 	panel.observe(frame())
