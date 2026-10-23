@@ -16,6 +16,42 @@ The loop is executable runtime code, with command buttons and durable snapshot r
 
 ## Ownership and commands
 
+The machinery workbench assembly group includes a collapsed **Timed canister**
+control. Start reserves one 1 kg iron bill; Pause, Resume, Cancel and Complete
+submit the existing `timed-canister-intent-v1` operations through
+`ProductionDevelopmentCommand`. The UI permits one unfinished own job at a time
+and disables actions while a request is pending or current telemetry is absent.
+It stays inside the existing scrollable contextual panel; it adds no camera overlay.
+
+Production observation v9 adds `timed_canister` (see
+`timed-canister-observation-v1.schema.json`). It contains the current reservation
+revision and own control epoch, advisory `can_operate` / `can_start`, and at most
+16 jobs filtered by authenticated principal, current body, world and region.
+Each job exposes only state and completed work ticks. Distant own jobs remain
+readable while operations require current workbench capability. A pinned timed
+blueprint fingerprint lets clients recognize revision-2 physical structures while
+the existing revision-1 factory catalog remains unchanged. Observations expose no
+other actor bindings, receipt maps, grants, output identities or writable work ticks.
+These fields are read-only telemetry, never command authorization.
+
+The host still binds session identity and scope, then checks current reach,
+consciousness, available hand, both revisions and control epoch at fixed-tick
+ingress, including retained retries. Ticks and physical outputs remain server
+owned. Resume rebinds changed control only through canonical policy. The projection
+and controls reject regressing revisions; remote clients also reject regressing
+ticks/epochs and changing timed definition identity. Legacy v7/v8 observations
+remain readable but provide no timed controls. Reconnect requires fresh host
+observation; the UI recovers own retained jobs without creating authenticated grants.
+
+Persistence remains production v8, including bounded retained request identities
+and paused-on-restore work. The existing atomic inventory factory and common
+finite-stock claim guard are unchanged. Runtime advancement stays at production
+priority 300 and the pinned 60 Hz timebase; ticks do no UI or service I/O.
+Projection creation is bounded by the existing 16-job ledger. Existing profiling
+counters remain available without changing simulation behavior. Stale, incapable,
+out-of-reach or malformed intents fail without spending the claimed bill or
+creating output. Completion still requires printer power, energy and capacity.
+
 `ProductionSimulationSystem` owns the deposit masses, bulk depot, shared vessel contents, constructed wall mass, finite battery energy, station power flags, one reserved batch and at most 64 request receipts. It runs after health and inventory, at priority 300. The catalog is read once during startup; ticks never perform file or service I/O.
 
 `ProductionDevelopmentCommand` uses the existing fixed-tick command queue. World and region scope are checked before ingress. Inventory resolves the server-bound actor, requires a conscious body, an available unreserved hand and logical reach within 1.5 m of the fixture workstation at `[0,0,0]` mm. Mounted drill and station tools provide processing capabilities; there is no handheld mining tool check. A machine batch continues autonomously if its operator subsequently moves away or becomes unconscious.

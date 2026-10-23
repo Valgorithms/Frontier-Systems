@@ -2,6 +2,42 @@ extends RefCounted
 class_name TimedCanisterConstruction
 
 ## Workbench-only policy. Material and physical records remain in their owners.
+## Read-only current control data is not a grant. Ingress resolves it again.
+static func observation(state: Dictionary, inventory: InventorySimulationSystem, context: AuthenticatedCommandContext, fingerprint: String) -> Dictionary:
+	var actor: ServiceResult = inventory.authorize(context)
+	var bodies: Dictionary = inventory.controller_candidate().value
+	var body: Dictionary = bodies[actor.value]
+	var can_operate: bool = inventory.production_capability(context).is_success
+	var result: Dictionary = {"blueprint_fingerprint": fingerprint, "revision": state["construction"]["revision"], "control_epoch": body["control_epoch"], "can_operate": can_operate, "can_start": false, "jobs": {}}
+	var unfinished: bool = false
+	for id in state["construction"]["jobs"]:
+		var previous: Dictionary = state["construction_bindings"][id]
+		if previous["actor_id"] != String(context.principal_id) or previous["body_id"] != actor.value or previous["world_id"] != String(context.world_id) or previous["region_id"] != String(context.region_id): continue
+		var job: Dictionary = state["construction"]["jobs"][id]
+		result["jobs"][id] = {"state": job["state"], "progress_ticks": job["progress_ticks"]}
+		if job["state"] not in ["cancelled", "completed"]: unfinished = true
+	result["can_start"] = can_operate and not unfinished and int(state["timebase_hz"]) == 60 and state["powered"]["printer"] and int(state["store"]["iron"]) - ConstructionReservationPlan.claimed(state["construction"]) >= ConstructionReservationPlan.BILL and state["construction"]["jobs"].size() < ConstructionReservationPlan.MAX_JOBS and state["construction_commands"].size() < 128
+	return result
+
+
+static func valid_observation(value: Variant) -> bool:
+	if typeof(value) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value, PackedStringArray(["blueprint_fingerprint", "revision", "control_epoch", "can_operate", "can_start", "jobs"])): return false
+	if typeof(value["blueprint_fingerprint"]) != TYPE_STRING or value["blueprint_fingerprint"].length() != 64: return false
+	for character in value["blueprint_fingerprint"]:
+		if not "0123456789abcdef".contains(character): return false
+	for field in ["revision", "control_epoch"]:
+		if not ControlContractValidation.is_integer(value[field], 0, ProductionSimulationSystem.MAX_REVISION): return false
+	if typeof(value["can_operate"]) != TYPE_BOOL or typeof(value["can_start"]) != TYPE_BOOL or (value["can_start"] and not value["can_operate"]): return false
+	if typeof(value["jobs"]) != TYPE_DICTIONARY or value["jobs"].size() > ConstructionReservationPlan.MAX_JOBS: return false
+	for id in value["jobs"]:
+		var job: Variant = value["jobs"][id]
+		if not ControlContractValidation.is_id(id) or typeof(job) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(job, PackedStringArray(["state", "progress_ticks"])): return false
+		if not job["state"] in ConstructionReservationPlan.STATES or not ControlContractValidation.is_integer(job["progress_ticks"], 0, ConstructionReservationPlan.WORK_TICKS): return false
+		if job["state"] in ["ready", "completed"] and int(job["progress_ticks"]) != ConstructionReservationPlan.WORK_TICKS: return false
+		if value["can_start"] and job["state"] in ["active", "paused", "ready"]: return false
+	return true
+
+
 static func output_id(job_id: String) -> String:
 	return "reserved-canister-%s" % job_id.sha256_text().substr(0, 24)
 

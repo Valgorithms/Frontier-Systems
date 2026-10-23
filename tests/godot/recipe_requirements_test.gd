@@ -21,7 +21,7 @@ func run() -> void:
 	context = AuthenticatedCommandContext.from_authenticated_session(&"local-inventory-actor", &"recipe-test", world.world_id, world.region_id, PackedStringArray(["inventory.operate", "terrain.operate"]))
 	var snapshot: String = world.capture_world_snapshot_json().value
 	var observed: Dictionary = production.observation(context).value
-	check(observed["schema_version"] == 8 and JSON.parse_string(snapshot)["systems"]["production"]["schema_version"] == 8, "v8 observation and v8 timed-construction persistence")
+	check(observed["schema_version"] == 9 and JSON.parse_string(snapshot)["systems"]["production"]["schema_version"] == 8, "v9 observation and v8 timed-construction persistence")
 	var catalog: Dictionary = production._catalog.duplicate(true)
 	for id in observed["recipes"]:
 		var requirement: Dictionary = observed["recipe_requirements"][id]
@@ -45,12 +45,14 @@ func run() -> void:
 	var legacy: Dictionary = observed.duplicate(true)
 	legacy["schema_version"] = 7
 	legacy.erase("recipe_requirements")
+	legacy.erase("timed_canister")
 	var legacy_projection := RemoteProductionProjection.new()
 	check(legacy_projection.accept_record(legacy).is_success, "legacy v7 explicitly readable")
 	check(WorkstationResourceView.recipe_text(legacy, "craft.plate").contains("unavailable from legacy v7") and not WorkstationResourceView.recipe_text(legacy, "craft.plate").contains("short by"), "legacy costs never guessed")
 	var bad: Array[Dictionary] = []
 	var missing: Dictionary = observed.duplicate(true)
 	missing.erase("recipe_requirements")
+	missing.erase("timed_canister")
 	bad.append(missing)
 	for costs in [null, {}, {"craft.plate": {}}]:
 		var item: Dictionary = observed.duplicate(true)
