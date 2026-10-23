@@ -77,6 +77,7 @@ func run() -> void:
 	check(ConstructionReservationPlan.claimed(state["construction"]) == claimed, "door build preserves active finite iron reservation")
 	var device: AccessControlledDeviceState = access.devices[StringName(door_id)]
 	check(device.security_controllers.is_empty() and device.actuators.size() == 1, "no fixture controller spares or second actuator granted")
+	check(production.construction_openings(context, state.state_revision).value.status == "open_or_unsupported", "real paid unsealed door alone cannot complete enclosure")
 	var retained: Dictionary = pose.duplicate(true)
 	retained.merge({"control_epoch": 0, "expected_revision": int(state["state_revision"]) - 1})
 	var request: String = "machine-test-%d" % sequence
@@ -95,6 +96,7 @@ func run() -> void:
 	await authority_and_contact_checks()
 	door_command("door_open", {"door_id": door_id})
 	check(access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).position == 1.0, "existing Access actuator owns manual position")
+	check(production.construction_openings(context, production.capture_snapshot().value.state_revision).value.status == "open_or_unsupported", "open paid door grants no enclosure")
 	move([3500, 0, -4600])
 	door_command("door_close", {"door_id": door_id}, false)
 	door_command("door_remove", {"door_id": door_id}, false)
@@ -159,6 +161,7 @@ func run() -> void:
 	fixture.close()
 	door_command("door_remove", {"door_id": door_id})
 	check(not access.devices.has(StringName(door_id)) and production.capture_snapshot().value["store"]["plate"] == 2000000, "disassembly removes only paid device and refunds exact trusted bill")
+	check(production.construction_openings(context, production.capture_snapshot().value.state_revision).value.door_ids.is_empty(), "removed finite door leaves no aperture identity")
 	command("panel_remove", {"panel_id": panel})
 	check(production.capture_snapshot().value["store"]["plate"] == 3000000, "floor recovers once detached")
 	if is_instance_valid(host): host.free()

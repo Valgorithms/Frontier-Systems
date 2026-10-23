@@ -240,6 +240,28 @@ func construction_closure(context: AuthenticatedCommandContext) -> ServiceResult
 	return ConstructedRoomClosure.assess({"schema_version": 1, "production_revision": _state["state_revision"], "walls": walls.value, "surfaces": surfaces})
 
 
+## Internal v1 unsealed-aperture diagnostic; reads never yield or cache.
+func construction_openings(context: AuthenticatedCommandContext, expected_revision: Variant) -> ServiceResult:
+	var world: WorldRuntime = get_parent().get_parent() as WorldRuntime if get_parent() != null else null
+	if world == null or context == null or not context.is_valid_for(world.world_id, world.region_id): return _failure("Opening assessment requires the current world and region.")
+	var allowed: ServiceResult = _inventory.production_capability(context, false, []) if _inventory != null else _failure("Inventory is unavailable.")
+	if not allowed.is_success: return allowed
+	if not ControlContractValidation.is_integer(expected_revision, 0, MAX_REVISION) or int(expected_revision) != int(_state["state_revision"]): return _failure("A current integer Production revision is required.")
+	# Legacy walls have no ownership field. They remain shared region geometry;
+	# only this principal's panels and this bound body's doors can participate.
+	var walls: ServiceResult = ConstructedWallBoundaries.describe(_state["walls"], _state["state_revision"])
+	if not walls.is_success: return walls
+	var surfaces: Array[Dictionary] = []
+	for id in _state["panels"]:
+		if _state["panels"][id]["principal_id"] == String(context.principal_id): surfaces.append(HorizontalPanelConstruction.descriptor(id, _state["panels"][id]))
+	var openings: Array[Dictionary] = []
+	for id in _state["doors"]:
+		var door: Dictionary = _state["doors"][id]
+		if door["principal_id"] == String(context.principal_id) and door["body_id"] == allowed.value:
+			openings.append({"door_id": String(id), "position": door["position"].duplicate(), "quarter_turn": door["quarter_turn"]})
+	return ConstructedDoorOpeningTopology.assess({"schema_version": 1, "production_revision": _state["state_revision"], "walls": walls.value, "surfaces": surfaces, "openings": openings})
+
+
 ## Server-only on-demand assessment, never a movement grant. No client contacts,
 ## positions or prior support results are accepted. Reads do not yield or cache.
 func resolve_paid_floor_locomotion(context: AuthenticatedCommandContext, environment: Dictionary, equipment: Dictionary) -> ServiceResult:
