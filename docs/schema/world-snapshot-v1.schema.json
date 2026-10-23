@@ -22,7 +22,8 @@
         "tools": { "$ref": "urn:frontier-systems:schema:tool-system:v1" },
         "pressure": { "oneOf": [
           { "$ref": "#/$defs/pressureSystem" },
-          { "$ref": "urn:frontier-systems:schema:pressure-system:v2" }
+          { "$ref": "urn:frontier-systems:schema:pressure-system:v2" },
+          { "$ref": "urn:frontier-systems:schema:pressure-system:v3" }
         ] },
         "production": { "oneOf": [
           { "$ref": "urn:frontier-systems:schema:production-system:v1" },
@@ -36,7 +37,8 @@
           { "$ref": "urn:frontier-systems:schema:production-system:v9" },
           { "$ref": "urn:frontier-systems:schema:production-system:v10" },
           { "$ref": "urn:frontier-systems:schema:production-system:v11" },
-          { "$ref": "urn:frontier-systems:schema:production-system:v12" }
+          { "$ref": "urn:frontier-systems:schema:production-system:v12" },
+          { "$ref": "urn:frontier-systems:schema:production-system:v13" }
         ] },
         "health": { "oneOf": [
           { "$ref": "urn:frontier-systems:schema:health-system:v1" },

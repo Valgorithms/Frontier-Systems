@@ -20,3 +20,5 @@ extends SimulationSystem
 @abstract func prepare_room_change(context: AuthenticatedCommandContext, request: String, operation: String, door_id: String, production: Dictionary, tick: int) -> ServiceResult
 
 @abstract func room_observation(door_id: String) -> Dictionary
+
+@abstract func room_valve_open(door_id: String) -> bool

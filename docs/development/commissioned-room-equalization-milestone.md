@@ -3,7 +3,15 @@
 Base: `0536a7de178214daf06880475b17c17aae85d9f1` (merged PR146).
 Owner: this isolated `commissioned-room-equalization` worker; design/merge owner:
 Coordinator `01a1283c-45d6-7e61-bedd-905e8797f03d`.
-Status: design submitted; no runtime/schema edits or local Godot authorized yet.
+Status: Coordinator accepted the bill, manual energy policy and implementation
+scope at design head `821a1f05cb5ef9e590bc856ceaf11b53a384836f`. Implementation
+in progress; local Godot remains unexecuted pending an exact-head exclusive lease.
+
+Acceptance correction: the existing safety leak already flows above 0.5 kPa
+at the proposed valve conductance, and the existing 1000 N manual door can move
+at/below 0.5 kPa. This bypass does not uniquely unlock a stuck door or accelerate
+over-rating recovery. Its usable new behavior is intentional equalization of
+a nonzero subthreshold differential that the closed healthy boundary retains.
 
 ## Outcome and smallest slice
 
@@ -84,17 +92,21 @@ An open passive valve can reduce differential below 0.5 kPa to equilibrium;
 closing it may retain the resulting differential. Existing manual force checks
 still decide door movement. Broken/missing links stop flow and retain gas.
 
-Proposed saves: Production v13 adds optional paid bypass records per door with
+Saves: Production v13 adds paid bypass records per door with
 an immutable bill; Pressure v3 adds bounded valve state per commissioned room.
-Older Production v1-v12 and Pressure v1-v2 normalize to absent valve / closed,
-granting no material and preserving their gas and allocation. Use explicit
+Older Production v1-v12 and Pressure v1-v2 retain their absent-valve formats,
+granting no material and preserving their gas and allocation. Records with no
+paid parts continue to emit Production v11/v12 by original catalog, and Pressure
+with no commissioned valve continues to emit v2. Production v13 permits either
+existing catalog without changing its origin budget. Use explicit
 version dispatch, strict schemas, orphan/duplicate/missing-link rejection and
 whole-world prevalidation before assignment. The commissioning geometry copy
 must remain stable when a valve is installed; store its bill outside geometry.
 Do not mutate the old pinned geometry schema to smuggle hardware into a room.
 
-Next observation versions expose installed/open plus absolute differential and
-manual force readiness, retaining old decoders. Show concise valve status beside
+Observation v15 / paid-door v4 expose installed/open while retaining old decoders.
+Derive absolute differential and the existing manual force budget from room
+telemetry for display; Access remains the movement authority. Show valve status beside
 the existing room pressures; add install/open/close/recover actions to the
 collapsed door panel, with cost and pending/error feedback. No new screen or
 new custom assets. Bounded counters: installed/open valves and transferred moles;
@@ -107,10 +119,12 @@ pay/install the valve, command open/close through normal authorization, persist
 and reload it, and recover the exact bill after decommissioning. For a meaningful
 positive pressure gradient, use existing legitimate airlock habitat transfers
 after commissioning; do not call `from_pressure` or seed positive gas snapshots.
-Check pair/all-volume moles before/after, invariant 1000 m3 allocation, bounded
-flow, reverse gradient, equilibrium/no overshoot, closed-valve retention, and
+Check all-volume moles before/after, invariant 1000 m3 allocation, bounded
+flow, equilibrium/no overshoot, closed-valve retention, and
 unchanged over-rating leakage. Prove normal crowbar recovery by the real force
-check, preserving damaged hardware. Whole-world reload while open must resume
+check, preserving damaged hardware. Above-rating force rejection/leak parity uses
+isolated negative-only finite redistribution fixtures; those cannot fund the
+positive path. Whole-world reload while open must resume
 finite exchange with the same state; closed reload must retain it.
 
 Negative controls: missing/foreign/uncommissioned hardware, insufficient plate,
