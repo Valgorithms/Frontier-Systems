@@ -280,7 +280,11 @@ func prepare_equipment_change(context: AuthenticatedCommandContext, request_id: 
 	body["state_revision"] += 1
 	candidate["ledger"]["state_revision"] += 1
 	candidate["state_revision"] += 1
-	var fingerprint: String = JSON.stringify(["equipment", definition_id, definition_revision, item_id, create, authorized.value]).sha256_text()
+	# V1 receipts are cross-validated by existing terrain checkpoints. Preserve
+	# their immutable identity; only versioned outputs extend that contract.
+	var intent: Array = ["equipment", definition_id, item_id, create, authorized.value]
+	if definition_revision != 1: intent.insert(2, definition_revision)
+	var fingerprint: String = JSON.stringify(intent).sha256_text()
 	candidate["receipts"].append({"request_id": request_id, "fingerprint": fingerprint, "state_revision": candidate["state_revision"]})
 	if candidate["receipts"].size() > SharedInventoryCoordinator.MAX_RECEIPTS:
 		candidate["receipts"].pop_front()
