@@ -5,6 +5,21 @@ var door_id: String
 
 
 func run() -> void:
+	var blueprint: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/production/manual-door.v1.json"))
+	check(PaidDoorGeometry.valid_blueprint(blueprint), "parsed JSON integer bill accepted")
+	for amount in [2000000.5, true, 2000001, -1, "2000000"]:
+		var altered: Dictionary = blueprint.duplicate(true)
+		altered.materials.plate = amount
+		check(not PaidDoorGeometry.valid_blueprint(altered), "altered/fractional/noninteger bill rejects")
+	for field in ["materials", "schema_version", "provenance"]:
+		var altered: Dictionary = blueprint.duplicate(true)
+		altered.erase(field)
+		check(not PaidDoorGeometry.valid_blueprint(altered), "missing blueprint field rejects")
+	var extra: Dictionary = blueprint.duplicate(true)
+	extra.materials.extra = 1
+	check(not PaidDoorGeometry.valid_blueprint(extra), "extra bill field rejects")
+	extra = blueprint.duplicate(true); extra.extra = 1
+	check(not PaidDoorGeometry.valid_blueprint(extra), "extra blueprint field rejects")
 	world = WorldRuntime.new()
 	world.resource_carriers_enabled = true
 	root.add_child(world)
@@ -36,12 +51,12 @@ func run() -> void:
 	var crowbar: String = ""
 	for item in inventory.own_inventory_observation(context).value["items"]:
 		if item["definition_id"] == "item.crowbar.fabricated": crowbar = item["item_id"]
-	move([5000, 0, -6000])
-	var pose: Dictionary = {"position": [5000, 0, -5000], "quarter_turn": 0}
-	door_command("door_build", pose, false)
-	command("panel_build", {"kind": "floor", "bounds_millimetres": [4500, 5500, -5050, -4050], "height_millimetres": 0})
-	var panel: String = production.capture_snapshot().value["panels"].keys()[0]
 	command("canister_reserve", {"job_id": "door-reservation", "expected_reservation_revision": production.capture_snapshot().value["construction"]["revision"], "control_epoch": 0})
+	move([3500, 0, -6000])
+	var pose: Dictionary = {"position": [3500, 0, -5000], "quarter_turn": 0}
+	door_command("door_build", pose, false)
+	command("panel_build", {"kind": "floor", "bounds_millimetres": [3000, 4000, -5050, -4050], "height_millimetres": 0})
+	var panel: String = production.capture_snapshot().value["panels"].keys()[0]
 	var claimed: int = ConstructionReservationPlan.claimed(production.capture_snapshot().value["construction"])
 	door_command("door_build", pose)
 	var state: Dictionary = production.capture_snapshot().value
@@ -66,10 +81,10 @@ func run() -> void:
 	if not crowbar.is_empty(): equip(crowbar)
 	door_command("door_open", {"door_id": door_id})
 	check(access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).position == 1.0, "existing Access actuator owns manual position")
-	move([5000, 0, -4600])
+	move([3500, 0, -4600])
 	door_command("door_close", {"door_id": door_id}, false)
 	door_command("door_remove", {"door_id": door_id}, false)
-	move([5000, 0, -6000])
+	move([3500, 0, -6000])
 	door_command("door_close", {"door_id": door_id})
 	var snapshot: Dictionary = JSON.parse_string(world.capture_world_snapshot_json().value)
 	var target := WorldRuntime.new()

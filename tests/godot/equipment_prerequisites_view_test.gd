@@ -50,6 +50,7 @@ func run() -> void:
 	legacy_production.erase("recipe_requirements")
 	legacy_production.erase("timed_canister")
 	legacy_production.erase("horizontal_panels")
+	legacy_production.erase("paid_doors")
 	check(EquipmentPrerequisiteView.quote(legacy_production, legacy_production["blueprints"], legacy_production["blueprints"].keys()[0], "printer").contains("Blueprint:"), "legacy equipment observations retain existing blueprint costs")
 	var legacy: Dictionary = tools.duplicate(true)
 	legacy["schema_version"] = 2

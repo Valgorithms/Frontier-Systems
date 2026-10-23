@@ -26,7 +26,10 @@ static func valid_device(id: String, door: Dictionary, record: Dictionary) -> bo
 	var device: AccessControlledDeviceState = decoded.value
 	var target: ActuatorState = device.actuator(actuator_id(id))
 	if device.device_id != StringName(id) or not device.security_controllers.is_empty() or device.actuators.size() != 1 or target == null: return false
-	if device.access_policy != new_device(id, door["principal_id"]).access_policy: return false
+	var policy: Dictionary = device.access_policy
+	if not ControlContractValidation.has_exact_fields(policy, PackedStringArray(["schema_version", "policy_id", "revision", "default_decision", "grants"])) or not ControlContractValidation.is_integer(policy.schema_version, 1, 1) or policy.policy_id != "%s-policy" % id or not ControlContractValidation.is_integer(policy.revision, 1, 1) or policy.default_decision != "deny" or typeof(policy.grants) != TYPE_ARRAY or policy.grants.size() != 1: return false
+	var grant: Dictionary = policy.grants[0]
+	if not ControlContractValidation.has_exact_fields(grant, PackedStringArray(["subject_kind", "subject_id", "action_ids"])) or grant.subject_kind != "principal" or grant.subject_id != door.principal_id or grant.action_ids != ["door.manual_operate"]: return false
 	# Condition, latch and bypass history remain Access-owned. No hidden hardware.
 	return target.mode in [&"manual", &"disabled", &"jammed"] and target.position in [0.0, 1.0] and target.effective_pressure_area_m2 == 0.0 and target.maximum_force_newtons == 0.0 and target.seal_condition == 0.0 and target.manual_override_available
 

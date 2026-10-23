@@ -191,6 +191,7 @@ func run() -> void:
 	legacy["production"].erase("recipe_requirements")
 	legacy["production"].erase("timed_canister")
 	legacy["production"].erase("horizontal_panels")
+	legacy["production"].erase("paid_doors")
 	panel.observe(legacy)
 	check(panel._component_details.text.contains("Blueprint:") and panel._component_details.text.contains("Tool ID:"), "legacy v2/v7 remains readable")
 	var vanished: Dictionary = legacy.duplicate(true)

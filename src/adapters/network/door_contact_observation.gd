@@ -16,7 +16,6 @@ static func valid_items(value: Variant) -> bool:
 
 static func decode(value: Variant, world: StringName, region: StringName) -> ServiceResult:
 	if typeof(value) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value, PackedStringArray(["schema_version", "world_id", "region_id", "sequence", "inventory_restore", "production_restore", "production_revision", "production_tick", "inventory_tick", "boxes"])): return invalid()
-	if typeof(value.can_operate) != TYPE_BOOL: return false
 	if not ControlContractValidation.is_integer(value.schema_version, 1, 1) or value.world_id != String(world) or value.region_id != String(region): return invalid()
 	for field in ["sequence", "inventory_restore", "production_restore", "production_revision", "production_tick", "inventory_tick"]:
 		if not ControlContractValidation.is_integer(value[field], 1 if field == "sequence" else 0, PaidPanelContactObservation.MAX_INTEGER): return invalid()
