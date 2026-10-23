@@ -157,7 +157,6 @@ func _receive(frame: Dictionary) -> void:
 			_terrain_record = TerrainObservationValidation.normalized(frame["terrain"])
 			frame["terrain"] = _terrain_record.duplicate(true)
 			_observation = frame.duplicate(true)
-			if _contact_fences != [envelope.inventory_restore, envelope.production_restore]: panel_contact_cleared.emit()
 			_contact_sequence = envelope.sequence
 			_contact_fences = [envelope.inventory_restore, envelope.production_restore]
 			panel_contact_received.emit(contact.value.duplicate(true))

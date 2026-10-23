@@ -42,6 +42,14 @@ Automatic checkpoints occur every five seconds. The authenticated `world/checkpo
 
 ## Extension points
 
+### Paid panel contact observations
+
+`paid-panel-contact-observation-v1.schema.json` defines a read-only, complete collision view of paid floor and ceiling panels from every builder in the authenticated world/region. The host derives it afresh from the actual canonical owners for each peer publication. It exposes only bounded stable geometry IDs, dimensions and revision/tick metadata, without principals, material records or session credentials. This contact assistance does not grant movement or change canonical command authorization.
+
+The envelope carries a per-connection increasing sequence and two volatile, non-persisted restore fences: Inventory's `controller_restore_generation()` and Production's `collision_restore_generation()`. Successful owner restores advance the corresponding fence, including a same-revision restore with different geometry; failed restores do not. Host owner/scope replacement closes the old connection. Whole-world restoration remains restricted to a fresh, never-started runtime. Reconnection binds a new transport and local connection generation, rejecting queued frames from the retired transport.
+
+`RemoteWorldRuntime` validates scope, sequence, fences and agreement with the accompanying Production revision/tick before publishing detached geometry. A fence transition clears old contact before accepting replacement state. `PaidPanelContactScene` installs local static boxes at display offset (-6, 0, 2) metres: floor top 0 mm, centre -6 mm; ceiling underside 2000 mm, centre 2006 mm; thickness 12 mm. Removal and lifecycle invalidation detach stale bodies from the physics space immediately. Disconnect, invalid observations, scope/transform changes and teardown clear contact; absence of a fresh publication expires it after 500 ms. Own-only picking previews remain separate. See [physical contact acceptance](../development/paid-panel-physical-contact-milestone.md) for tests and limits.
+
 Replace invite binding with Steam identity behind a session adapter; retain canonical command authorization. Replace local checkpoint storage with an asynchronous PHP repository through the existing versioned world contracts without changing resource ownership. Generalize fixture bodies/scenario metadata, authoritative physics and component factories in later milestones. Do not treat these two-player adapters as an unrestricted production platform API.
 
 ## Versioned data contracts
