@@ -33,4 +33,4 @@ jobs:
           DISCORD_CHANGELOG_CHANNEL_ID: ${{ vars.DISCORD_CHANGELOG_CHANNEL_ID }}
           DISCORD_CHANGELOG_WEBHOOK_URL: ${{ secrets.DISCORD_CHANGELOG_WEBHOOK_URL }}
         run: |
-          & (Get-Command node -CommandType Application).Source tools/github/pr-changelog.mjs
+          & (Get-Command node -CommandType Application | Select-Object -First 1).Source tools/github/pr-changelog.mjs

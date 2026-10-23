@@ -229,6 +229,10 @@ export function workflowContracts(merge, manual, checks) {
   assert.match(merge,/if: github.repository == 'Valgorithms\/Frontier-Systems' && github.event.pull_request.merged == true && vars.DISCORD_MERGE_CHANGELOG_ENABLED == 'true'/);
   assert.match(merge,/ref: \$\{\{ github.sha \}\}/);
   assert.match(merge,/persist-credentials: false/);
+  for (const text of [merge,checks]) {
+    assert.match(text,/Get-Command node -CommandType Application \| Select-Object -First 1/);
+    assert.doesNotMatch(text,/Get-Command node -CommandType Application\)\.Source/);
+  }
   assert.doesNotMatch(merge,/pull_request\.(head|body|title)|workflow_dispatch:|deployment_status:|secrets: inherit|write-all/);
   assert.match(checks,/types: \[opened, synchronize, reopened, edited\]/);
   assert.match(checks,/node-version: '24'/);
@@ -247,7 +251,7 @@ test('workflow trust, permissions, trigger, queues and Windows/Linux secret-free
     merge.replace('merged == true','merged == false'),merge.replace('contents: read','contents: write'),
     merge.replace('pull-requests: read','pull-requests: write'),merge.replace('github.sha','github.event.pull_request.head.sha'),
     merge.replace('persist-credentials: false','persist-credentials: true'),merge.replace('queue: max','queue: single'),
-    merge.replace('cancel-in-progress: false','cancel-in-progress: true')]) {
+    merge.replace('cancel-in-progress: false','cancel-in-progress: true'),merge.replace(' | Select-Object -First 1','')]) {
     assert.throws(()=>workflowContracts(bad,manual,checks));
   }
 });

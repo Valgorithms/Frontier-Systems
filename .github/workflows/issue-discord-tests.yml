@@ -24,17 +24,17 @@ jobs:
           node-version: '24'
       - shell: pwsh
         run: |
-          & (Get-Command node -CommandType Application).Source --test tools/github/issue-discord.test.mjs
+          & (Get-Command node -CommandType Application | Select-Object -First 1).Source --test tools/github/issue-discord.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & (Get-Command node -CommandType Application).Source --test tools/github/changelog-discord.test.mjs
+          & (Get-Command node -CommandType Application | Select-Object -First 1).Source --test tools/github/changelog-discord.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & (Get-Command node -CommandType Application).Source --test tools/github/pr-changelog.test.mjs
+          & (Get-Command node -CommandType Application | Select-Object -First 1).Source --test tools/github/pr-changelog.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & (Get-Command node -CommandType Application).Source tools/github/changelog-discord.mjs --validate
+          & (Get-Command node -CommandType Application | Select-Object -First 1).Source tools/github/changelog-discord.mjs --validate
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Validate PR changelog description
         if: github.event_name == 'pull_request'
         shell: pwsh
         run: |
-          & (Get-Command node -CommandType Application).Source tools/github/pr-changelog.mjs --check-pr
+          & (Get-Command node -CommandType Application | Select-Object -First 1).Source tools/github/pr-changelog.mjs --check-pr
 
