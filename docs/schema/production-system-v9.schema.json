@@ -706,5 +706,5 @@
       "type": "string"
     }
   },
-  "description": "V8 adds workbench-only canister claims and authenticated body/control bindings. V1-v7 migrate to empty claims without changing stock. Restart pauses unfinished work. Wall floor positions retain the 50 mm grid."
+  "description": "Save v9 adds canonical paid horizontal panel records. Versions1..8 migrate to an empty panel registry. Runtime additionally validates positive50..1000mm extents, kind/height agreement, exact area-derived plate bill, same-plane non-overlap, revision coherence and whole-world conservation."
 }

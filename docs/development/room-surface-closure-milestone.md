@@ -67,3 +67,7 @@ The followup owner adapter must validate paid floor/ceiling records, payment and
 physical installation/lifecycle, stable IDs, revision coherence and save/restore
 before this foundation can support a gameplay or atmosphere claim. It must use
 existing Production/Inventory owners, with no second canonical registry.
+
+Canonical paid Production records and their revision-coherent owner query are now
+implemented by the [paid horizontal panel integration](paid-horizontal-panels-milestone.md).
+The detached helpers remain geometry-only and retain their original v1 contract.

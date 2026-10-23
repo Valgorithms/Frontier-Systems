@@ -28,7 +28,9 @@ reuse. Shared canister claim coverage still runs before every commit.
 Save version 9 requires the panel registry, checks all shapes, dimensions,
 overlaps, pinned bills and whole-world conservation. Versions 1..8 migrate to
 an empty registry. Version 8 files remain supported; old schemas are retained.
-No async callback or UI mutates this state. Work occurs only on command ticks;
+The schema enforces record shapes and numeric bounds; runtime additionally checks
+kind/height agreement, positive bounded extents, exact area/bill equality, overlap
+and whole-world conservation. No async callback or UI mutates this state. Work occurs only on command ticks;
 closure is derived on demand from walls and panels at the same owner revision.
 Profiling adds panel count and total installed panel mass. Existing command
 failures expose denial; no new configuration, assets or dependencies are used.
@@ -41,3 +43,8 @@ dimensions are also checked, without granting extra fixture resources.
 
 Verification results and exact tested head are recorded in the PR. Graphical,
 controller/VR, live network and deployment acceptance are outside this scope.
+
+Windows Godot4.7.2 focused checks pass with the initial failure logs retained:
+an inline test projection needed explicit Node cleanup; a later fixture target
+needed to respect reach; restore expectations account for the existing retained
+canister-job revision fence. No validation or shutdown diagnostic was suppressed.
