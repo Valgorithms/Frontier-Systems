@@ -1,213 +1,257 @@
-# Finite chamber gas storage: design review
+# Bounded powered chamber gas recovery: revised design
 
-Status: proposal only; Coordinator acceptance required before runtime/schema edits.
+Status: source proposal only, awaiting Coordinator acceptance. No runtime/schema
+implementation or Godot execution authorized. Revised on 2026-10-23 after the
+Coordinator declined the [two-litre receiver](deferred-two-litre-chamber-storage-design.md).
+Prototype shell reuse remains UNAPPROVED and is unnecessary here.
 Base: `db74161ab66b38365b9fd76b48de18480a98c036` (PR149).
-Owner: chat `01a16ad6-6e04-7503-8e5c-f9377e9fb5cd`, branch
-`finite-chamber-gas-storage`, managed worktree `finite-chamber-gas-storage`.
-Coordinator: `01a1283c-45d6-7e61-bedd-905e8797f03d` owns design acceptance,
-runtime leases and integration. No implementation or Godot execution authorized yet.
+Owner chat: `01a16ad6-6e04-7503-8e5c-f9377e9fb5cd`; Coordinator:
+`01a1283c-45d6-7e61-bedd-905e8797f03d`. Retain draft PR150 and descriptive
+branch/worktree `finite-chamber-gas-storage`; no successor or branch rename.
 
-## Source findings and dependency decision
+## Observable outcome and source decision
 
-The scratch-construction roadmap's remaining atmosphere adapter row explicitly
-requires constructable pressure vessels and owner adapters. PR149 supplies a paid
-3.6 m3 chamber, finite habitat/exterior endpoints, interlocked manual doors and
-bypasses. It does not supply a recoverable gas vessel. Storage is a valid next
-foundation, but passive storage cannot provide lossless chamber evacuation.
+Fit one paid fixed pump/interface to the existing chamber, close both doors and
+bypasses, then deliberately recover a bounded amount of chamber gas directly
+into the finite existing habitat using real controls and finite electricity.
+The fresh finite acquisition route should recover 20% of the initial chamber
+gas before stopping, retaining every remaining mole in the chamber. The player
+then uses the existing manual bypass/force-safe door sequence. This reduces gas
+lost on one outward cycle; it does not promise vacuum evacuation, lossless
+cycles, breathing, portable gas, powered door movement or free subsequent energy.
 
-Reviewed at the pinned base:
+The roadmap's atmosphere-owner adapter dependency remains appropriate, but a
+receiver is not needed for this outcome. Pressure remains sole owner of all gas.
+No new pressure volumes, shell conversion, species inference, inventory gas mass,
+general pump/network framework, pipes, suits, ships, thermal simulation or release.
 
-| Source | Consequence |
+Reviewed at the base:
+
+| Source | Finding |
 | --- | --- |
-| `docs/development/scratch-construction-milestone.md`, remaining adapters | Build through trusted blueprints/owners; never clone fixture contents |
-| `src/core/pressure/pressure_system.gd`, `_prepare_chamber`, `_step_paid_chamber`, snapshot decoder | Pressure already owns chamber gas, ordered flow and paired links; retain this owner |
-| `src/core/pressure/pressure_flow_solver.gd` | Equal-temperature flow follows the gradient and stops at equilibrium; no compression or uphill return |
-| `src/core/pressure/pressure_volume_state.gd` | Runtime bulk mol, m3, K and absolute kPa; no species or molecular mass |
-| `data/inventory/canister.v2.json` | Real fabricated carrier has 2000 ml bulk space and 2500 ml external volume; no gas rating or valve |
-| `data/production/timed-canister-blueprint.v1.json`, `timed_canister_construction.gd` | 1 kg iron shell, 1000 J fabrication, 120-tick reservation lifecycle; preserve existing blueprint/fingerprint |
-| `data/inventory/shared.production.v1.json`, `src/app/first_playable_bootstrap.gd` | Existing physical prototype carriers can be reused after unloading; do not create another starter |
-| `src/core/production/production_simulation_system.gd`, `_apply_door`, `validate_inventory_links`, checkpoint guards | Production owns material receipts, Inventory physical identity; prepared cross-owner validation already exists |
-| `docs/design/breathing-mixtures-and-pressure-control.md` | Species-aware micromoles are detached groundwork, not a runtime replacement or permission to invent gas composition |
-| `docs/development/paid-chamber-sequential-interlocks-milestone.md` | Fresh route uses 39 kg ore, 71750 J and leaves 0.6 kg plate / 0.4 kg iron |
+| `src/core/production/production_simulation_system.gd`, `initial_record`, `_decode`, `apply_local` | Production owns the existing integer 100000 J bank, powered station flags, material stock, receipts and revisions. Save validates energy in [0,100000]. Existing spending is finite; do not introduce recharge |
+| Same file, `simulate_tick`, `_simulate_machinery` | Machinery buffers live separately inside Production. Solar generation is explicit; it does not refill the workbench bank |
+| `src/core/machinery/machinery_workshop.gd`, `draw` | 20000 J per machine buffer, 1000 W generation and shared cable budgets. `draw` mutates workshop candidates and has no pump endpoint/Pressure transaction; do not borrow this path or count solar energy twice |
+| `src/core/access/prepared_door_change.gd`, `commit`; Production `_apply_door` | Existing Access/Pressure prevalidation/CAS then non-yielding writes followed by Production assignment provides a transaction pattern, not an existing pump-energy API |
+| `src/core/pressure/pressure_system.gd`, `install_prepared_room_state`, `_step_paid_chamber` | Pressure owns finite bulk-mole volumes, ordered passive flows, sensors, chamber links and decoded candidate installation |
+| `src/core/simulation/simulation_runner.gd`, `_system_order`; `SimulationSystem`; Production `_init` | Pressure defaults to priority0; Production is priority300, after pressure/sensors. Preserve that order rather than relying on child insertion order |
+| `src/core/pressure/pressure_flow_solver.gd` | Passive solver cannot transfer uphill; pump needs a separate bounded work-paid planner, never a negative conductance or free use of `_step_transfer` |
+| `src/core/runtime/world_runtime.gd`, `restore_world_snapshot` | Detached mass/link validation surrounds whole-runner restore; extend common candidate validation before any owner writes |
+| `docs/development/paid-chamber-sequential-interlocks-milestone.md` | Actual fresh route spends 71750 J from 100000 J and leaves 0.6 kg plate / 0.4 kg iron after 39 kg ore |
 
-Recommended smallest slice: a **paid manual gas-port insert on one existing,
-empty, owned 2-litre canister**, placed and latched beside the chamber. Reuse
-Inventory/Production identity and Pressure bulk flow. This is a small physical
-storage/transfer/recovery foundation, not a practical chamber recuperator.
-Prototype and fabricated shells remain distinguishable with their original
-provenance; only explicit fitting creates a gas-rated assembly. No old carrier
-becomes gas-rated on load. Approval must explicitly accept using a pre-existing
-prototype shell for the fresh route; a fully player-fabricated extra shell does
-not fit the current simultaneous chamber budget.
+**Prerequisite:** there is no existing atomic gas-transfer/energy-debit API.
+Accept a narrow prepared Production/Pressure transaction before pump behavior,
+or stop at this prerequisite. Do not debit energy after Pressure mutation, call
+live `MachineryWorkshop.draw`, compensate via restore, or claim existing APIs
+already make the operation atomic. This amendment must be reviewed before code.
 
-At 101.325 kPa and 293.15 K the chamber has about 149.656 mol. A vacuum
-0.002 m3 receiver equilibrates at 101.26874 kPa, receiving about 0.08310 mol:
-only 0.05552% of the chamber gas. After venting the chamber it can return gas
-downhill, but cannot restore the original pressure. Do not advertise gas savings
-large enough to unlock door opening, evacuation, or lossless repeated cycles.
-Once at equilibrium it cannot accept further gas without an actual lower-pressure
-destination. Existing exterior gas remains in the finite exterior owner.
+## Work model, bounds and finite acquisition
 
-Alternatives for Coordinator decision:
+Use the current equal-temperature ideal-gas model: bulk mol, m3, K, absolute kPa,
+joules, watts and simulation seconds. No heat/species changes. Reversible
+isothermal compression requires `dn * R * T * ln(Pout/Pin)` for fixed endpoint
+pressures. The [USPAS Cryogenic Engineering lecture, slides 16-17](https://uspas.fnal.gov/materials/21onlineSBU/Cryo/5%20-%20Thermodynamics%20for%20Cryogenics.pdf)
+derives this minimum-work relation and explains isothermal efficiency. Our
+finite-volume endpoint bound and tuning below are independent project proposals,
+not performance data for a real pump.
 
-1. Accept the small adapter as groundwork with the limited outcome above.
-2. If useful bulk recovery is the intended next outcome, reject this scope and
-   first design a larger paid receiver and its geometry/material bill. A vacuum
-   receiver equal to chamber volume captures only 50% on first equilibrium;
-   90% needs nine chamber volumes (32.4 m3), not a canister capacity rewrite.
-3. Near-vacuum recovery into compact storage requires powered compression,
-   energy/work accounting and rated components. That is a later separate design,
-   outside this task. Species/tank/suit integration is likewise not prerequisite
-   for the existing bulk-mole chamber and must not be smuggled into this slice.
+For a proposed batch q from chamber C into habitat H, derive candidate endpoint
+pressures from `nC-q` and `nH+q`. Reject q <= 0, q >= nC, invalid/nonfinite
+derived states, unequal temperatures or unsupported endpoints. Charge:
 
-## Proposed physical assembly and finite budget
+```
+ratio_end = max(1, PH_after / PC_after)
+work_bound_J = q * R * T * ln(ratio_end)
+electrical_J = ceil(work_bound_J / 0.35) + 1
+```
 
-One insert costs exactly 200000 mg processed plate, manual fitting/removal at
-zero electrical cost with the existing usable held crowbar. This is explicit
-prototype tuning, not pressure-vessel engineering certification. No new ore,
-energy, gas, tool, shell or repair grant. Existing sources/catalog bytes unchanged.
-Fitting requires an owned empty prototype or fabricated carrier, no nested
-payload, no machinery socket and an unreserved shell; it consumes its bulk space
-exclusively. Bulk load/unload, nesting, extraction and machinery insertion reject
-while fitted. Never count the same 2000 ml as both bulk and gas capacity.
+The ratio rises throughout this fixed-volume transfer, so the endpoint ratio
+upper-bounds reversible work across the entire batch, rather than undercharging
+using its initial pressure. Proposed 35% isothermal efficiency is conservative
+prototype tuning, not certification. The extra 1 J per successful batch covers
+bounded drive overhead even at equal/downhill pressures. Downhill pumping earns
+no energy credit; stopped/no-flow states consume no power. Isothermal heat
+rejection to an unmodeled environment is an explicit approximation, not stored
+thermal energy, electricity regeneration or gas heating.
 
-Fresh PR149 route can unload its existing carrier and spend 0.2 of its remaining
-0.6 kg plate. Total energy remains 71750 J / 28250 J remaining. Final incremental
-matter accounting: installed chamber 20.4 kg + insert 0.2 kg + crowbar 2 kg +
-plate 0.4 kg + iron 0.4 kg + tails 15.6 kg = 39 kg acquired ore. Existing starter
-shell mass stays in its existing Inventory origin ledger; it is not added to the
-ore budget. Fabricated shells retain their existing 1 kg iron structure receipt.
-An additional fabricated shell needs 1 kg iron and 1000 J, but only 0.4 kg iron
-is left and all 39 kg ore is exhausted. Do not silently add ore or reduce old bills.
+One batch of at most 0.1 mol per 60 simulation ticks at 60 Hz (0.1 mol/s);
+maximum 250 J per batch / 250 W average over its one-second interval. No burst
+catch-up after pause/restore. Reject a batch whose conservative price exceeds
+250 J, whose destination exceeds 110 kPa absolute, whose pressure ratio exceeds
+16, or whose source would fall below 1 kPa absolute. Do not truncate the price,
+silently shrink a batch to match electricity or borrow future energy. The final
+batch may be smaller solely to hit the user-selected fixed 20% recovery budget.
+No epsilon-emptying, clamping of moles, target-pressure write or residual deletion.
 
-Pressure volume is 0.002 m3, initially zero mol and 293.15 K, rated to 110 kPa
-absolute under this fixed prototype policy. Vacuum initialization adds empty
-capacity, not gas; explicitly account installed vessel volume separately from the
-unchanged 1000 m3 habitat/chamber partition. Removal of an empty vessel retires
-exactly that empty capacity. Gas transfers conserve all-volume moles.
+Proposed assembly bill: 400000 mg processed plate housing/interface plus
+200000 mg refined iron drive; manual assembly with usable held crowbar costs
+1000 J from the existing Production bank. Prototype material/device tuning,
+without adding materials, ore, catalog versions, stock, motor items or starter
+equipment. Actual pump provenance records both materials and energy spent;
+recover its intact physical assembly rather than cloning a factory fixture.
+Manual recover/refit costs zero additional energy but preserves condition and
+does not refund assembly energy. Destructive salvage returns original materials
+once, never electricity; rebuilding then costs 1000 J again.
 
-Propose a bounded fixed socket on the chamber's inner side with an actual 3D
-canister, supported position, collision and reachable handle. Final socket
-coordinates must be demonstrated against actual door sweeps and the 600 mm body
-route before implementation acceptance, rather than assuming a UI anchor proves
-placement. Existing panel/door support must prevent removal while mounted.
-No arbitrary pipes, cables, free endpoints, general topology or spatial atmosphere.
+Finite matter after construction: chamber 20.4 kg + crowbar 2 kg + pump 0.6 kg
++ plate 0.2 kg + iron 0.2 kg + tails 15.6 kg = 39 kg acquired ore. Existing
+unacquired ice/regolith and starter ledgers remain unchanged. Pump uses no shell.
+Assembly leaves 27250 J for all subsequent work, not a dedicated free reserve.
 
-## Commands, ownership and pressure behavior
+Independent source-model calculation at initial 101.325 kPa / 293.15 K,
+3.6 m3 chamber and 996.4 m3 habitat, with the unrelated prototype valves closed:
 
-Production owns the paid insert receipt, shell/insert association, socket placement
-and reservations. Inventory owns the shell and body/control session; Pressure
-owns volume, gas, rated port state and flow. Access remains owner of both chamber
-actuators and force checks. UI derives actions and never writes pressure.
+| Metric | Proposed 20% recovery |
+| --- | ---: |
+| Starting chamber gas | 149.65630889 mol |
+| Gas returned to habitat | 29.93126178 mol |
+| Batches / ideal duration | 300 / 300 seconds |
+| Endpoint-bound electricity including ceil and 1 J per batch | 22993 J |
+| Largest batch charge | 157 J, below 250 J limit |
+| Final chamber / habitat absolute pressure | 81.060 / 101.39821758 kPa |
+| Total route + pump assembly + recovery | 95743 J |
+| Remaining bank | 4257 J |
 
-Proposed explicit operations: fit/remove insert, place/recover assembly, connect/
-disconnect chamber port, set port open/closed, and deliberately discharge through
-the mounted service outlet to the finite exterior. Only one connection/direction
-mode exists at a time; outlet and chamber connection are mutually exclusive.
-Closing remains available when opening prerequisites fail, subject to valid owner
-identity. No automatic sequencing, target pressure assignment or refill command.
+The integrated reversible minimum for the same finite endpoints is about
+7863.4934 J. At 35% efficiency this already requires about 22467 J; the 22993 J
+charged batch sum is conservatively higher, including endpoint bounds/rounding.
+PowerShell and independent JavaScript arithmetic agree on all table totals.
 
-Every operation uses authenticated principal/session/body/world/region, explicit
-shell/chamber IDs, expected Production/Inventory/Pressure revisions and restore
-epoch, live reach and appropriate hand capability. Fitting/operating requires
-held usable crowbar and the existing construction capability; carrying requires
-the existing empty/available hand rules. Recheck at enqueue and apply; receipts
-bind exact intent. Changed-intent replay, foreign IDs, stale epochs and disconnected
-observations reject. Bound receipt/assembly counts and overflow checks.
+This is arithmetic evidence, not runtime or physical acceptance. Other work or
+reservoir changes can prevent the target; admission/step checks use actual state.
+Remaining 80% is explicitly retained until the player opens the existing outer
+bypass, conserving gas into exterior. The pump cannot make the outer door safe
+by itself. Repeated recovery can exhaust the finite bank and must stop honestly.
+90% recovery would cost about 702335 J even without respecting the 250 J batch
+cap; it is not achievable from this bank. No hidden source or easier-work formula.
+Solar-powered deeper recovery needs its own paid placement/wiring/atomic-power
+design; it is not silently included here.
 
-Opening the chamber connection requires both doors, both bypasses and service
-outlet closed with intact chamber boundaries. While open, reject either door,
-bypass, decommission, kit recovery and geometry removal. No weakening of 1000 N,
-1.71 m2 force admission or original 0.5 kPa legacy room policy. Closed storage
-does not change the chamber's existing leakage. Safe closure cannot depend on
-opposite hardware being intact. No manual forcing of an unsafe door.
+## Placement, commands and interlocks
 
-At existing fixed Pressure cadence process prototype flows, chamber flows, then
-the single storage connection before sensors; persist deterministic ordering.
-Use existing 1 mol/(s*kPa) conductance, equal-temperature equilibrium cap and
-0.001 kPa epsilon. Reject nonfinite/negative states, mismatched temperatures,
-unknown endpoints, self-links and incompatible policy/rating. No uphill flow,
-species conversion, compressor work or hidden electrical debit.
+One fixed assembly bound to exact paid-chamber ID, `habitat_main`, owner/body,
+world/region and existing paid geometry. Use a bounded nonblocking mount at the
+inner chamber interface with actual 3D pump silhouette, support/contact and
+reachable handle. Pin final coordinates against the actual sweeps and 600 mm
+body path in the implementation amendment; actual physical tests must verify
+the chosen mount rather than treating a UI anchor as placement acceptance.
+Power connection is an explicit fixed logical interface to the existing
+Production workbench bank, using `powered.construction`; no spatial electrical
+grid, cable, solar-feed or realistic wiring claim. Coordinator must accept this
+bounded fixture power binding or require a paid grid prerequisite instead.
 
-New insert has intact/failed retained state, no invented shell-health simulation.
-Above its absolute rating, mark failed and leak through the mounted service outlet
-to the finite exterior using the same bounded passive solver, even with its valve
-closed. Preserve insert/shell matter and remaining gas; closing is not repair.
-Disconnecting is isolated by closed port; filled or failed assemblies stay latched
-until explicitly discharged to zero solver residue. Define residue conservatively:
-no epsilon deletion; any positive remainder blocks destructive salvage. A final
-explicit discharge transaction may move the exact remainder to the finite exterior
-without pressure reset, and must reject if that would require uphill transfer.
-If exterior pressure prevents emptying, retain the filled hardware and report why.
+Proposed host commands: build/place assembly, start recovery, stop, recover,
+refit, salvage. Start sets an immutable job target of exactly 20% of observed
+current chamber gas and a maximum permitted job electricity budget, never a
+target pressure. It captures current owner/body/control epoch and fixed links.
+Only one job/assembly; no direct user q, efficiency, rating or endpoint values.
+Start and state-changing commands require authenticated session, principal,
+body, revisions/restore epoch, current reach, construction capability and actual
+held usable crowbar. Per-step owner/session/reach/tool checks mirror existing
+bound finite jobs; losing any pauses before gas/energy writes. Resume is explicit
+under fresh authorization, no saved session credential or automatic reconnect.
+Receipts bind exact intent; changed-intent replays reject, same request is once.
 
-Loaded portable gas mass cannot be derived from bulk moles without a composition
-contract. Therefore prohibit carrying, nesting, salvage or arbitrary relocation
-with any positive gas in this slice. This deliberate restriction avoids zero-mass
-gas cargo. An empty isolated assembly can be recovered with its original shell ID,
-unchanged insert condition and material receipts. Removing an empty insert refunds
-its original plate once, subject to capacity/reservations; refitting never heals
-failure. A failed retained insert can only be salvaged, not restored as intact.
+Both doors/bypasses closed and intact before start and each transfer. Running
+job blocks both door/bypass openings, chamber decommission and supporting-part/
+kit recovery. Stopping always isolates the pump's normally closed interface;
+safe closure must remain possible with damaged opposite hardware. No reverse
+pump path, no automatic vent and no free bypass flow through stopped hardware.
+Existing Access force checks, 1000 N / 1.71 m2, original 0.5 kPa policy, chamber
+retention/leak behavior and collision/occupancy guards remain authoritative.
+Supported chamber damage pauses recovery and existing leaks remain active;
+the pump does not seal a failed boundary. No new damage/repair simulation.
 
-## Transactions, save and legacy behavior
+Physical recovery requires stopped job and isolated interface, valid paid mount,
+supported inventory destination/capacity and no occupant/sweep conflict. Preserve
+assembly ID, condition and exact material receipt; no gas resides in the pump,
+and no volume disappears when removed. Failed device state, if introduced by
+existing supported integrity semantics, must disable flow and remain retained;
+refitting/reloading cannot heal it. Do not invent an unsupported wear tick.
 
-Extend prepared-owner operations; no second gas owner. Build detached Production,
-Inventory, Pressure and relevant Access candidates, check common owner/body,
-identity, shell provenance, empty bulk child, exact paid bill, unique volume/sensor,
-socket support, chamber association, rating/temperature, capacity and every active
-construction claim. Recheck compared revisions before a nonfallible commit.
-Allocation/preparation/CAS failure leaves all owners and receipts unchanged.
+## Prepared transaction and save prerequisite
 
-Whole-world restore must validate the normalized complete candidates before
-assignment, including the existing chamber pair and new mounted shell. Reject
-orphan/duplicate gas volumes, inserted bulk payload, missing paid receipt, mismatched
-condition/valves, false endpoint/rating/bill and unsupported versions. Failure
-leaves all owners, tick, epochs, receipts and revisions equal to before restore.
-Do not temporarily install one owner to validate another. Preserve exactly the
-retained gas and open/closed/failed states through reload.
+Add only a narrow server-owned prepared operation: Pressure plans new C/H moles,
+retaining all other volumes; Production plans energy debit, job progress and
+bounded counters/receipt. Stage and validate detached records against current
+Access/Inventory and active reservation claims. Compare complete required owner
+revisions, current energy and source/destination state immediately before commit.
+After the last possible failure, assign prepared owner records synchronously
+without callback, yield, signal, live restore, decoder or fallible allocation.
+No debit without gas and no gas without debit; failure/no-power/capacity/rating/
+limit/stale-CAS leaves all canonical state and receipts unchanged.
 
-Expected future version boundaries: Production save16 / observation18 and Pressure
-save6, insert/assembly record1, strict emitted schemas and decoder negatives.
-Inventory save/definition and UI wire versions must follow the actual chosen
-adapter representation; pin them in the accepted implementation amendment before
-code changes. Preserve old item/blueprint definitions and fingerprints. Legacy
-missing storage records mean absent assemblies, no gas, insert, rating, shell,
-source, healing or refund. Never reinterpret prototype mixture fixtures as supply.
-No environment variables, new dependencies or remote services proposed.
+Admission/start/stop may explicitly change job state. A scheduled stalled batch
+does not alter progress, energy, gas, target, revision or receipt; derive the
+stall reason in observation. Normal owner tick and independently scheduled flows
+can still advance; no-write assertions compare the affected transaction state
+at its exact step boundary, not the whole world across time. No per-stall log spam.
+Persist last committed batch tick and refuse duplicate or backwards ticks;
+Proposed scheduling preserves existing priorities: Pressure0 executes passive
+flows and samples sensors, then Production300 advances its tick and existing
+canister/machinery work, then attempts one due pump transaction before existing
+extraction/recipe early returns. Competing earlier spends win; pump rechecks the
+remaining bank. There is no second pump call from Pressure. The existing pressure
+sensors sample the result on the next tick (one-tick latency); pump admission and
+current UI pressures derive from actual canonical volumes, never stale sensors.
+Pin this ordering in the accepted transaction amendment and test restore parity.
+Do not execute from UI or service callbacks.
 
-## Real controls, acceptance and bounded verification
+Prepared-operation failure injection and all-owner equality tests are a required
+prerequisite to starting powered behavior. Existing `_apply_door` is the pattern;
+its Access-specific assumptions must not be disguised as an energy transaction.
+If a nonfallible commit boundary cannot be demonstrated, stop and report that
+prerequisite instead of compensating writes.
 
-Expose actual canister selection, empty/occupied bulk status, fit cost, physical
-socket placement and recover/remove actions through hosted commands. Show shell ID,
-actual mol / absolute kPa / 2 L capacity / condition / 110 kPa limit, chamber and
-exterior pressures, closed/open/connection state, pending receipt and exact blocker.
-State passive-equilibrium limits and retained gas clearly. Disable stale/rebound/
-disconnected actions until fresh owner observation. Use normal physical inventory
-selection and derived preview/collision, not a test-only pressure setter.
+Propose Production save16 / observation18, pump/job records1, new strict pump
+definition/bill schema. Pressure save may remain5 if no new persisted gas fields
+are necessary; pin actual required version changes in the accepted amendment.
+Preserve all old definitions/catalogs/fingerprints and force semantics. Decode
+complete Production/Pressure/Access/Inventory candidates first; validate paid
+bill, geometry/mount, ownership, target/accumulated mol, energy spent, tick/cadence,
+links, valves and supported conditions before any install. Reject orphan pumps,
+false bills, wrong endpoints, duplicate jobs, inconsistent target/receipts, energy
+overflow and malformed half-restores with all-owner/tick/epoch equality.
 
-Acceptance after design approval:
+Legacy missing pump means absent pump/job, unchanged energy/gas and no materials,
+healing, source, motor or port grant. Save/reload preserves actual gas and energy
+without reapplying a batch. Restored jobs are paused pending fresh authorization;
+document this intentional session-safety migration rather than silently resuming.
+Recovery/salvage respects all active material claims, receiving capacities and
+exact-once receipts. No environment variables, dependencies or services.
 
-- Fresh unseeded finite PR149 acquisition/build plus real existing carrier emptying,
-  0.2 kg insert payment, real socket placement and unobstructed body/door traversal.
-- Real UI fit/connect/open/close, chamber-to-empty-store transfer, finite chamber
-  vent, store-to-lower-pressure-chamber return, retained equilibrium and repeated
-  diminishing cycles. Compare every volume's summed moles before/after each step.
-- Loaded recovery rejection; explicit finite-outlet discharge or truthful retained
-  blocker; empty physical recovery/replacement and exact-once plate refund.
-- Reservation, capacity, power/tool/reach/hand, foreign owner/session/body, stale
-  revisions/epochs, replay/changed intent, failure injection before each commit,
-  absolute overrating and closed-valve leak, no healing, unsupported temperature,
-  both flow signs, port/door/bypass interlocks and safe-close negative controls.
-- Full-world save/reload open/closed/failed/retained states; malformed multi-owner
-  restore equality; old worlds, exhausted sources and old canisters receive nothing.
-- Existing chamber, room, reinforcement, force, timed-canister, bulk capacity,
-  Inventory, observations and emitted-schema/version negatives remain covered.
+## Controls and acceptance after design approval
 
-This commit is design text only: arithmetic/source/diff review applies. Runtime
-acceptance remains unverified. After accepted design and implementation, freeze
-and push a head, request Coordinator's explicit exclusive exact-head NO-PORT lease
-with named stages/time budget. Use AST-extracted versioned Invoke-GodotCheck,
-empty preflight inventory, stop on first diagnostic, no edit/retry under lease,
-retain logs and report postflight inventory/release. Final Windows/Linux exact-head
-CI and schema negatives are required; distinguish PR head from tested merge SHA.
-Capture only if material physical/UI uncertainty remains. No successors, media,
-publication, deployment, outreach, spending or merge before Coordinator acceptance.
+Real hosted controls select pump/mount and show bill, bank J, chamber/habitat
+absolute pressures, remaining target mol, returned mol, paid J, running/paused/
+stalled state, 250 W / 0.1 mol/s limits, elapsed active seconds and exact blocker.
+Start/stop/resume/recover/refit use the existing authenticated action queue;
+stale/rebound/disconnected views disable actions until fresh owner observation.
+Explain 20% partial recovery and remaining manual vent/force sequence plainly.
+
+- Unseeded finite acquisition/build route, paid pump placement, physical support,
+  UI operation, 20% return in about 300 active seconds, 22993 J model check and
+  all-volume mole/material/energy accounting. Actual integration receipt totals
+  must substantiate the design arithmetic; no source-to-runtime inference.
+- Both door traversals and complete outward/return manual cycle, pump interlocks,
+  no habitat vent shortcut, isolated recovery/refit/salvage and stable provenance.
+- No power, insufficient bank, over-job budget, >250 J batch, exhausted target,
+  source floor, ratio16, destination110 kPa, unequal T, nonfinite values, wrong
+  owner/session/body/reach/tool/hand, stale revisions/epochs, replay/changed intent,
+  concurrent material reservations and safe-close cases with rejected-step equality.
+- Forced failure at each preparation/CAS boundary proves no one-sided debit/gas
+  transfer. Unrelated passive flows and scheduling have deterministic ordering.
+- Save/reload before/after a charged batch, stalled/restored paused jobs, corrupted
+  link/bill/energy/tick/target candidates and old-world no-grant preservation.
+- Existing chamber/pressure stability, force/bypass, reinforcement, finite bootstrap,
+  machinery energy, timed construction, Inventory/UI and strict emitted schemas.
+
+Current verification is source, arithmetic and diff review only. No runtime/schema
+edits until Coordinator accepts this pinned revised scope and transaction/power
+binding choices. Then freeze/push implementation head and request an explicit
+exclusive exact-head NO-PORT lease with named stages/budget, AST-extracted versioned
+Invoke-GodotCheck, empty preflight inventory, first-diagnostic stop, no edit/retry,
+retained logs and postflight release. Final Windows/Linux exact-head CI and emitted
+schema negatives required; distinguish source head and tested merge revision.
+Capture only if actual UI/physical uncertainty remains. No successor, media,
+publication, spending, deployment or outreach.
