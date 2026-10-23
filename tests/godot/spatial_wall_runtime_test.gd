@@ -127,6 +127,7 @@ func run() -> void:
 	context = own_context
 	check(production.capture_snapshot().value["store"]["iron"] == 2400000 and production.capture_snapshot().value["walls"].is_empty(), "all wall matter returns to exact refined stock")
 	var legacy: Dictionary = JSON.parse_string(world.capture_world_snapshot_json().value)
+	for field in ["construction", "construction_bindings", "construction_commands"]: legacy["systems"]["production"].erase(field)
 	legacy["systems"]["production"]["schema_version"] = 6
 	legacy["systems"]["production"].erase("walls")
 	restored = WorldRuntime.new()

@@ -188,8 +188,8 @@ class FailedAdoption extends InventorySimulationSystem:
 	func primary_payload_masses() -> Dictionary:
 		return delegate.primary_payload_masses()
 
-	func prepare_equipment_change(context: AuthenticatedCommandContext, request_id: String, item_id: String, create: bool, masses: Dictionary, definition_id: String, owner_record: Dictionary = {}, external: Variant = null) -> ServiceResult:
-		return delegate.prepare_equipment_change(context, request_id, item_id, create, masses, definition_id, owner_record, external)
+	func prepare_equipment_change(context: AuthenticatedCommandContext, request_id: String, item_id: String, create: bool, masses: Dictionary, definition_id: String, owner_record: Dictionary = {}, external: Variant = null, definition_revision: int = 1) -> ServiceResult:
+		return delegate.prepare_equipment_change(context, request_id, item_id, create, masses, definition_id, owner_record, external, definition_revision)
 
 	func commit_prepared_owner(_record: Dictionary) -> ServiceResult:
 		attempted = true
