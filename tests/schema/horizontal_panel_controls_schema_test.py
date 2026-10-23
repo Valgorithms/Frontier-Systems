@@ -34,4 +34,4 @@ for record in fixture["malformed"]:
     view = record["horizontal_panels"]
     ids = [s["surface_id"] for s in view["surfaces"]]
     assert len(ids) != len(set(ids)) or view["closure"]["production_revision"] != record["state_revision"]
-print(f"Panel controls schemas: real v10, legacy v7-9, {schema_rejections} schema and {len(fixture['malformed']) - schema_rejections} semantic rejections passed")
+print(f"Panel controls schemas: real v11, legacy v7-9, {schema_rejections} schema and {len(fixture['malformed']) - schema_rejections} semantic rejections passed")

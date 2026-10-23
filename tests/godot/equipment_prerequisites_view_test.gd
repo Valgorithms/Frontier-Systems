@@ -76,7 +76,7 @@ func run() -> void:
 	root.add_child(remote)
 	remote.set_process(false)
 	remote._authenticated = true
-	remote._receive(JSON.parse_string(JSON.stringify({"type": "observation", "panel_contact": preload("res://tests/support/paid_panel_contact_fixture.gd").envelope(world, context), "tools": tools, "production": production, "terrain": world.terrain_observation(context).value, "inventory": inventory.own_inventory_observation(context, true).value, "position": [0, 0, 0], "players": []})))
+	remote._receive(JSON.parse_string(JSON.stringify({"type": "observation", "panel_contact": preload("res://tests/support/paid_panel_contact_fixture.gd").envelope(world, context), "door_contact": preload("res://tests/support/paid_panel_contact_fixture.gd").door_envelope(world, context), "tools": tools, "production": production, "terrain": world.terrain_observation(context).value, "inventory": inventory.own_inventory_observation(context, true).value, "position": [0, 0, 0], "players": []})))
 	check(not remote._observation.is_empty(), "real receive accepts current frame")
 	if not remote._observation.is_empty():
 		check(EquipmentPrerequisiteView.part_text(remote._observation["tools"], remote._observation["production"], blueprint_id, "extractor-1", "head", "", false) == EquipmentPrerequisiteView.part_text(tools, production, blueprint_id, "extractor-1", "head", "", false), "local remote parity")

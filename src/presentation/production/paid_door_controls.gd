@@ -86,5 +86,5 @@ func _send(operation: String) -> void:
 	else: command.payload["door_id"] = _selected
 	command.authenticated_context = AuthenticatedCommandContext.for_local_development(&"local-inventory-actor", _world.world_id, _world.region_id)
 	_pending = String(command.command_id)
-	var queued: ServiceResult = _world.enqueue_authenticated_command(command)
+	var queued: ServiceResult = _world.enqueue_command(command)
 	if not queued.is_success: _pending = ""; _status.text = queued.message

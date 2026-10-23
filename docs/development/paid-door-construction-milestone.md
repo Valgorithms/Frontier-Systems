@@ -1,8 +1,8 @@
 # Paid manual door construction checkpoint
 
-Status: design checkpoint sent to the Frontier Coordinator; implementation and acceptance pending.
+Status: implementation in draft PR #141; focused lifecycle and CI acceptance pending.
 
-The initial checkpoint is superseded where necessary by the concrete transaction and geometry details below. These details still require Coordinator review before owner/schema edits.
+The initial checkpoint is superseded where necessary by the concrete transaction and geometry details below. The Coordinator accepted the bounded owner, transaction, geometry and restore mechanisms before implementation.
 
 ## Bounded outcome
 
@@ -52,7 +52,9 @@ Existing owners: `src/core/production/production_simulation_system.gd`, `src/cor
 
 Reviewed against `772a5bb9c27068def68847bf7a83a4b599b14e0c`: `SpatialWallConstruction` defines wall pose, body-envelope and fixture keepouts; `HorizontalPanelConstruction` defines paid rectangles, area bills and capacity checks; Production `apply_local` has the shared claim-coverage guard; Inventory `active_tool` resolves held capabilities through Tools. Access has reusable actuator/device parsing and manual validation, but no prepared construction transaction. `SimulationRunner.restore_snapshot` validates systems before writing them; `WorldRuntime` separately validates cross-owner references. The current contact decoder admits only horizontal 12 mm floor/ceiling boxes, so admitting vertical door boxes there would violate its contract. Existing world inventory records provide containers and positions, not arbitrary item meshes or geometric extents.
 
-Implementation and focused regression/schema checks are now present. Runtime, graphical and CI-export acceptance remain pending; source presence is not acceptance.
+Implementation and focused regression/schema checks are present. Import and headless startup passed at `589a2939bb142f845b5e9eeb78a73518a540b221`; the earlier blueprint numeric comparison and contact decoder parse defects were corrected. Expanded lifecycle, actual host reconnect/queued-session rejection, UI submission and physical contact checks await a fresh exclusive runtime lease. CI-export acceptance remains pending; source presence and startup are not lifecycle acceptance.
+
+Door-only hosted commands retain a weak host reference and an opaque per-authentication lease. Both validation and application recheck the exact current peer/slot/session, stable principal and resolved body. Reconnection retains installation ownership while retired queued commands reject. Other Production commands are outside this transport-liveness correction.
 
 ## Acceptance
 

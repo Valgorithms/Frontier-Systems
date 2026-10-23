@@ -32,4 +32,4 @@ for invalid in fixture["malformed"]:
     # Dynamic key equality and total input mass are explicit runtime constraints.
     requirements = invalid["recipe_requirements"]
     assert set(requirements) != set(invalid["recipes"]) or any(sum(r["inputs"].values()) > 100000000 for r in requirements.values())
-print(f"Recipe schemas: real v10/alternate, legacy v7, persistent v9 and {schema_rejections} schema plus {len(fixture['malformed']) - schema_rejections} semantic rejections passed.")
+print(f"Recipe schemas: real v11/alternate, legacy v7, persistent v10 and {schema_rejections} schema plus {len(fixture['malformed']) - schema_rejections} semantic rejections passed.")

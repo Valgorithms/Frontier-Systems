@@ -30,4 +30,4 @@ for field, value in (("materials", {"plate": 0}), ("bounds_millimetres", [0, 50.
 missing = deepcopy(current)
 del missing["panels"]
 assert not validator(10).is_valid(missing)
-print("Paid panel schemas: actual v9, legacy v8 and six malformed records passed")
+print("Paid panel schemas: actual v10, legacy v8 and six malformed records passed")

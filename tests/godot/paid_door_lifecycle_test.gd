@@ -1,4 +1,4 @@
-extends "res://tests/godot/machinery_runtime_test.gd"
+extends "res://tests/godot/timed_canister_controls_test.gd"
 
 var access: AccessControlSystem
 var door_id: String
@@ -54,6 +54,17 @@ func run() -> void:
 	command("canister_reserve", {"job_id": "door-reservation", "expected_reservation_revision": production.capture_snapshot().value["construction"]["revision"], "control_epoch": 0})
 	move([3500, 0, -6000])
 	var pose: Dictionary = {"position": [3500, 0, -5000], "quarter_turn": 0}
+	var split_support: Dictionary = {"left": {"kind": "floor", "height_millimetres": 0, "bounds_millimetres": [3000, 3500, -5050, -4050]}, "right": {"kind": "floor", "height_millimetres": 0, "bounds_millimetres": [3500, 4000, -5050, -4050]}}
+	check(PaidDoorGeometry.supported(pose, split_support), "complete union of two paid floors supports swing")
+	split_support.right.bounds_millimetres[0] = 3550
+	check(not PaidDoorGeometry.supported(pose, split_support), "50 mm support gap rejects")
+	var occupancy: Dictionary = inventory.capture_snapshot().value
+	check(PaidDoorConstruction.unoccupied(pose, occupancy, production.capture_snapshot().value), "known clear canonical bodies map")
+	occupancy.owner.bodies[0].profile_id = "unmapped.profile"
+	check(not PaidDoorConstruction.unoccupied(pose, occupancy, production.capture_snapshot().value), "unknown body profile fails closed")
+	occupancy = inventory.capture_snapshot().value
+	occupancy.world_storage.append({"container_id": "unknown.world.root", "position_millimetres": [10000, 0, 10000]})
+	check(not PaidDoorConstruction.unoccupied(pose, occupancy, production.capture_snapshot().value), "unknown world storage fails closed")
 	door_command("door_build", pose, false)
 	command("panel_build", {"kind": "floor", "bounds_millimetres": [3000, 4000, -5050, -4050], "height_millimetres": 0})
 	var panel: String = production.capture_snapshot().value["panels"].keys()[0]
@@ -79,6 +90,7 @@ func run() -> void:
 	door_command("door_open", {"door_id": door_id}, false)
 	check(not crowbar.is_empty(), "real fabricated crowbar available")
 	if not crowbar.is_empty(): equip(crowbar)
+	await authority_and_contact_checks()
 	door_command("door_open", {"door_id": door_id})
 	check(access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).position == 1.0, "existing Access actuator owns manual position")
 	move([3500, 0, -4600])
@@ -86,7 +98,10 @@ func run() -> void:
 	door_command("door_remove", {"door_id": door_id}, false)
 	move([3500, 0, -6000])
 	door_command("door_close", {"door_id": door_id})
-	var snapshot: Dictionary = JSON.parse_string(world.capture_world_snapshot_json().value)
+	var captured: ServiceResult = world.capture_world_snapshot_json()
+	check(captured.is_success, "whole paid-door snapshot: %s" % captured.message)
+	if not captured.is_success: finish(); return
+	var snapshot: Dictionary = JSON.parse_string(captured.value)
 	var target := WorldRuntime.new()
 	target.resource_carriers_enabled = true
 	root.add_child(target)
@@ -143,6 +158,7 @@ func run() -> void:
 	check(not access.devices.has(StringName(door_id)) and production.capture_snapshot().value["store"]["plate"] == 2000000, "disassembly removes only paid device and refunds exact trusted bill")
 	command("panel_remove", {"panel_id": panel})
 	check(production.capture_snapshot().value["store"]["plate"] == 3000000, "floor recovers once detached")
+	if is_instance_valid(host): host.free()
 	print("Paid manual door lifecycle: %d failures" % failures)
 	finish()
 
@@ -163,3 +179,104 @@ func equip(item: String) -> void:
 	world.enqueue_command(action)
 	step()
 	check(last.is_success, "equip actual fabricated crowbar")
+
+
+func connect_door_peer(peer: int, slot: int) -> void:
+	host._peers[peer] = {"socket": RecordingSocket.new(), "slot": -1, "created": Time.get_ticks_msec(), "last_move": Time.get_ticks_msec(), "pending_move": false, "window": Time.get_ticks_msec(), "commands": 0}
+	host._receive(peer, {"type": "authenticate", "key": host._keys[slot]})
+	check(host._peers[peer].slot == slot, "door peer authenticated without listener")
+
+
+func door_route(peer: int, operation: String, payload: Dictionary) -> Dictionary:
+	request_sequence += 1
+	var request: String = "door-host-%d" % request_sequence
+	host._peers[peer].window = Time.get_ticks_msec() - 1000
+	host.frames.clear(); host._events.clear()
+	host._receive(peer, JSON.parse_string(JSON.stringify({"type": "command", "request_id": request, "system": "production", "operation": operation, "payload": payload})))
+	step()
+	for reply in host.frames + host._events:
+		if reply.peer == peer and reply.frame.get("request_id") == request: return reply.frame
+	check(false, "door host acknowledges fixed-tick command")
+	return {"ok": false}
+
+
+func operate_intent() -> Dictionary:
+	return {"expected_revision": production.capture_snapshot().value.state_revision, "control_epoch": 0, "door_id": door_id}
+
+
+func publish_door(peer: int) -> Dictionary:
+	host.frames.clear()
+	host._publish(peer)
+	for item in host.frames:
+		if item.peer == peer and item.frame.type == "observation": return JSON.parse_string(JSON.stringify(item.frame))
+	check(false, "complete host contact publication")
+	return {}
+
+
+func authority_and_contact_checks() -> void:
+	host = RecordingHost.new()
+	root.add_child(host); host.set_process(false); host._world = world
+	host._keys = ["door-actor-0000000000000000000000", "door-target-000000000000000000000"]
+	world.command_completed.connect(host._on_completed)
+	connect_door_peer(1, 0); connect_door_peer(2, 1)
+	var original: Dictionary = production.capture_snapshot().value
+	var before_access: Dictionary = access.capture_snapshot().value
+	check(not door_route(2, "door_remove", operate_intent()).ok, "foreign authenticated principal cannot recover door")
+	check(production.capture_snapshot().value.doors == original.doors and access.capture_snapshot().value.devices == before_access.devices, "foreign rejection preserves both owner records")
+	var stale: Dictionary = operate_intent(); stale.control_epoch = 1
+	check(not door_route(1, "door_open", stale).ok, "host rejects stale control epoch")
+	var forged: Dictionary = operate_intent(); forged.principal_id = "local-inventory-actor"
+	check(not door_route(1, "door_open", forged).ok, "host rejects extra client authority")
+	# A command queued by a disconnected peer must not become a later owner's action.
+	host._receive(1, {"type": "command", "request_id": "queued-door-open", "system": "production", "operation": "door_open", "payload": operate_intent()})
+	host._drop_peer(1)
+	step()
+	check(not last.is_success and last.error_code == &"door_session_expired", "disconnected queued door command fails at fixed tick")
+	check(access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).position == 0.0, "expired session cannot move leaf")
+	connect_door_peer(3, 0)
+	# Recheck transport identity even if a peer ID and slot are reused.
+	var queued := HostedPaidDoorCommand.new()
+	queued.host_reference = weakref(host); queued.peer_id = 3; queued.slot = 0
+	queued.session_lease = host._peers[3].door_session_lease
+	queued.authenticated_context = host._context(0, 3)
+	queued.operation = "door_open"; queued.payload = operate_intent()
+	queued.command_id = &"validate-then-replace"
+	# Resolve the actual stable body ID rather than assuming an inventory container ID.
+	queued.body_id = inventory.authorize(queued.authenticated_context, true).value
+	check(queued.validate(world).is_success, "current hosted door validates")
+	host._peers[3].door_session_lease = RefCounted.new()
+	check(not queued.apply(world).is_success, "replacement between validate/apply fails closed")
+	var remote := RemoteWorldRuntime.new()
+	root.add_child(remote); remote.set_process(false)
+	remote._receive({"type": "authenticated", "slot": 0, "world_id": String(world.world_id), "region_id": String(world.region_id)})
+	var scene := PaidDoorContactScene.new(); root.add_child(scene); scene.bind(remote)
+	remote._receive(publish_door(3))
+	check(scene.get_child_count() == 4, "real remote receive installs complete frame and leaf")
+	var character := CharacterBody3D.new()
+	var capsule := CapsuleShape3D.new(); capsule.radius = 0.35; capsule.height = 1.8
+	var collider := CollisionShape3D.new(); collider.shape = capsule; character.add_child(collider)
+	root.add_child(character)
+	await physics_frame
+	character.position = ProceduralWorldInventoryPreview.DISPLAY_ORIGIN + Vector3(3.5, 0.9, -5.7)
+	check(character.move_and_collide(Vector3(0, 0, 1.4)) != null, "PhysicsServer closed leaf blocks player capsule")
+	check(not production.door_motion_clear([3500, 0, -5700], [3500, 0, -4300]), "canonical closed leaf rejects tunnelling")
+	# Actual local production UI queues the same authenticated intent contract.
+	var controls := PaidDoorControls.new(); root.add_child(controls); controls.configure(world); controls.set_process(false)
+	controls._process(0.2)
+	check(not controls._buttons[1].disabled, "door controls operate away from workstation")
+	controls._buttons[1].pressed.emit()
+	check(not controls._pending.is_empty(), "actual player button queues door operation")
+	step(); controls._process(0.2)
+	check(controls._pending.is_empty() and access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).position == 1.0, "UI command completion opens real Access leaf")
+	remote._receive(publish_door(3))
+	await physics_frame
+	character.position = ProceduralWorldInventoryPreview.DISPLAY_ORIGIN + Vector3(3.5, 0.9, -5.7)
+	check(character.move_and_collide(Vector3(0, 0, 1.4)) == null, "PhysicsServer open leaf permits capsule traversal")
+	check(production.door_motion_clear([3500, 0, -5700], [3500, 0, -4300]), "canonical open doorway permits traversal")
+	check(door_route(3, "door_close", operate_intent()).ok, "reconnected current session operates original stable door")
+	remote._receive(publish_door(3))
+	var bad: Dictionary = publish_door(3); bad.door_contact.boxes.pop_back()
+	remote._receive(bad)
+	check(scene.get_child_count() == 0, "malformed door snapshot clears contact immediately")
+	remote.panel_contact_cleared.emit()
+	controls.free(); scene.free(); remote.free(); character.free()
