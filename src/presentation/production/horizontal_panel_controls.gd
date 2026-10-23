@@ -99,7 +99,7 @@ func observe(production: Dictionary) -> void:
 		_pending = ""
 	_record.clear()
 	_panels.clear()
-	if production.get("schema_version") != 10 or not WorkstationResourceView.valid(production) or int(production["state_revision"]) < _revision or int(production["last_tick"]) < _tick:
+	if production.get("schema_version") not in [10, 11] or not WorkstationResourceView.valid(production) or int(production["state_revision"]) < _revision or int(production["last_tick"]) < _tick:
 		observation_changed.emit({})
 		_refresh()
 		return

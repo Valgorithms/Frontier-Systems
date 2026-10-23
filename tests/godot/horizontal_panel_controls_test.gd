@@ -211,6 +211,7 @@ func check_projection(current: Dictionary) -> void:
 	for version in [7, 8, 9]:
 		var legacy: Dictionary = current.duplicate(true)
 		legacy.erase("horizontal_panels")
+		legacy.erase("paid_doors")
 		legacy["schema_version"] = version
 		if version < 9: legacy.erase("timed_canister")
 		if version < 8: legacy.erase("recipe_requirements")

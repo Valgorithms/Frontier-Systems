@@ -4,6 +4,7 @@ class_name RemoteWorldRuntime
 signal observation_received(record: Dictionary)
 signal connection_closed(message: String)
 signal panel_contact_received(record: Dictionary)
+signal door_contact_received(record: Dictionary)
 signal panel_contact_cleared
 var _connection_generation: int = 0
 var _contact_sequence: int = 0
@@ -154,12 +155,20 @@ func _receive(frame: Dictionary) -> void:
 			if not _projection.accept_record(frame["production"]).is_success:
 				_reject_panel_contact()
 				return
+			var doors: ServiceResult = DoorContactObservation.decode(frame.get("door_contact"), world_id, region_id)
+			if int(frame.production.schema_version) >= 11:
+				if not doors.is_success: _reject_panel_contact(); return
+				for field in ["sequence", "inventory_restore", "production_restore"]:
+					if doors.value[field] != envelope[field]: _reject_panel_contact(); return
+				for field in ["production_revision", "production_tick", "inventory_tick"]:
+					if doors.value[field] != envelope.geometry[field]: _reject_panel_contact(); return
 			_terrain_record = TerrainObservationValidation.normalized(frame["terrain"])
 			frame["terrain"] = _terrain_record.duplicate(true)
 			_observation = frame.duplicate(true)
 			_contact_sequence = envelope.sequence
 			_contact_fences = [envelope.inventory_restore, envelope.production_restore]
 			panel_contact_received.emit(contact.value.duplicate(true))
+			if doors.is_success: door_contact_received.emit(doors.value.duplicate(true))
 			observation_received.emit(_observation.duplicate(true))
 		"ack":
 			if _requests.has(frame.get("request_id")) and typeof(frame.get("ok")) == TYPE_BOOL and typeof(frame.get("code")) == TYPE_STRING and frame["code"].length() <= 128 and typeof(frame.get("message")) == TYPE_STRING and frame["message"].length() <= 512:

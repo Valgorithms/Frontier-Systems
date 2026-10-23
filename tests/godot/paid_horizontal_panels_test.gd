@@ -14,9 +14,10 @@ func run() -> void:
 	context = AuthenticatedCommandContext.for_local_development(&"local-inventory-actor", world.world_id, world.region_id)
 	var old: Dictionary = production.capture_snapshot().value
 	old.erase("panels")
+	old.erase("doors")
 	old["schema_version"] = 8
 	check(production.validate_snapshot_record(old, 0).is_success, "save8 migrates to empty paid panels")
-	check(production.restore_snapshot_record(old, 0).is_success and production.capture_snapshot().value["schema_version"] == 9, "save8 restores as save9")
+	check(production.restore_snapshot_record(old, 0).is_success and production.capture_snapshot().value["schema_version"] == 10, "save8 restores as save9")
 	for batch in range(10):
 		move([-3000, 0, -1000])
 		command("extract", {"deposit_id": "deposit.iron", "carrier_id": "resource-canister-1", "amount_milligrams": 1000000})

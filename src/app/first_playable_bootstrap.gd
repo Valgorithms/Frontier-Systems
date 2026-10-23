@@ -273,6 +273,9 @@ func _start_client() -> void:
 	var panel_contact := PaidPanelContactScene.new()
 	_habitat.add_child(panel_contact)
 	panel_contact.bind(_remote)
+	var door_contact := PaidDoorContactScene.new()
+	_habitat.add_child(door_contact)
+	door_contact.bind(_remote)
 	_machinery_panel.bind_horizontal_preview(panel_preview)
 	panel_preview.panel_selected.connect(func(id: String) -> void:
 		_open_panel(3)

@@ -7,7 +7,7 @@ const MATERIALS: Array[String] = ["ore.iron", "ice", "regolith", "iron", "tailin
 
 
 func accept_record(value: Dictionary) -> ServiceResult:
-	if not ControlContractValidation.is_integer(value.get("schema_version"), 7, 10): return _invalid()
+	if not ControlContractValidation.is_integer(value.get("schema_version"), 7, 11): return _invalid()
 	var version: int = int(value["schema_version"])
 	var fields := PackedStringArray(["schema_version", "catalog_revision", "catalog_fingerprint", "timebase_hz", "last_tick", "state_revision", "deposits", "store", "vessel", "wall_mass_milligrams", "energy_joules", "powered", "job", "cargo", "components", "recipes", "dispensable", "can_operate", "vessel_pressure_kpa", "extractable_sources"])
 	fields.append("machinery")
@@ -15,11 +15,13 @@ func accept_record(value: Dictionary) -> ServiceResult:
 	fields.append_array(PackedStringArray(["structures", "blueprints", "loose_parts", "tool_extraction"]))
 	if version >= 8: fields.append("recipe_requirements")
 	if version >= 9: fields.append("timed_canister")
-	if version == 10: fields.append("horizontal_panels")
-	if not ControlContractValidation.has_exact_fields(value, fields) or not ControlContractValidation.is_integer(value.get("schema_version"), 7, 10) or not ControlContractValidation.is_integer(value.get("timebase_hz"), 60, 90) or not [60, 72, 90].has(int(value.get("timebase_hz"))) or typeof(value.get("can_operate")) != TYPE_BOOL:
+	if version >= 10: fields.append("horizontal_panels")
+	if version >= 11: fields.append("paid_doors")
+	if version >= 11 and not DoorContactObservation.valid_items(value.get("paid_doors")): return _invalid()
+	if not ControlContractValidation.has_exact_fields(value, fields) or not ControlContractValidation.is_integer(value.get("schema_version"), 7, 11) or not ControlContractValidation.is_integer(value.get("timebase_hz"), 60, 90) or not [60, 72, 90].has(int(value.get("timebase_hz"))) or typeof(value.get("can_operate")) != TYPE_BOOL:
 		return _invalid()
 	if not SpatialWallConstruction.valid(value["walls"]): return _invalid()
-	if version == 10 and not HorizontalPanelObservation.valid(value["horizontal_panels"], value.get("state_revision")): return _invalid()
+	if version >= 10 and not HorizontalPanelObservation.valid(value["horizontal_panels"], value.get("state_revision")): return _invalid()
 	if int(value["schema_version"]) >= 9 and not TimedCanisterConstruction.valid_observation(value["timed_canister"]): return _invalid()
 	for field in ["last_tick", "state_revision", "catalog_revision", "wall_mass_milligrams", "energy_joules"]:
 		if not ControlContractValidation.is_integer(value[field], 0, 9007199254740000):

@@ -215,6 +215,9 @@ func configure(world: WorldRuntime) -> void:
 	_operation_controls.append(_eject_amount)
 	_button("Eject iron into selected owned canister", "machine_autolathe_eject")
 	_button("Recycle empty owned part into workbench iron", "machine_recycle")
+	var doors := PaidDoorControls.new()
+	add_child(doors)
+	doors.configure(world)
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_status)

@@ -20,7 +20,7 @@ def validator(version):
 
 
 fixture = json.loads((ROOT / "var/horizontal-panel-controls-fixture.json").read_text())
-current = validator(10)
+current = validator(11)
 current.validate(fixture["current"])
 for version, record in zip((7, 8, 9), fixture["legacy"]):
     validator(version).validate(record)

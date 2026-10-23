@@ -58,6 +58,7 @@ func _ready() -> void:
 	var production_system := ProductionSimulationSystem.new()
 	production_system.name = "ProductionSimulationSystem"
 	_production_setup_result = production_system.configure(inventory_system, tool_system)
+	if _production_setup_result.is_success: _production_setup_result = production_system.bind_door_access(access_control_system)
 	_simulation_runner.add_child(production_system)
 	var terrain_system := TerrainSimulationSystem.new()
 	terrain_system.name = "TerrainSimulationSystem"
@@ -315,9 +316,10 @@ func restore_world_snapshot(snapshot: WorldSnapshot) -> ServiceResult:
 		if masses.has(id): return ServiceResult.failure(&"payload_owner_conflict", "A physical item cannot belong to two mass owners.")
 		masses[id] = extra[id]
 	return inventory.with_checkpoint_payload_masses(masses, func() -> ServiceResult:
-		var link_validation: ServiceResult = _validate_cross_system_state(system_records, normalized.tick_number)
-		if not link_validation.is_success: return link_validation
-		return _simulation_runner.restore_snapshot(normalized.tick_number, system_records))
+		return production.with_checkpoint_door_links(system_records["production"], system_records["access_control"], normalized.tick_number, func() -> ServiceResult:
+			var link_validation: ServiceResult = _validate_cross_system_state(system_records, normalized.tick_number)
+			if not link_validation.is_success: return link_validation
+			return _simulation_runner.restore_snapshot(normalized.tick_number, system_records)))
 
 
 ## Decodes and restores a snapshot before the runner starts.
@@ -376,6 +378,8 @@ func _validate_cross_system_state(system_records: Dictionary, snapshot_tick_numb
 	var valid_production: ServiceResult = production.validate_snapshot_record(system_records["production"], snapshot_tick_number)
 	if not valid_production.is_success:
 		return valid_production
+	var door_links: ServiceResult = PaidDoorConstruction.links(valid_production.value, access_record, inventory_record)
+	if not door_links.is_success: return door_links
 	var production_links: ServiceResult = production.validate_inventory_links(valid_production.value, inventory_record)
 	if not production_links.is_success: return production_links
 	var tools := get_simulation_system(ToolSimulationSystem.SYSTEM_ID) as ToolSimulationSystem

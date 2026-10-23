@@ -144,7 +144,7 @@ func run() -> void:
 	var own: Dictionary = inventory.own_inventory_observation(context).value
 	check(own["items"].any(func(item: Dictionary) -> bool: return item["item_id"] == output and item["definition_revision"] == 2), "completed UI job creates actual revision-2 canister")
 	check(production.capture_snapshot().value["store"]["iron"] == 200000, "completion debits exactly one real bill")
-	check(JSON.parse_string(world.capture_world_snapshot_json().value)["systems"]["production"]["schema_version"] == 9, "UI preserves v9 save contract")
+	check(JSON.parse_string(world.capture_world_snapshot_json().value)["systems"]["production"]["schema_version"] == 10, "UI preserves v10 save contract")
 	panel.observe(paused)
 	check(controls._record.is_empty() and controls._buttons["resume"].disabled, "stale panel observation disables actions")
 	panel.observe(frame())
@@ -245,6 +245,7 @@ func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	# no definition identity for revision-2 timed output.
 	legacy.erase("timed_canister")
 	legacy.erase("horizontal_panels")
+	legacy.erase("paid_doors")
 	legacy["schema_version"] = 8
 	var old_projection := RemoteProductionProjection.new()
 	check(old_projection.accept_record(legacy).is_success, "legacy v8 remains readable without timed controls")
