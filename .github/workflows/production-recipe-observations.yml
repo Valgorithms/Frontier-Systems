@@ -119,6 +119,7 @@ jobs:
           path: |
             var/ci/godot/
             var/recipe-requirements-fixture.json
+            var/finite-bootstrap-fixture.json
             var/timed-canister-controls-fixture.json
             var/paid-panels-fixture.json
             var/paid-door-fixture.json
