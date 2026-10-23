@@ -273,7 +273,8 @@ func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 	observed["machinery"] = machinery_observation(context)
 	observed["timed_canister"] = TimedCanisterConstruction.observation(_state, _inventory, context, _timed_blueprints.get_definition(ConstructionReservationPlan.BLUEPRINT).value["fingerprint"])
 	# Observation version is independent of the v9 persistence record.
-	observed["schema_version"] = 9
+	observed["schema_version"] = 10
+	observed["horizontal_panels"] = HorizontalPanelObservation.project(_state, context, construction_closure(context), _inventory.production_capability(context, true, []).is_success)
 	observed["recipes"] = _catalog["recipes"].keys()
 	observed["recipe_requirements"] = {}
 	for id in _catalog["recipes"]:

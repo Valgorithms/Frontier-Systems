@@ -20,10 +20,10 @@ def validator(name):
 
 
 fixture = json.loads((ROOT / "var/timed-canister-controls-fixture.json").read_text())
-current = validator("production-observation:v9")
+current = validator("production-observation:v10")
 current.validate(fixture["current"])
 validator("production-observation:v8").validate(fixture["legacy"])
 assert not current.is_valid(fixture["legacy"])
 for malformed in fixture["malformed"]:
     assert not current.is_valid(malformed)
-print(f"Timed canister schema: actual v9, legacy v8 and {len(fixture['malformed'])} negative projections passed")
+print(f"Timed canister schema: actual v10, legacy v8 and {len(fixture['malformed'])} negative projections passed")

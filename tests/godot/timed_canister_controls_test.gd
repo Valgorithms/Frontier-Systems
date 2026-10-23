@@ -243,6 +243,7 @@ func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	# Use a pre-completion projection for legacy compatibility: old versions have
 	# no definition identity for revision-2 timed output.
 	legacy.erase("timed_canister")
+	legacy.erase("horizontal_panels")
 	legacy["schema_version"] = 8
 	var old_projection := RemoteProductionProjection.new()
 	check(old_projection.accept_record(legacy).is_success, "legacy v8 remains readable without timed controls")

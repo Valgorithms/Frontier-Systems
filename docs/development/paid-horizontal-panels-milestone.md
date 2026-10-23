@@ -1,5 +1,9 @@
 # Canonical paid horizontal panels
 
+This records the initial owner integration. The subsequent
+[player controls milestone](horizontal-panel-controls-milestone.md) adds an
+observation-v10 projection and queued UI; canonical ownership and save9 stay unchanged.
+
 Production owns up to 64 horizontal panel records. This first integration adds
 fixed-tick authenticated `panel_build` / `panel_remove` owner commands and an
 on-demand `construction_closure` query. No player UI or new network operation is
