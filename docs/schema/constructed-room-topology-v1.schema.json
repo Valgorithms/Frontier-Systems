@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Constructed room topology assessment v1 (not a room or seal)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "production_revision", "status", "interior_bounds_millimetres", "required_surfaces"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "production_revision": {"type": "integer", "minimum": 0, "maximum": 9007199254740000},
+    "status": {"enum": ["closed_wall_perimeter", "open_or_unsupported"]},
+    "interior_bounds_millimetres": {"type": "array", "items": {"type": "integer", "minimum": -100550, "maximum": 100550}},
+    "required_surfaces": {"const": ["floor", "ceiling"]}
+  },
+  "allOf": [{
+    "if": {"properties": {"status": {"const": "closed_wall_perimeter"}}},
+    "then": {"properties": {"interior_bounds_millimetres": {"minItems": 4, "maxItems": 4}}},
+    "else": {"properties": {"interior_bounds_millimetres": {"maxItems": 0}}}
+  }]
+}
