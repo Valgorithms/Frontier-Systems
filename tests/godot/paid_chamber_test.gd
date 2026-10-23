@@ -58,7 +58,11 @@ func run() -> void:
 	if not pair.is_success: finish(); return
 	inner_id = pair.value.inner_door_id; outer_id = pair.value.outer_door_id
 	for id in [inner_id, outer_id]:
-		door_id = id; door_command("door_seal_install", {"door_id": id}); chamber_ui(8)
+		door_id = id; door_command("door_seal_install", {"door_id": id})
+		if id == inner_id: bypass_reject("door_bypass_install")
+	for id in [inner_id, outer_id]:
+		door_id = id; chamber_ui(8)
+		if failures: finish(); return
 	door_id = inner_id
 	var insufficient: Dictionary = production._state.duplicate(true)
 	insufficient.store.plate = PaidChamber.MASS - 1
