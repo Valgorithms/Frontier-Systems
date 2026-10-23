@@ -1,6 +1,8 @@
 # Bounded powered chamber gas recovery: revised design
 
-Status: source proposal only, awaiting Coordinator acceptance. No runtime/schema
+Status: revised outcome/budget/power binding accepted by Coordinator at
+`05e79b6a0c53b6f6b97fdec815c3da04def50141`; implementation amendment below awaits
+separate pinned acceptance. No runtime/schema
 implementation or Godot execution authorized. Revised on 2026-10-23 after the
 Coordinator declined the [two-litre receiver](deferred-two-litre-chamber-storage-design.md).
 Prototype shell reuse remains UNAPPROVED and is unnecessary here.
@@ -203,9 +205,8 @@ its Access-specific assumptions must not be disguised as an energy transaction.
 If a nonfallible commit boundary cannot be demonstrated, stop and report that
 prerequisite instead of compensating writes.
 
-Propose Production save16 / observation18, pump/job records1, new strict pump
-definition/bill schema. Pressure save may remain5 if no new persisted gas fields
-are necessary; pin actual required version changes in the accepted amendment.
+The frozen amendment below pins Production16 / observation18 / paid-door7 and
+Pressure6, including reciprocal audit records; pump/job and definition/bill are1.
 Preserve all old definitions/catalogs/fingerprints and force semantics. Decode
 complete Production/Pressure/Access/Inventory candidates first; validate paid
 bill, geometry/mount, ownership, target/accumulated mol, energy spent, tick/cadence,
@@ -219,6 +220,166 @@ without reapplying a batch. Restored jobs are paused pending fresh authorization
 document this intentional session-safety migration rather than silently resuming.
 Recovery/salvage respects all active material claims, receiving capacities and
 exact-once receipts. No environment variables, dependencies or services.
+
+## Frozen implementation amendment for acceptance
+
+### Exact mount, collision and physical provenance
+
+All coordinates below are canonical millimetres, before the existing display
+offset. Pump solid center `[5600,150,-4400]`, size `[200,300,100]`; AABB
+x[5500,5700], y[0,300], z[-4450,-4350]. Its footprint must be completely covered
+by the paid floor at y0 using the existing exact union support query, and remain
+within the accepted chamber interior x[5100,6900], z[-4500,-3500]. No wall health
+or wall mount is implied: this is a floor-supported compact prototype interface.
+Handle `[5600,900,-4300]` is a noncolliding interaction point, tested against
+canonical body center using existing 1500 mm reach. The entire pump solid is
+derived from the owned mounted assembly record, not an independent scene owner.
+
+At quarter-turn1 the existing inner door sweep occupies x[4100,5100],
+z[-4500,-3500]; outer occupies x[6000,7000], same z band. Pump has 400 mm
+separation from inner sweep and 300 mm from outer sweep. The unchanged central
+600 mm body route at z=-4000 occupies z[-4300,-3700], leaving 50 mm to pump's
+frontmost face z=-4350; rear wall interior face at -4500 leaves 50 mm behind it.
+These are AABB calculations, not contact evidence. Retain PR149's continuous
+spawn/inner-leaf detour, both apertures and outer-return route; test actual
+CharacterBody3D/PhysicsServer contact with installed pump and all swept/open/closed
+door shapes, floor seams and body heights. Place/recover fails if a body, world
+container or existing machine overlaps the solid. Supporting-floor removal is
+guarded while installed. No collision disabling, body teleport or narrowed body.
+
+New immutable definition `item.chamber-recovery-pump.fabricated` revision1,
+schema item-definition1, tags `item.handheld` and `equipment.chamber-pump`,
+6000 ml external volume, base mass0 and storage null. Production's dedicated
+`chamber_recovery.assemblies` material record supplies exactly 600000 mg through
+both `payload_mass` and `payload_masses`; it is never also a generic structure,
+machinery part or cargo payload. Exact record: assembly ID/item ID, definition
+revision, bill/fingerprint, owner/body/world/region, 1000 J assembly-spend receipt,
+original Inventory condition and mounted-or-carried state. No fabricated equipment
+tag that accidentally routes through unrelated blueprint validation.
+
+Build prepares the new physical item in the authenticated body's inventory using
+the existing factory-candidate pattern with registered definition and capacity;
+then place relocates that same ID to a dedicated bounded root container
+`world.chamber-pump-<assembly-id>` at floor anchor `[5600,0,-4400]`, capacity one
+item/600000 mg/6000 ml. Root is observable but general Inventory transfer/closure/
+equip/socket operations must reject mounted pump movement; only the paired pump
+recover command can remove it and retire the root. Mounted record and actual
+Inventory item/root must match exactly. Recover prepares original item into the
+body subject to capacity/available-hand/ownership checks; no condition reset or
+material refund. Salvage only an owned carried inactive item; remove exact ID and
+refund original bill once, preserving lifetime audit. Record existing condition
+verbatim; only condition1000 can start, with other conditions retained for salvage.
+No new damage model, wear/repair operation or healing path.
+
+### Versions, lifetime limits and reciprocal accounting
+
+Pin Production save16, observation18, paid-door observation7 (pump interlocks),
+Pressure save6, pump assembly/job/accounting records1 and pump blueprint1.
+Pressure6 extends the chamber5 shape with `pump_accounting`; it preserves every
+existing gas volume/valve field. Inventory system5, shared owner2 / ledger2,
+item-definition1 and Production intent1 envelope remain their existing shape;
+strict operation allowlists gain pump operations. Add new emitted schemas for
+Production16/observation18/paid-door7/Pressure6/pump records and update every
+current consumer's accepted/unsupported-version controls. Do not accept unknown
+future versions or alter old immutable item/blueprint/catalog bytes.
+
+Legacy Production<=15/Pressure<=5 normalize to empty pump history/accounting,
+without changing old gas, energy, origins, receipts or definitions. Both absent
+is valid; a current pump on only one side is invalid. Existing chamber records
+remain unchanged in their nested version. New item registration never spawns an
+item or grants a rating. No missing-owner migration creates a pump.
+
+One current assembly maximum, at most32 lifetime assembly records and128 lifetime
+jobs; retain completed/cancelled/salvaged summaries, reject further creation at
+capacity instead of trimming provenance or inventing a counter reset. Jobs have
+monotonic server ID/sequence, initial mol, target=0.2*initial mol, returned mol,
+spent J, immutable maxJ=`min(25000, actual_bank_J_at_start)`, owner/control binding,
+state and last successful batch tick. Client supplies no target/maxJ/efficiency.
+maxJ must be positive; each batch checks spent+price<=maxJ and current bank>=price.
+Stop means pause; resume retains the same target/maxJ/spend. Cancel permanently
+closes that job without refund; a fresh authorized job may target20% of then-current
+gas, but all lifetime counters and actual bank debit persist. Place/recover/refit/
+salvage/build never reset job history or recovered-mol/paid-J totals. No budget
+refresh on restart, receipt eviction or reload. Bounds/overflow reject before write.
+
+Production owns authoritative bank and material/job accounting. Pressure6 stores
+a reciprocal audit mirror, not another energy/gas owner: monotonic commit sequence,
+assembly/job ID, last batch tick, exact last q/chargedJ, cumulative returned mol
+and paid J, plus retained per-job summaries (same128 limit). Both candidates receive
+the identical calculated values, never recomputed/rounded independently. Reciprocal
+sequence/totals/job summaries must match exactly on every prepare/restore; check
+sum(job paidJ)=lifetime paidJ, sum(job returned mol)=lifetime returned mol using
+the same deterministic accumulation order, valid target/spend bounds, and bank
++ lifetime pump assembly/batch spending<=100000 J as a necessary finite-origin
+constraint. Other existing station spending remains in the existing bank/receipts;
+the mirror is not permission to infer or refill missing energy.
+
+### Prepared API, CAS and commit boundaries
+
+New server-only `PreparedChamberRecoveryChange` is short-lived, single-use and
+never persisted/sent. Proposed `Production.prepare_chamber_recovery_step(tick)`
+returns a prepared success or rejection; it asks
+`Pressure.prepare_chamber_recovery_transfer(assembly_id, job_id, q, tick)` for
+detached decoded pressure-after plus conservative cost. No public caller chooses
+cost/efficiency or writes gas. `prepared.commit(production, pressure, inventory,
+access)` verifies exact owner object identities, volatile restore fences, expected
+Production state_revision/last_tick and complete before snapshot (including
+bank/job/material claims), exact Pressure before record (all volumes, valve,
+sensor, accounting state), Access pair before records, and Inventory owner/ledger
+revisions, body/control/action epochs, current grip/tool/pose/condition and
+controller restore generation. Compare exact canonical records where no revision
+exists; a prior matching ID alone is insufficient. A mismatch consumes/rejects
+the prepared object. Validate overflow, candidate schemas and all cross-links
+before the first assignment.
+
+All allocations/decoding/projection/hashes and optional test-failure injection
+occur before publication. Final boundary directly swaps prepared Pressure state
+and Production state with no callback, signal, decoder, allocation-dependent
+helper, yielding or restore. Optional Inventory swaps for build/place/recover
+must be completely predecoded and fenced before this same boundary; pure gas
+steps do not change Inventory or Access. Existing Inventory factory preparation
+and `PreparedDoorChange` demonstrate detached preparation; neither live factory
+commit followed by gas mutation nor live `MachineryWorkshop.draw` is acceptable.
+Build/place/recover/salvage use the same rejection-before-write discipline.
+
+First implementation phase is this prerequisite plus focused failure-injection
+tests, before pump UI/preview expansion. Inject before/after candidate preparation,
+at each owner validation and immediately before publication; change bank, gas,
+claims, door/valve, Inventory/grip/body/epoch, restore fence and single-use status
+between prepare/commit. Assert equality of every affected owner and reciprocal
+receipt/counter, including successful same-step second-call rejection. No rollback
+or live compensation. Prove legitimate success charges the computed work once.
+
+### Scheduler and paused-reload cadence
+
+Keep Pressure priority0 (passive flows then sensors) and Production priority300.
+Production advances last_tick, simulates existing timed canister/machinery work,
+then calls pump scheduling exactly once before extraction/recipe early returns.
+Successful previous spends have precedence; pump plans against the current bank.
+Admission at external-command tick start sets first eligibility to tick+60.
+Successful batch sets next eligibility to tick+60. Ineligible ticks have no pump
+mutation; stalled eligible ticks derive a reason with unchanged job/gas/bank/
+receipts and can try one batch on a later tick, never catch up multiple batches.
+Explicit stop or lost session/reach/tool parks the job until authorized resume;
+resume sets fresh eligibility current_tick+60 while retaining target/maxJ/spend.
+No saved session secret. Whole-world reload installs a paused job with retained
+last successful tick; normalize that pause in both candidates, no debit/transfer,
+and require fresh resume/60-tick delay. Reload/stop cannot accelerate the rate.
+Running pump interlocks are enforced at external commands and step admission.
+Actual volumes drive admission/UI; sensors deliberately catch up next tick.
+
+### Boundary checks before device expansion
+
+Use R=8.314462618 J/(mol*K), actual fixed T and volumes; mol as existing finite
+float, J as exact bounded integer. Compute after-state first, use dimensionless
+PHafter/PCafter and natural logarithm, ceil only after dividing by0.35, then add1.
+Check no rounded-down free charge, positive q, q<nC, strict finite endpoints and
+monotonic PH increase / PC decrease before assignment. Accept exact250J,110kPa,
+ratio16 and1kPa boundaries; reject just outside. Test exact integer/near-integer
+work charges, tiny final target batch, equality/downhill min1J, absent energy,
+maxJ exhaustion and unsupported timebase. Do not use pressure epsilon to erase
+matter or clamp a final amount to empty. Preserve the original29.93126178mol /
+22993J model target with meaningful runtime receipts after authorization.
 
 ## Controls and acceptance after design approval
 
@@ -246,9 +407,10 @@ Explain 20% partial recovery and remaining manual vent/force sequence plainly.
 - Existing chamber/pressure stability, force/bypass, reinforcement, finite bootstrap,
   machinery energy, timed construction, Inventory/UI and strict emitted schemas.
 
-Current verification is source, arithmetic and diff review only. No runtime/schema
-edits until Coordinator accepts this pinned revised scope and transaction/power
-binding choices. Then freeze/push implementation head and request an explicit
+Current verification is source, arithmetic and diff review only. Outcome, budget
+and power binding are accepted; no runtime/schema edits until Coordinator accepts
+this pinned implementation amendment and transaction boundaries. Then freeze/push
+implementation head and request an explicit
 exclusive exact-head NO-PORT lease with named stages/budget, AST-extracted versioned
 Invoke-GodotCheck, empty preflight inventory, first-diagnostic stop, no edit/retry,
 retained logs and postflight release. Final Windows/Linux exact-head CI and emitted
