@@ -347,7 +347,14 @@ func detached_chamber_controls(snapshot: String) -> void:
 		check((gas.volumes[StringName(gas.paid_chamber.volume_id)].gas_moles != moles_before) == leaking, "closed valves do not suppress boundary leak")
 		if leaking:
 			var closed_result: Dictionary = gas.capture_snapshot().value
-			check(target.restore_world_snapshot_json(JSON.stringify(bad)).is_success, "reset same finite leak control")
+			# Whole-world restore is startup-only; compare identical fixtures in
+			# separate runtimes rather than attempting a second startup restore.
+			target.free()
+			target = FirstPlayableBootstrap.create_playable_world(); root.add_child(target)
+			var reset: ServiceResult = target.restore_world_snapshot_json(JSON.stringify(bad))
+			check(reset.is_success, "fresh runtime restores same finite leak control")
+			if not reset.is_success: target.free(); return
+			gas = target.get_simulation_system(PressureSystem.SYSTEM_ID)
 			gas.room_valves[inner_id] = true
 			gas._step_paid_chamber(1.0 / 60.0)
 			check(gas.capture_snapshot().value.volumes == closed_result.volumes, "open valve plus leak uses one conductance")
