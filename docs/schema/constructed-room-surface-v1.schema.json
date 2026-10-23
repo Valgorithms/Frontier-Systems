@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Detached constructed room surface v1",
+  "description": "Geometry only. Ordered X min/max, Z min/max and nonzero area are checked by the runtime helper. No payment, persistence or seal authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["surface_id", "kind", "bounds_millimetres", "height_millimetres"],
+  "properties": {
+    "surface_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "\\S"},
+    "kind": {"type": "string", "enum": ["floor", "ceiling"]},
+    "bounds_millimetres": {
+      "type": "array", "minItems": 4, "maxItems": 4,
+      "items": {"type": "integer", "minimum": -100500, "maximum": 100500}
+    },
+    "height_millimetres": {"type": "integer", "enum": [0, 2000]}
+  },
+  "allOf": [
+    {"if": {"properties": {"kind": {"const": "floor"}}}, "then": {"properties": {"height_millimetres": {"const": 0}}}},
+    {"if": {"properties": {"kind": {"const": "ceiling"}}}, "then": {"properties": {"height_millimetres": {"const": 2000}}}}
+  ]
+}
