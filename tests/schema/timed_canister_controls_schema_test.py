@@ -26,4 +26,4 @@ validator("production-observation:v8").validate(fixture["legacy"])
 assert not current.is_valid(fixture["legacy"])
 for malformed in fixture["malformed"]:
     assert not current.is_valid(malformed)
-print(f"Timed canister schema: actual v12, legacy v8 and {len(fixture['malformed'])} negative projections passed")
+print(f"Timed canister schema: actual v13, legacy v8 and {len(fixture['malformed'])} negative projections passed")
