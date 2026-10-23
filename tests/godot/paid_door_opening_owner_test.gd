@@ -23,7 +23,20 @@ func run() -> void:
 	seed.deposits["deposit.ice"] = 2000000
 	seed.store.plate = 10000000
 	seed.store.iron = 3000000
-	check(production.restore_snapshot_record(seed, runner.tick_number).is_success, "bounded 25kg total fixture seed validates")
+	var initial_seed: ServiceResult = production.restore_snapshot_record(seed, runner.tick_number)
+	check(not initial_seed.is_success and initial_seed.message == "Revision-zero production must retain its initial finite fixture state.", "revision-zero fixture reclassification rejects: %s" % initial_seed.message)
+	if failures: finish(); return
+	# Retain a real initiating command receipt before applying the authorized
+	# test-only seed; never fabricate revision or receipt history.
+	command("power", {"station": "printer", "enabled": true})
+	if failures: finish(); return
+	seed = production.capture_snapshot().value
+	seed.deposits["deposit.iron"] = 0
+	seed.deposits["deposit.ice"] = 2000000
+	seed.store.plate = 10000000
+	seed.store.iron = 3000000
+	var restored_seed: ServiceResult = production.restore_snapshot_record(seed, runner.tick_number)
+	check(restored_seed.is_success, "bounded 25kg total fixture seed validates: %s" % restored_seed.message)
 	if failures: finish(); return
 	if failures: finish(); return
 	check(ProductionSimulationSystem._mass(seed.deposits) + ProductionSimulationSystem._mass(seed.store) == 25000000, "fixture provenance retains exact initial total")
