@@ -23,7 +23,7 @@ breathability, species, pumps, temperature/species mixing or general networks.
 Retain the geometry and independent source analysis in
 [the prerequisite design](paid-two-door-chamber-milestone.md#full-successor-target-geometry-and-budget):
 four walls, doors at [5050,0,-4000]/[6950,0,-4000] quarter-turn1, interior
-x[5100,6900] z[-4500,-3500] y[0,2000], floor x[4100,7000]. Floor and ceiling
+x[5100,6900] z[-4500,-3500] y[0,2000], floor x[4100,7900]. Floor and ceiling
 are tiled into existing legal panel sizes, never oversized single panels. Actual
 topology, PhysicsServer contact, occupancy and clearance must establish usability.
 Retain area 1.71 m2 and crowbar 1000 N. Explicit prototype containment tuning is
@@ -41,24 +41,24 @@ fabrication path costs 2 kg iron and 2000 J for the held crowbar.
 | Bill | Mass / energy |
 | --- | ---: |
 | Four walls / two doors | 4 / 4 kg plate |
-| Floor including swings / ceiling | 2.9 / 1.8 kg plate |
+| Floor including swings / ceiling | 3.8 / 1.8 kg plate |
 | Two seals / two bypasses | 0.4 / 0.4 kg plate |
 | Distinct containment kit | 6 kg plate |
-| Installed plate | 19.5 kg |
-| 37 ore extractions | 9250 J |
-| Refine 37 kg ore | 22.2 kg iron + 14.8 kg tails; 37000 J |
-| Print 20 kg plate / fabricate crowbar | 20000 / 2000 J |
-| Total / remaining electrical energy | 68250 / 31750 J |
+| Installed plate | 20.4 kg |
+| 39 ore extractions | 9750 J |
+| Refine 39 kg ore | 23.4 kg iron + 15.6 kg tails; 39000 J |
+| Print 21 kg plate / fabricate crowbar | 21000 / 2000 J |
+| Total / remaining electrical energy | 71750 / 28250 J |
 
-Final accounted matter: 19.5 kg installed + 2 kg crowbar + 0.5 kg plate +
-0.2 kg iron + 14.8 kg tails = 37 kg. Untouched 5 kg ice/10 kg regolith make
-52 kg world origin. One-kg extraction/unload batches fit the 2 kg carrier;
+Final accounted matter: 20.4 kg installed + 2 kg crowbar + 0.6 kg plate +
+0.4 kg iron + 15.6 kg tails = 39 kg. Untouched 5 kg ice/10 kg regolith make
+54 kg world origin. One-kg extraction/unload batches fit the 2 kg carrier;
 even all acquired material fits depot capacity. Existing conservative wear over
-37 completed cycles leaves tools usable. Manual assembly/recovery and passive
+39 completed cycles leaves tools usable. Manual assembly/recovery and passive
 gas transfer cost zero electricity; no new power, tool or stock grant.
 
 Propose catalog v4: preserve v1/v2/v3 bytes and add a distinct reachable
-`deposit.iron.chamber` with exactly 13000000 mg ore, explicit fingerprint,
+`deposit.iron.chamber` with exactly 15000000 mg ore, explicit fingerprint,
 source position/reach and selectable UI label. New-world composition opts into
 v4. Legacy catalogs, missing-Production migration and depleted sources receive
 no added source or refill. Legacy players may only build from their own remaining
@@ -138,8 +138,8 @@ Exercise actual source selector, action queue, projection and control paths.
 
 ## Acceptance and verification budget
 
-Positive: unseeded fresh first-playable acquire37kg/refine/print/fabricate/build
-route, exact68250J and all mass accounted; actual body support/contact through
+Positive: unseeded fresh first-playable acquire39kg/refine/print/fabricate/build
+route, exact71750J and all mass accounted; actual body support/contact through
 both apertures; both manual cycle directions; habitat isolated during outer vent;
 finite pressure loss over repeated cycles; all-volume mole/volume conservation;
 kit recover/refit and whole-world reload with open/closed valve resume.
@@ -166,3 +166,32 @@ CI and emitted-schema negatives must pass on the final head; distinguish tested
 merge revision. Capture only if material usability uncertainty remains after real
 control/runtime checks. Final task-closeout and matching-head Coordinator review
 precede merge. No deployment, publication, media, financial or outreach action.
+
+## Accepted support correction
+
+Coordinator accepted the support correction on 2026-10-23: the original x7000
+floor end leaves only50mm beyond the outer aperture atx6950 and fails the
+existing600mm full-footprint support contract. Extend the paid floor tox7900
+using one legal900mm strip. The39kg/71750J/54kg-origin budget above supersedes
+the earlier37kg/68250J/52kg proposal. Keep a negative control for the old short
+floor and prove full body crossing onto both paid approaches.
+
+## Accepted handle and preview corrections
+
+Coordinator accepted two further physical integration corrections on 2026-10-23.
+Paid doors use a fixed server-owned handle 900 mm above the floor anchor. Reach
+is the existing 1500 mm limit measured from the authorized canonical body center
+(`body_center` normalizes legacy y0 and actual capsule y900). All Inventory
+authorization, voluntary action and available-hand checks remain mandatory.
+Construction, chamber pair operations and low-level opening admission use this
+same helper; no client handle or global Inventory reach change is introduced.
+The safe inside position x5550 can operate the outer handle at x6950 without
+occupying either sweep. Boundary controls cover y0/y900 parity and 1501 mm denial.
+
+Production focus hides and disables only the explicitly owned negative-side
+legacy `DoorFrameWall` mesh/collider crossing the mapped inner aperture. Ordinary
+preview keeps it. Surface, HabitatFloor, positive-side wall, prototype functional
+doors, logical pressure and all paid geometry retain their existing ownership.
+The actual LocalHabitatCharacter test begins at the observed factory spawn,
+walks supported waypoints, proves a closed paid leaf blocks, crosses both paid
+apertures and mirrors reached positions through canonical movement commands.

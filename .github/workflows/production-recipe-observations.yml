@@ -23,6 +23,12 @@ on:
       - 'tests/schema/finite_bootstrap*'
       - 'data/production/catalog.v2.json'
       - 'data/production/catalog.v3.json'
+      - 'data/production/catalog.v4.json'
+      - 'src/app/first_playable_bootstrap.gd'
+      - 'src/core/access/access_control_system.gd'
+      - 'src/presentation/habitat/procedural_habitat_preview.gd'
+      - 'tests/godot/paid_chamber*'
+      - 'tests/schema/paid_chamber*'
       - 'data/production/manual-room-reinforcement*'
       - 'tests/godot/paid_room_reinforcement*'
       - 'tests/schema/room_reinforcement*'
@@ -86,7 +92,7 @@ jobs:
           include-templates: false
       - name: Run bounded recipe, resource and maintenance checks
         shell: pwsh
-        run: ./tools/ci/run-godot-checks.ps1 -TestNames 'recipe_requirements_test.gd','workstation_resource_view_test.gd','repair_usability_test.gd','first_playable_task_guide_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd','timed_canister_controls_test.gd','paid_horizontal_panels_test.gd','paid_door_lifecycle_test.gd','paid_door_pressure_room_test.gd','finite_bootstrap_acquisition_test.gd','commissioned_room_equalization_test.gd','paid_room_reinforcement_test.gd','horizontal_panel_controls_test.gd','horizontal_floor_support_query_test.gd','paid_floor_support_adapter_test.gd','paid_panel_collision_descriptors_test.gd','paid_panel_contact_scene_test.gd'
+        run: ./tools/ci/run-godot-checks.ps1 -TestNames 'recipe_requirements_test.gd','workstation_resource_view_test.gd','repair_usability_test.gd','first_playable_task_guide_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd','timed_canister_controls_test.gd','paid_horizontal_panels_test.gd','paid_door_lifecycle_test.gd','paid_door_pressure_room_test.gd','finite_bootstrap_acquisition_test.gd','commissioned_room_equalization_test.gd','paid_room_reinforcement_test.gd','paid_chamber_test.gd','horizontal_panel_controls_test.gd','horizontal_floor_support_query_test.gd','paid_floor_support_adapter_test.gd','paid_panel_collision_descriptors_test.gd','paid_panel_contact_scene_test.gd'
       - name: Validate real emitted JSON against local versioned schemas
         shell: pwsh
         run: |
@@ -104,6 +110,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Finite bootstrap schema checks failed.' }
           & $schemaPython tests/schema/paid_door_schema_test.py
           if ($LASTEXITCODE -ne 0) { throw 'Paid door schema checks failed.' }
+          & $schemaPython tests/schema/paid_chamber_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Paid chamber schemas failed.' }
           & $schemaPython tests/schema/room_reinforcement_schema_test.py
           if ($LASTEXITCODE -ne 0) { throw 'Room reinforcement schemas failed.' }
           & $schemaPython tests/schema/room_equalization_schema_test.py
@@ -137,6 +145,7 @@ jobs:
             var/paid-door-pressure-fixture.json
             var/room-equalization-fixture.json
             var/room-reinforcement-fixture.json
+            var/paid-chamber-fixture.json
             var/horizontal-panel-controls-fixture.json
             var/horizontal-floor-support-fixture.json
             var/paid-floor-locomotion-fixture.json

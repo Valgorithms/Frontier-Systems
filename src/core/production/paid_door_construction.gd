@@ -94,6 +94,18 @@ static func unoccupied(pose: Dictionary, inventory: Dictionary, state: Dictionar
 	return true
 
 
+## Prototype manual handle is900mm above its paid floor anchor. Own canonical
+## body_center normalizes legacy y0 and real capsule-center y900 consistently.
+static func reachable(inventory: InventorySimulationSystem, context: AuthenticatedCommandContext, position: Array) -> ServiceResult:
+	var authorized: ServiceResult = inventory.production_capability(context, true, [])
+	if not authorized.is_success: return authorized
+	var pose: ServiceResult = inventory.own_position(context)
+	if not pose.is_success: return pose
+	var handle: Vector3 = SpatialWallConstruction.point(position) + Vector3(0, 900, 0)
+	if SpatialWallConstruction.body_center(pose.value).distance_to(handle) > InventorySimulationSystem.WORLD_REACH_MILLIMETRES: return failure("The server-owned manual handle is beyond1500mm reach.")
+	return authorized
+
+
 static func plan(state: Dictionary, inventory: InventorySimulationSystem, access: AccessControlSystem, context: AuthenticatedCommandContext, request: String, operation: String, payload: Dictionary, pressure: PressureRoomOwner = null) -> ServiceResult:
 	var create: bool = operation == "door_build"
 	var fields: Array = ["expected_revision", "control_epoch", "position", "quarter_turn"] if create else ["expected_revision", "control_epoch", "door_id"]
@@ -120,6 +132,7 @@ static func plan(state: Dictionary, inventory: InventorySimulationSystem, access
 		if not current.is_success or not valid_device(id, door, current.value, pressure.room_area(id) if pressure != null else 0.0): return failure("The commissioned door hardware is invalid.")
 		device = AccessControlledDeviceState.from_record(current.value).value
 		var actuator: ActuatorState = device.actuator(actuator_id(id))
+		if not PaidChamber.kit_for(state, id).is_empty() and operation in ["door_remove", "door_seal_install", "door_seal_remove", "door_room_commission", "door_reinforcement_install", "door_bypass_recover"]: return failure("Recover the distinct paid chamber kit before changing its linked boundary.")
 		if pressure != null and pressure.room_area(id) > 0.0 and operation in ["door_remove", "door_seal_install", "door_seal_remove"]: return failure("Decommission the pressure compartment before changing its paid boundary.")
 		if operation == "door_remove":
 			if state.get("room_reinforcements", {}).has(id): return failure("Recover the paid reinforcement before removing its door.")
@@ -136,7 +149,7 @@ static func plan(state: Dictionary, inventory: InventorySimulationSystem, access
 			var reinforcement: ServiceResult = PaidRoomReinforcement.plan(state, id, actuator, device, inventory, context, request, operation, pressure)
 			if not reinforcement.is_success: return reinforcement
 		elif operation in PaidRoomBypass.OPERATIONS:
-			var bypass: ServiceResult = PaidRoomBypass.plan(state, id, actuator, device, inventory, context, request, operation, pressure)
+			var bypass: ServiceResult = PaidRoomBypass.plan(state, id, actuator, device, inventory, context, request, operation, pressure, access)
 			if not bypass.is_success: return bypass
 		elif operation in ["door_room_commission", "door_room_decommission"]:
 			var tool: ServiceResult = inventory.active_tool(context, "tool.crowbar")
@@ -156,7 +169,7 @@ static func plan(state: Dictionary, inventory: InventorySimulationSystem, access
 			var can_move: ServiceResult = access.validate_door_actuation(StringName(id), actuator_id(id), operation == "door_open", pressure.room_difference(id) if pressure != null else 0.0, true, verified)
 			if not can_move.is_success: return can_move
 			actuator.position = 1.0 if operation == "door_open" else 0.0
-	var reach: ServiceResult = inventory.production_capability(context, true, door["position"])
+	var reach: ServiceResult = reachable(inventory, context, door["position"])
 	if not reach.is_success: return reach
 	if not clear_installations(doors, state) or not unoccupied(door, inventory.capture_snapshot().value, state): return failure("The installation swing is occupied or has an unsupported canonical shape.")
 	if operation == "door_remove": doors.erase(id)

@@ -17,6 +17,13 @@ const PROTOTYPE_AIRLOCK_ID: StringName = &"habitat_airlock"
 var devices: Dictionary = {}
 var current_tick: int = 0
 var _door_restore_guard: Callable
+var _paid_open_guard: Callable
+
+
+func bind_paid_open_guard(guard: Callable) -> ServiceResult:
+	if _paid_open_guard.is_valid() or not guard.is_valid(): return ServiceResult.failure(&"door_guard_bound", "Bind one paid opening authority.")
+	_paid_open_guard = guard
+	return ServiceResult.success()
 
 
 func bind_door_restore_guard(guard: Callable) -> ServiceResult:
@@ -240,6 +247,10 @@ func validate_door_actuation(
 	manual_operation: bool = false,
 	context: AuthenticatedCommandContext = null
 ) -> ServiceResult:
+	if opening and _paid_open_guard.is_valid() and String(device_id).begins_with("door-"):
+		var admitted: ServiceResult = _paid_open_guard.call(String(device_id), context)
+		if not admitted.is_success: return admitted
+		pressure_difference_kpa = float(admitted.value)
 	var device := devices.get(device_id) as AccessControlledDeviceState
 	if device == null:
 		return ServiceResult.failure(&"unknown_access_device", "The access-controlled device does not exist.")
@@ -278,6 +289,9 @@ func validate_door_actuation(
 
 
 func update_actuator_position(device_id: StringName, target_id: StringName, is_open: bool) -> void:
+	# Paid geometry is committed through PreparedDoorChange after all owner guards.
+	# This legacy airlock synchronization hook cannot mutate constructed doors.
+	if String(device_id).begins_with("door-"): return
 	var device := devices.get(device_id) as AccessControlledDeviceState
 	if device == null:
 		return

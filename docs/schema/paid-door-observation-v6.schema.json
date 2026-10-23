@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:frontier-systems:schema:paid-door-observation:v6",
+  "title": "Own paid chamber doors v6",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "control_epoch",
+    "doors",
+    "can_operate"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 6
+    },
+    "control_epoch": {
+      "type": "integer",
+      "minimum": -1,
+      "maximum": 9007199254740000
+    },
+    "doors": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "door_id",
+          "position",
+          "quarter_turn",
+          "opened",
+          "seal_installed",
+          "seal_condition",
+          "pressure_room",
+          "bypass_installed",
+          "bypass_open",
+          "reinforcement_installed",
+          "reinforcement_intact",
+          "chamber_kit_installed",
+          "chamber"
+        ],
+        "properties": {
+          "door_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^door-"
+          },
+          "position": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "prefixItems": [
+              {
+                "type": "integer",
+                "minimum": -100000,
+                "maximum": 100000,
+                "multipleOf": 50
+              },
+              {
+                "const": 0
+              },
+              {
+                "type": "integer",
+                "minimum": -100000,
+                "maximum": 100000,
+                "multipleOf": 50
+              }
+            ],
+            "items": false
+          },
+          "quarter_turn": {
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "opened": {
+            "type": "boolean"
+          },
+          "seal_installed": {
+            "type": "boolean"
+          },
+          "seal_condition": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "pressure_room": {
+            "oneOf": [
+              {
+                "type": "object",
+                "maxProperties": 0
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "volume_m3",
+                  "pressure_kpa",
+                  "ambient_pressure_kpa",
+                  "leaking"
+                ],
+                "properties": {
+                  "volume_m3": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 999
+                  },
+                  "pressure_kpa": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "ambient_pressure_kpa": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "leaking": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          },
+          "bypass_installed": {
+            "type": "boolean"
+          },
+          "bypass_open": {
+            "type": "boolean"
+          },
+          "reinforcement_installed": {
+            "type": "boolean"
+          },
+          "reinforcement_intact": {
+            "type": "boolean"
+          },
+          "chamber_kit_installed": {
+            "type": "boolean"
+          },
+          "chamber": {
+            "oneOf": [
+              {
+                "type": "object",
+                "maxProperties": 0
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "inner_door_id",
+                  "outer_door_id",
+                  "side",
+                  "habitat_pressure_kpa",
+                  "chamber_pressure_kpa",
+                  "exterior_pressure_kpa",
+                  "inner_bypass_open",
+                  "outer_bypass_open"
+                ],
+                "properties": {
+                  "inner_door_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^door-"
+                  },
+                  "outer_door_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^door-"
+                  },
+                  "side": {
+                    "enum": [
+                      "inner",
+                      "outer"
+                    ]
+                  },
+                  "habitat_pressure_kpa": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "chamber_pressure_kpa": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "exterior_pressure_kpa": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "inner_bypass_open": {
+                    "type": "boolean"
+                  },
+                  "outer_bypass_open": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "bypass_open": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "bypass_installed": {
+                  "const": true
+                },
+                "pressure_room": {
+                  "minProperties": 1
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reinforcement_intact": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reinforcement_installed": {
+                  "const": true
+                },
+                "seal_installed": {
+                  "const": true
+                },
+                "seal_condition": {
+                  "const": 1
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "can_operate": {
+      "type": "boolean"
+    }
+  }
+}

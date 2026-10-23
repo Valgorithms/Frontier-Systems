@@ -149,7 +149,7 @@ func bypass_reject(operation: String, extra: Dictionary = {}) -> void:
 
 func malformed_bypass_restores(snapshot: String) -> void:
 	for mutation in ["bill", "orphan", "missing", "open_type", "extra", "version", "grant", "pressure_legacy"]:
-		var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world(); root.add_child(target)
+		var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world(true, false); root.add_child(target)
 		var before: Variant = JSON.parse_string(target.capture_world_snapshot_json().value)
 		var bad: Dictionary = JSON.parse_string(snapshot)
 		match mutation:
@@ -184,7 +184,7 @@ func overrating_rejection_controls(snapshot: String) -> void:
 		var shift: float = (target_difference - current) / (factor * (1.0 / float(room_record.volume_m3) + 1.0 / float(ambient_record.volume_m3)))
 		room_record.gas_moles += shift; ambient_record.gas_moles -= shift
 		bad.systems.pressure.room_valves[door_id] = opened
-		var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world(); root.add_child(target)
+		var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world(true, false); root.add_child(target)
 		check(target.restore_world_snapshot_json(JSON.stringify(bad)).is_success, "isolated finite overrating rejection fixture restores")
 		var owner: ProductionSimulationSystem = target.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)
 		var gas: PressureSystem = target.get_simulation_system(PressureSystem.SYSTEM_ID)

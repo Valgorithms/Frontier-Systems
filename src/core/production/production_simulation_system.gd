@@ -18,9 +18,11 @@ var _room_pressure: PressureRoomOwner
 var _checkpoint_door_links: Dictionary = {}
 const STATIONS: Array[String] = ["drill", "refinery", "chemical", "printer", "recycler", "dispenser", "construction"]
 ## Stable fixture sites, relative to the inventory display origin in millimetres.
-const SOURCE_POSITIONS: Dictionary = {"deposit.iron": [-3000, 0, -1000], "deposit.ice": [-6000, 0, -1000], "deposit.regolith": [-9000, 0, -1000], "deposit.iron.outcrop": [-3000, 0, -1000], "deposit.iron.reinforcement": [-3000, 0, -1000]}
+const SOURCE_POSITIONS: Dictionary = {"deposit.iron": [-3000, 0, -1000], "deposit.ice": [-6000, 0, -1000], "deposit.regolith": [-9000, 0, -1000], "deposit.iron.outcrop": [-3000, 0, -1000], "deposit.iron.reinforcement": [-3000, 0, -1000], "deposit.iron.chamber": [-3000, 0, -1000]}
 var _catalog: Dictionary = {}
 var _catalog_fingerprint: String = ""
+var _chamber_catalog: Dictionary = {}
+var _chamber_fingerprint: String = ""
 var _reinforced_catalog: Dictionary = {}
 var _reinforced_fingerprint: String = ""
 var _legacy_catalog: Dictionary = {}
@@ -39,7 +41,7 @@ func _init() -> void:
 	tick_priority = 300
 
 
-func configure(inventory: InventorySimulationSystem, tools: ToolSimulationSystem = null, new_world_outcrop: bool = false, new_world_reinforcement: bool = false) -> ServiceResult:
+func configure(inventory: InventorySimulationSystem, tools: ToolSimulationSystem = null, new_world_outcrop: bool = false, new_world_reinforcement: bool = false, new_world_chamber: bool = false) -> ServiceResult:
 	if not _state.is_empty() or inventory == null or MachineryWorkshop.KINDS.is_empty():
 		return _failure("Configure one inventory capability provider.")
 	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/production/catalog.v2.json"))
@@ -56,6 +58,9 @@ func configure(inventory: InventorySimulationSystem, tools: ToolSimulationSystem
 	_reinforced_catalog = JSON.parse_string(FileAccess.get_file_as_string("res://data/production/catalog.v3.json"))
 	if not _validate_catalog(_reinforced_catalog).is_success: return _failure("Reinforced production catalog is invalid.")
 	_reinforced_fingerprint = JSON.stringify(_reinforced_catalog, "", true, true).sha256_text()
+	_chamber_catalog = JSON.parse_string(FileAccess.get_file_as_string("res://data/production/catalog.v4.json"))
+	if not _validate_catalog(_chamber_catalog).is_success: return _failure("Chamber catalog is invalid.")
+	_chamber_fingerprint = JSON.stringify(_chamber_catalog, "", true, true).sha256_text()
 	_catalog = raw.duplicate(true)
 	_inventory = inventory
 	_tools = tools
@@ -64,24 +69,25 @@ func configure(inventory: InventorySimulationSystem, tools: ToolSimulationSystem
 		return blueprints
 	var timed: ServiceResult = _timed_blueprints.configure(JSON.parse_string(FileAccess.get_file_as_string("res://data/production/timed-canister-blueprint.v1.json")), inventory, _catalog["materials"])
 	if not timed.is_success: return timed
-	_state = initial_record(0, new_world_outcrop, new_world_reinforcement)
+	_state = initial_record(0, new_world_outcrop, new_world_reinforcement, new_world_chamber)
 	var motion: ServiceResult = inventory.bind_motion_validator(func(from: Array, to: Array) -> bool: return SpatialWallConstruction.motion_clear(_state["walls"], from, to) and door_motion_clear(from, to))
 	if not motion.is_success: return motion
 	return inventory.bind_payload_mass_provider(payload_mass)
 
 
-func initial_record(tick: int, new_world_outcrop: bool = false, new_world_reinforcement: bool = false) -> Dictionary:
+func initial_record(tick: int, new_world_outcrop: bool = false, new_world_reinforcement: bool = false, new_world_chamber: bool = false) -> Dictionary:
 	var powered: Dictionary = {}
 	for station in STATIONS:
 		powered[station] = true
-	var revision: int = 3 if new_world_reinforcement else (2 if new_world_outcrop else 1)
-	var result: Dictionary = {"schema_version": 14 if new_world_reinforcement else (12 if new_world_outcrop else 11), "doors": {}, "panels": {}, "construction": ConstructionReservationPlan.initial(), "construction_bindings": {}, "construction_commands": {}, "walls": {}, "machinery": MachineryWorkshop.initial(), "loose_parts": {}, "structures": {}, "catalog_revision": revision, "catalog_fingerprint": _reinforced_fingerprint if revision == 3 else (_catalog_fingerprint if revision == 2 else _legacy_fingerprint), "timebase_hz": Engine.physics_ticks_per_second,
-		"last_tick": tick, "state_revision": 0, "deposits": _initial_deposits(new_world_outcrop, new_world_reinforcement), "store": _empty_stock(),
+	var revision: int = 4 if new_world_chamber else (3 if new_world_reinforcement else (2 if new_world_outcrop else 1))
+	var result: Dictionary = {"schema_version": 15 if new_world_chamber else (14 if new_world_reinforcement else (12 if new_world_outcrop else 11)), "doors": {}, "panels": {}, "construction": ConstructionReservationPlan.initial(), "construction_bindings": {}, "construction_commands": {}, "walls": {}, "machinery": MachineryWorkshop.initial(), "loose_parts": {}, "structures": {}, "catalog_revision": revision, "catalog_fingerprint": _chamber_fingerprint if revision == 4 else (_reinforced_fingerprint if revision == 3 else (_catalog_fingerprint if revision == 2 else _legacy_fingerprint)), "timebase_hz": Engine.physics_ticks_per_second,
+		"last_tick": tick, "state_revision": 0, "deposits": _initial_deposits(new_world_outcrop, new_world_reinforcement, new_world_chamber), "store": _empty_stock(),
 		"vessel": _empty_stock(), "wall_mass_milligrams": 0, "energy_joules": 100000,
 		"powered": powered, "job": {}, "receipts": [], "cargo": {}}
-	if revision == 3:
+	if revision >= 3:
 		result.room_bypasses = {}
 		result.room_reinforcements = {}
+	if revision == 4: result.chamber_kits = {}
 	return result
 
 
@@ -183,9 +189,9 @@ func validate_inventory_links(record: Dictionary, inventory_record: Dictionary) 
 	return ServiceResult.success()
 
 
-func _initial_deposits(new_world_outcrop: bool = false, new_world_reinforcement: bool = false) -> Dictionary:
+func _initial_deposits(new_world_outcrop: bool = false, new_world_reinforcement: bool = false, new_world_chamber: bool = false) -> Dictionary:
 	var result: Dictionary = {}
-	var catalog: Dictionary = _reinforced_catalog if new_world_reinforcement else (_catalog if new_world_outcrop else _legacy_catalog)
+	var catalog: Dictionary = _chamber_catalog if new_world_chamber else (_reinforced_catalog if new_world_reinforcement else (_catalog if new_world_outcrop else _legacy_catalog))
 	for id in catalog["deposits"]:
 		result[id] = int(catalog["deposits"][id]["mass_milligrams"])
 	return result
@@ -349,7 +355,8 @@ func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 	# Observation version is independent of the v9 persistence record.
 	observed.erase("room_bypasses")
 	observed.erase("room_reinforcements")
-	observed["schema_version"] = 16 if int(_state.schema_version) == 14 else (15 if _state.has("room_bypasses") else (14 if int(_state["catalog_revision"]) == 2 else 13))
+	observed.erase("chamber_kits")
+	observed["schema_version"] = 17 if int(_state.schema_version) == 15 else (16 if int(_state.schema_version) == 14 else (15 if _state.has("room_bypasses") else (14 if int(_state["catalog_revision"]) == 2 else 13)))
 	observed["paid_doors"] = door_observation(context)
 	observed["horizontal_panels"] = HorizontalPanelObservation.project(_state, context, construction_closure(context), _inventory.production_capability(context, true, []).is_success)
 	observed["recipes"] = _catalog["recipes"].keys()
@@ -608,7 +615,7 @@ func _prepare_tool_extraction(candidate: Dictionary, context: AuthenticatedComma
 			candidate["job"]["extraction"]["status"] = "running"
 			candidate["job"]["extraction"]["pause_reason"] = ""
 		return ServiceResult.success()
-	if _tools == null or not _fields(payload, ["expected_revision", "deposit_id", "carrier_id", "cycles"]) or not candidate["deposits"].has(payload.get("deposit_id")) or not ControlContractValidation.is_id(payload.get("carrier_id")) or not ControlContractValidation.is_integer(payload.get("cycles"), 1, ToolExtractionWork.MAX_CYCLES) or not candidate["job"].is_empty() or int(candidate["state_revision"]) > MAX_REVISION - 100: return _failure("Reserve 1–10 extraction cycles with exact source/carrier identities while production is idle.")
+	if _tools == null or not _fields(payload, ["expected_revision", "deposit_id", "carrier_id", "cycles"]) or not candidate["deposits"].has(payload.get("deposit_id")) or not ControlContractValidation.is_id(payload.get("carrier_id")) or not ControlContractValidation.is_integer(payload.get("cycles"), 1, ToolExtractionWork.MAX_CYCLES) or not candidate["job"].is_empty() or int(candidate["state_revision"]) > MAX_REVISION - 100: return _failure("Reserve 1Ã¢â‚¬â€œ10 extraction cycles with exact source/carrier identities while production is idle.")
 	var active: ServiceResult = _inventory.active_tool(context, "tool.extractor")
 	if not active.is_success: return active
 	var binding: Dictionary = {"request_id": request_id, "principal_id": String(context.principal_id), "tool_id": active.value, "carrier_id": payload["carrier_id"], "deposit_id": payload["deposit_id"], "remaining_cycles": int(payload["cycles"]), "completed_cycles": 0, "status": "running", "pause_reason": ""}
@@ -908,8 +915,8 @@ func machine_recipe(id: String) -> Dictionary:
 		return recipe
 	if id.begins_with("extract."):
 		var deposit: String = "deposit.%s" % id.trim_prefix("extract.")
-		if _reinforced_catalog["deposits"].has(deposit):
-			var material: String = _reinforced_catalog["deposits"][deposit]["material"]
+		if _chamber_catalog["deposits"].has(deposit):
+			var material: String = _chamber_catalog["deposits"][deposit]["material"]
 			return {"inputs": {}, "outputs": {material: 1000000}, "duration_ticks": 60, "energy_joules": 1000, "capability": "extractor", "deposit": deposit}
 	return {}
 
@@ -1041,29 +1048,32 @@ func restore_snapshot_record(record: Dictionary, tick: int) -> ServiceResult:
 
 func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	var fields: Array = ["schema_version", "catalog_revision", "catalog_fingerprint", "timebase_hz", "last_tick", "state_revision", "deposits", "store", "vessel", "wall_mass_milligrams", "energy_joules", "powered", "job", "receipts"]
-	if ControlContractValidation.is_integer(record.get("schema_version"), 2, 14):
+	if ControlContractValidation.is_integer(record.get("schema_version"), 2, 15):
 		fields.append("cargo")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 3, 14):
+	if ControlContractValidation.is_integer(record.get("schema_version"), 3, 15):
 		fields.append("structures")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 4, 14): fields.append("loose_parts")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 6, 14): fields.append("machinery")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 7, 14): fields.append("walls")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 8, 14): fields.append_array(["construction", "construction_bindings", "construction_commands"])
-	if ControlContractValidation.is_integer(record.get("schema_version"), 9, 14): fields.append("panels")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 10, 14): fields.append("doors")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 13, 14): fields.append("room_bypasses")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 14, 14): fields.append("room_reinforcements")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 4, 15): fields.append("loose_parts")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 6, 15): fields.append("machinery")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 7, 15): fields.append("walls")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 8, 15): fields.append_array(["construction", "construction_bindings", "construction_commands"])
+	if ControlContractValidation.is_integer(record.get("schema_version"), 9, 15): fields.append("panels")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 10, 15): fields.append("doors")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 13, 15): fields.append("room_bypasses")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 14, 15): fields.append("room_reinforcements")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 15, 15): fields.append("chamber_kits")
 	if _catalog.is_empty() or not _fields(record, fields):
 		return _failure("An exact configured production snapshot is required.")
-	if not ControlContractValidation.is_integer(record.schema_version, 1, 14) or not ControlContractValidation.is_integer(record.catalog_revision, 1, 3): return _failure("Unsupported production/catalog version.")
+	if not ControlContractValidation.is_integer(record.schema_version, 1, 15) or not ControlContractValidation.is_integer(record.catalog_revision, 1, 4): return _failure("Unsupported production/catalog version.")
 	var revision: int = int(record.catalog_revision)
-	var reinforced: bool = int(record.get("schema_version", 0)) == 14
+	var chamber_origin: bool = int(record.schema_version) == 15
+	var reinforced: bool = int(record.schema_version) >= 14
+	if revision == 4 and not chamber_origin: return _failure("Catalog4 requires explicit save15 origin.")
 	var expanded: bool = revision == 2
 	if revision == 3 and not reinforced: return _failure("New content requires explicit v14 origin.")
-	var saved_catalog: Dictionary = _reinforced_catalog if revision == 3 else (_catalog if expanded else _legacy_catalog)
-	if record["catalog_fingerprint"] != (_reinforced_fingerprint if revision == 3 else (_catalog_fingerprint if expanded else _legacy_fingerprint)):
+	var saved_catalog: Dictionary = _chamber_catalog if revision == 4 else (_reinforced_catalog if revision == 3 else (_catalog if expanded else _legacy_catalog))
+	if record["catalog_fingerprint"] != (_chamber_fingerprint if revision == 4 else (_reinforced_fingerprint if revision == 3 else (_catalog_fingerprint if expanded else _legacy_fingerprint))):
 		return _failure("The saved catalog differs; an explicit production migration is required.")
-	if not ControlContractValidation.is_integer(record["schema_version"], 1, 14) or not ControlContractValidation.is_integer(record["catalog_revision"], 1, 3) or (not reinforced and ((int(record.schema_version) == 12 and revision != 2) or (int(record.schema_version) < 12 and revision != 1))):
+	if not ControlContractValidation.is_integer(record["schema_version"], 1, 15) or not ControlContractValidation.is_integer(record["catalog_revision"], 1, 4) or (not reinforced and ((int(record.schema_version) == 12 and revision != 2) or (int(record.schema_version) < 12 and revision != 1))):
 		return _failure("Unsupported production/catalog version.")
 	if not ControlContractValidation.is_integer(record["last_tick"], tick, tick) or not ControlContractValidation.is_integer(record["timebase_hz"], Engine.physics_ticks_per_second, Engine.physics_ticks_per_second) or not [60, 72, 90].has(Engine.physics_ticks_per_second):
 		return _failure("Production tick and supported timebase must match the world.")
@@ -1078,7 +1088,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	normalized["loose_parts"] = record.get("loose_parts", {}).duplicate(true)
 	for field in ["schema_version", "catalog_revision", "timebase_hz", "last_tick", "state_revision", "wall_mass_milligrams", "energy_joules"]:
 		normalized[field] = int(record[field])
-	normalized["schema_version"] = 14 if reinforced else (13 if int(record["schema_version"]) == 13 else (12 if expanded else 11))
+	normalized["schema_version"] = 15 if chamber_origin else (14 if reinforced else (13 if int(record["schema_version"]) == 13 else (12 if expanded else 11)))
 	for field in ["construction", "construction_bindings", "construction_commands"]:
 		var fallback: Dictionary = ConstructionReservationPlan.initial() if field == "construction" else {}
 		if typeof(record.get(field, fallback)) != TYPE_DICTIONARY: return _failure("Construction fragments must be objects.")
@@ -1112,6 +1122,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	for wall in normalized["walls"].values():
 		wall["position"] = InventorySpatialMath.normalized(wall["position"])
 		wall["quarter_turn"] = int(wall["quarter_turn"])
+	if chamber_origin and not PaidChamber.valid_kits(record.chamber_kits, normalized): return _failure("Invalid paid chamber kit or geometry.")
 	var machinery: Variant = record.get("machinery", MachineryWorkshop.initial())
 	if typeof(machinery) != TYPE_DICTIONARY: return _failure("Machinery must be a record object.")
 	normalized["machinery"] = machinery.duplicate(true)
@@ -1125,7 +1136,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	if typeof(structures) != TYPE_DICTIONARY or structures.size() > 32:
 		return _failure("Structural equipment records must be bounded.")
 	normalized["structures"] = {}
-	var structural_mass: int = PaidRoomReinforcement.mass(normalized) + PaidRoomBypass.mass(normalized) + normalized["doors"].size() * PaidDoorGeometry.MASS + PaidDoorSeal.mass(normalized["doors"]) + HorizontalPanelConstruction.mass(normalized["panels"]) + MachineryWorkshop.mass(normalized["machinery"]) + normalized["walls"].size() * SpatialWallConstruction.MASS
+	var structural_mass: int = normalized.get("chamber_kits", {}).size() * PaidChamber.MASS + PaidRoomReinforcement.mass(normalized) + PaidRoomBypass.mass(normalized) + normalized["doors"].size() * PaidDoorGeometry.MASS + PaidDoorSeal.mass(normalized["doors"]) + HorizontalPanelConstruction.mass(normalized["panels"]) + MachineryWorkshop.mass(normalized["machinery"]) + normalized["walls"].size() * SpatialWallConstruction.MASS
 	if typeof(record.get("loose_parts", {})) != TYPE_DICTIONARY or normalized["loose_parts"].size() > 128: return _failure("Loose parts must be a bounded material map.")
 	for id in normalized["loose_parts"]:
 		if not ControlContractValidation.is_id(id) or not _stock_valid(normalized["loose_parts"][id]): return _failure("Invalid loose part materials.")
@@ -1180,7 +1191,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 			return _failure("A bounded reserved batch is required.")
 		var expected: Dictionary
 		if typeof(job["deposit_id"]) == TYPE_STRING and saved_catalog["deposits"].has(job["deposit_id"]) and job["recipe_id"] == "":
-			var material: String = _reinforced_catalog["deposits"][job["deposit_id"]]["material"]
+			var material: String = saved_catalog["deposits"][job["deposit_id"]]["material"]
 			var mass: int = int(job["extraction"]["remaining_cycles"]) * ToolExtractionWork.CYCLE_MASS if job.has("extraction") else 1000000
 			expected = {"station": "drill", "inputs": {material: mass}, "outputs": {material: mass}, "duration_ticks": 60}
 		elif job["deposit_id"] == "" and typeof(job["recipe_id"]) == TYPE_STRING and _catalog["recipes"].has(job["recipe_id"]):
@@ -1196,7 +1207,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	if _mass(normalized["store"]) + _reserved_mass(normalized) > MAX_MASS or _mass(normalized["vessel"]) > VESSEL_CAPACITY or _vessel_pressure(normalized["vessel"]) > MAX_VESSEL_PRESSURE_KPA:
 		return _failure("Reserved output or vessel exceeds capacity.")
 	var total: int = _mass(normalized["deposits"]) + _mass(normalized["store"]) + _mass(normalized["vessel"]) + int(normalized["wall_mass_milligrams"]) + _reserved_mass(normalized) + carried_mass + structural_mass
-	if total != _mass(_initial_deposits(expanded, revision == 3)):
+	if total != _mass(_initial_deposits(expanded, revision == 3, revision == 4)):
 		return _failure("Closed fixture material mass must be conserved, including reserved batches.")
 	if typeof(record["receipts"]) != TYPE_ARRAY or record["receipts"].size() > MAX_RECEIPTS:
 		return _failure("Receipt history exceeds its bound.")
@@ -1214,7 +1225,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 		receipt["tick_number"] = previous_tick
 		ids[receipt["request_id"]] = true
 	if int(normalized["state_revision"]) == 0:
-		var initial: Dictionary = initial_record(tick, expanded, revision == 3)
+		var initial: Dictionary = initial_record(tick, expanded, revision == 3, revision == 4)
 		if normalized != initial:
 			return _failure("Revision-zero production must retain its initial finite fixture state.")
 	elif normalized["receipts"].is_empty():
@@ -1253,10 +1264,10 @@ func _apply_door(context: AuthenticatedCommandContext, request: String, operatio
 		before = captured.value
 		var current_links: ServiceResult = _room_pressure.validate_room_links(_state, _door_access.capture_snapshot().value)
 		if not current_links.is_success: return current_links
-	var prepared: ServiceResult = PaidDoorConstruction.plan(candidate, _inventory, _door_access, context, request, operation, payload, _room_pressure)
+	var prepared: ServiceResult = PaidChamber.plan(candidate, _inventory, _door_access, context, request, operation, payload, _room_pressure) if operation in PaidChamber.OPERATIONS else PaidDoorConstruction.plan(candidate, _inventory, _door_access, context, request, operation, payload, _room_pressure)
 	if not prepared.is_success: return prepared
 	var pressure_record: Dictionary = before
-	if operation in ["door_room_commission", "door_room_decommission", "door_bypass_install", "door_bypass_open", "door_bypass_close", "door_reinforcement_install"]:
+	if operation in ["door_chamber_commission", "door_chamber_decommission", "door_room_commission", "door_room_decommission", "door_bypass_open", "door_bypass_close", "door_reinforcement_install"] or (operation == "door_bypass_install" and _room_pressure.room_area(payload.door_id) > 0.0):
 		var pressure_plan: ServiceResult = _room_pressure.prepare_room_change(context, request, operation, payload.door_id, candidate, tick)
 		if not pressure_plan.is_success: return pressure_plan
 		prepared.value.pressure_after = pressure_plan.value.after
@@ -1265,15 +1276,7 @@ func _apply_door(context: AuthenticatedCommandContext, request: String, operatio
 	if _room_pressure != null:
 		prepared.value.pressure_owner = _room_pressure
 		prepared.value.pressure_before = before
-		var after_access: Dictionary = _door_access.capture_snapshot().value.duplicate(true)
-		var found: bool = false
-		for index in range(after_access.devices.size()):
-			if after_access.devices[index].device_id == String(prepared.value._id):
-				found = true
-				if prepared.value._remove: after_access.devices.remove_at(index)
-				else: after_access.devices[index] = prepared.value._after.duplicate(true)
-				break
-		if not found and not prepared.value._remove: after_access.devices.append(prepared.value._after.duplicate(true))
+		var after_access: Dictionary = prepared.value.project_access(_door_access.capture_snapshot().value)
 		if not _room_pressure.validate_room_links(candidate, after_access, pressure_record, tick).is_success: return _failure("Prepared pressure, construction and hardware links differ.")
 	if not TimedCanisterConstruction.covered(candidate): return _failure("Unfinished construction retains its reserved stock.")
 	if not PaidDoorGeometry.valid(candidate["doors"], candidate["panels"]): return _failure("Door support validation failed.")
@@ -1315,7 +1318,7 @@ func bind_room_pressure(pressure: PressureRoomOwner, world: StringName, region: 
 	var bound: ServiceResult = pressure.bind_room_owners(self, _door_access, world, region)
 	if not bound.is_success: return bound
 	_room_pressure = pressure
-	return ServiceResult.success()
+	return _door_access.bind_paid_open_guard(_admit_paid_open)
 
 
 func _validate_constructed_links(production: Dictionary, access: Dictionary) -> ServiceResult:
@@ -1349,12 +1352,16 @@ func door_observation(context: AuthenticatedCommandContext) -> Dictionary:
 		for item in items:
 			item["bypass_installed"] = _state.room_bypasses.has(item.door_id)
 			item["bypass_open"] = _room_pressure.room_valve_open(item.door_id) if _room_pressure != null else false
-	if int(_state.schema_version) == 14:
+	if int(_state.schema_version) >= 14:
 		for item in items:
 			item["reinforcement_installed"] = _state.room_reinforcements.has(item.door_id)
 			var actuator: ActuatorState = _door_access.devices[StringName(item.door_id)].actuator(PaidDoorConstruction.actuator_id(item.door_id))
 			item["reinforcement_intact"] = item.reinforcement_installed and PaidRoomReinforcement.intact(actuator)
-	return {"schema_version": 5 if int(_state.schema_version) == 14 else (4 if _state.has("room_bypasses") else 3), "control_epoch": epoch, "can_operate": authorize_door(context, {"control_epoch": epoch}).is_success, "doors": items}
+	if int(_state.schema_version) >= 15:
+		for item in items:
+			item["chamber_kit_installed"] = not PaidChamber.kit_for(_state, item.door_id).is_empty()
+			item["chamber"] = _room_pressure.chamber_observation(item.door_id) if _room_pressure != null else {}
+	return {"schema_version": 6 if int(_state.schema_version) >= 15 else (5 if int(_state.schema_version) == 14 else (4 if _state.has("room_bypasses") else 3)), "control_epoch": epoch, "can_operate": authorize_door(context, {"control_epoch": epoch}).is_success, "doors": items}
 
 
 func door_solids() -> ServiceResult:
@@ -1502,4 +1509,16 @@ static func source_ids(revision: int) -> Array[String]:
 	var ids: Array[String] = ["deposit.iron", "deposit.ice", "deposit.regolith"]
 	if revision >= 2: ids.append("deposit.iron.outcrop")
 	if revision >= 3: ids.append("deposit.iron.reinforcement")
+	if revision >= 4: ids.append("deposit.iron.chamber")
 	return ids
+
+
+func _admit_paid_open(door_id: String, context: AuthenticatedCommandContext) -> ServiceResult:
+	if context == null or not _state.doors.has(door_id): return _failure("Unknown paid opening authority.")
+	var door: Dictionary = _state.doors[door_id]
+	var auth: ServiceResult = _inventory.authorize(context, true)
+	if not auth.is_success or door.principal_id != String(context.principal_id) or door.body_id != auth.value: return _failure("Only the constructing current body may open this door.")
+	if not PaidDoorConstruction.reachable(_inventory, context, door.position).is_success or not _inventory.active_tool(context, "tool.crowbar").is_success: return _failure("Opening requires current reach and the actual held crowbar.")
+	var safe: ServiceResult = _room_pressure.validate_room_open(door_id)
+	if not safe.is_success: return safe
+	return ServiceResult.success(_room_pressure.room_difference(door_id))

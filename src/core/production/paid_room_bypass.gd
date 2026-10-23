@@ -28,13 +28,23 @@ static func mass(state: Dictionary) -> int:
 	return state.get("room_bypasses", {}).size() * MASS
 
 
-static func plan(state: Dictionary, door_id: String, actuator: ActuatorState, device: AccessControlledDeviceState, inventory: InventorySimulationSystem, context: AuthenticatedCommandContext, request: String, operation: String, pressure: PressureRoomOwner) -> ServiceResult:
+static func plan(state: Dictionary, door_id: String, actuator: ActuatorState, device: AccessControlledDeviceState, inventory: InventorySimulationSystem, context: AuthenticatedCommandContext, request: String, operation: String, pressure: PressureRoomOwner, access: AccessControlSystem) -> ServiceResult:
 	var tool: ServiceResult = inventory.active_tool(context, "tool.crowbar")
 	if not tool.is_success: return tool
 	if pressure == null or actuator.mode != &"manual" or actuator.integrity <= 0.0 or actuator.latch_state != &"released" or not device.bypass_jobs.is_empty() or not device.tamper_events.is_empty() or actuator.override_actor_id != &"": return PaidDoorConstruction.failure("Usable manual hardware and cleared work are required.")
 	var parts: Dictionary = state.get("room_bypasses", {}).duplicate(true)
+	var candidate_pair: bool = false
+	if pressure.room_area(door_id) == 0.0 and operation == "door_bypass_install":
+		var authorized: ServiceResult = inventory.authorize(context, true)
+		if authorized.is_success:
+			var pair: ServiceResult = PaidChamber.candidate(state, String(context.principal_id), authorized.value)
+			candidate_pair = pair.is_success and door_id in [pair.value.inner_door_id, pair.value.outer_door_id] and PaidChamber.closed_intact(actuator)
+			if candidate_pair:
+				for id in [pair.value.inner_door_id, pair.value.outer_door_id]:
+					var other: AccessControlledDeviceState = access.devices.get(StringName(id))
+					if other == null or pressure.room_area(id) != 0.0 or not PaidChamber.closed_intact(other.actuator(PaidDoorConstruction.actuator_id(id))): candidate_pair = false
 	if operation == "door_bypass_install":
-		if parts.has(door_id) or pressure.room_area(door_id) == 0.0 or actuator.position != 0.0 or int(state.store.plate) < MASS: return PaidDoorConstruction.failure("A closed commissioned door and 0.2 kg unreserved plate are required.")
+		if parts.has(door_id) or (pressure.room_area(door_id) == 0.0 and not candidate_pair) or actuator.position != 0.0 or int(state.store.plate) < MASS: return PaidDoorConstruction.failure("A closed commissioned door and 0.2 kg unreserved plate are required.")
 		parts[door_id] = {"bypass_id": "room-bypass-%s" % JSON.stringify([String(context.principal_id), request]).sha256_text().substr(0, 32), "blueprint_id": BLUEPRINT, "blueprint_revision": 1, "materials": {"plate": MASS}}
 		state.store.plate -= MASS
 	elif operation == "door_bypass_recover":
@@ -45,7 +55,7 @@ static func plan(state: Dictionary, door_id: String, actuator: ActuatorState, de
 		parts.erase(door_id)
 	else:
 		if not parts.has(door_id) or pressure.room_area(door_id) == 0.0: return PaidDoorConstruction.failure("Install a paid bypass on the commissioned door first.")
-	if int(state.schema_version) == 14:
+	if int(state.schema_version) >= 14:
 		state.room_bypasses = parts
 	elif parts.is_empty():
 		state.erase("room_bypasses")

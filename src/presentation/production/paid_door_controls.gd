@@ -40,9 +40,9 @@ func configure(world: WorldRuntime, local_principal: StringName = &"local-invent
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.text = "Requires a paid floor under the full swing. Stand outside the swing within 1.5 m, with a usable crowbar. Seal: 0.2 kg plate. Commission one complete habitat enclosure for finite pressure service; open before decommissioning."
 	_details.add_child(_status)
-	for operation in ["door_build", "door_open", "door_close", "door_remove", "door_seal_install", "door_seal_remove", "door_room_commission", "door_room_decommission"] + PaidRoomBypass.OPERATIONS + PaidRoomReinforcement.OPERATIONS:
+	for operation in ["door_build", "door_open", "door_close", "door_remove", "door_seal_install", "door_seal_remove", "door_room_commission", "door_room_decommission"] + PaidRoomBypass.OPERATIONS + PaidRoomReinforcement.OPERATIONS + PaidChamber.OPERATIONS:
 		var button := Button.new()
-		button.text = {"door_reinforcement_install": "Fit 110 kPa prototype kit: 4 kg plate", "door_reinforcement_recover": "Recover kit: decommission first", "door_bypass_install": "Fit manual bypass: 0.2 kg plate", "door_bypass_open": "Open bypass to surroundings", "door_bypass_close": "Close bypass", "door_bypass_recover": "Recover bypass: decommission first", "door_room_commission": "Commission habitat compartment", "door_room_decommission": "Decommission open compartment", "door_seal_install": "Fit/rework seal: 0.2 kg plate", "door_seal_remove": "Remove seal: recover 0.2 kg plate", "door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
+		button.text = {"door_chamber_kit_install": "Fit chamber kit on inner door: 6 kg plate", "door_chamber_kit_recover": "Recover chamber kit: decommission first", "door_chamber_commission": "Commission paid inner/outer chamber", "door_chamber_decommission": "Dismantle only when both sides pressure-safe; may require habitat depressurization", "door_reinforcement_install": "Fit 110 kPa prototype kit: 4 kg plate", "door_reinforcement_recover": "Recover kit: decommission first", "door_bypass_install": "Fit manual bypass: 0.2 kg plate", "door_bypass_open": "Open bypass to surroundings", "door_bypass_close": "Close bypass", "door_bypass_recover": "Recover bypass: decommission first", "door_room_commission": "Commission habitat compartment", "door_room_decommission": "Decommission open compartment", "door_seal_install": "Fit/rework seal: 0.2 kg plate", "door_seal_remove": "Remove seal: recover 0.2 kg plate", "door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
 		button.disabled = true
 		button.pressed.connect(_send.bind(operation))
 		_details.add_child(button)
@@ -66,10 +66,10 @@ func _process(delta: float) -> void:
 	var context := AuthenticatedCommandContext.for_local_development(_local_principal, _world.world_id, _world.region_id)
 	var observed: ServiceResult = _world.production_observation(context)
 	_record.clear()
-	if observed.is_success and ControlContractValidation.is_integer(observed.value.get("schema_version"), 12, 16) and WorkstationResourceView.valid(observed.value): _record = observed.value
+	if observed.is_success and ControlContractValidation.is_integer(observed.value.get("schema_version"), 12, 17) and WorkstationResourceView.valid(observed.value): _record = observed.value
 	_doors.clear()
 	for door in _record.get("paid_doors", {}).get("doors", []):
-		_doors.add_item("%s: %s; %s" % [String(door.door_id).right(8), "open" if door.opened else "closed", seal_text(door)])
+		_doors.add_item("%s: %s; %s" % [String(door.door_id).right(8), "open" if door.opened else "closed", seal_text(door, _record.paid_doors.doors)])
 		_doors.set_item_metadata(_doors.item_count - 1, door.door_id)
 		if _selected == door.door_id: _doors.select(_doors.item_count - 1)
 	if _doors.item_count > 0 and _selected.is_empty(): _selected = _doors.get_item_metadata(0)
@@ -92,7 +92,14 @@ func _send(operation: String) -> void:
 	if not queued.is_success: _pending = ""; _status.text = queued.message
 
 
-static func seal_text(door: Dictionary) -> String:
+static func seal_text(door: Dictionary, doors: Array = []) -> String:
+	if not door.get("chamber", {}).is_empty():
+		var c: Dictionary = door.chamber
+		var opposite: String = c.outer_door_id if c.side == "inner" else c.inner_door_id
+		var boundary: String = "unavailable"
+		for other in doors:
+			if other.door_id == opposite: boundary = "%s, seal %.0f%%, %s" % ["open" if other.opened else "closed", other.seal_condition * 100.0, "leaking" if other.pressure_room.leaking else "retaining"]
+		return "%s chamber door; pair %s / %s; habitat %.3f / chamber %.3f / exterior %.6f kPa; opposite %s; valves inner %s outer %s; delta load %.1f / 1000 N" % [c.side, c.inner_door_id.right(8), c.outer_door_id.right(8), c.habitat_pressure_kpa, c.chamber_pressure_kpa, c.exterior_pressure_kpa, boundary, c.inner_bypass_open, c.outer_bypass_open, absf(door.pressure_room.pressure_kpa - door.pressure_room.ambient_pressure_kpa) * 1710.0]
 	if not door.get("pressure_room", {}).is_empty():
 		var room: Dictionary = door.pressure_room
 		var difference: float = absf(float(room.pressure_kpa) - float(room.ambient_pressure_kpa))
