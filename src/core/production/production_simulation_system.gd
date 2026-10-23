@@ -192,6 +192,13 @@ func authorize_operation(context: AuthenticatedCommandContext, operation: String
 	return _inventory.production_capability(context, true, SOURCE_POSITIONS[payload["deposit_id"]])
 
 
+## On-demand topology input. Uses the same visibility capability as observation.
+func construction_boundaries(context: AuthenticatedCommandContext) -> ServiceResult:
+	var allowed: ServiceResult = _inventory.production_capability(context, false, []) if _inventory != null else _failure("Inventory is unavailable.")
+	if not allowed.is_success: return allowed
+	return ConstructedWallBoundaries.describe(_state["walls"], _state["state_revision"])
+
+
 func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 	var allowed: ServiceResult = _inventory.production_capability(context, false, []) if _inventory != null else _failure("Inventory is unavailable.")
 	if not allowed.is_success:
