@@ -69,7 +69,7 @@ func observe(production: Dictionary) -> void:
 		_epoch = -1
 		_selected_id = ""
 	_record.clear()
-	if production.get("schema_version") not in [9, 10, 11] or not ControlContractValidation.is_integer(production.get("state_revision"), 0, ProductionSimulationSystem.MAX_REVISION) or int(production["state_revision"]) < _revision or not TimedCanisterConstruction.valid_observation(production.get("timed_canister")):
+	if not ControlContractValidation.is_integer(production.get("schema_version"), 9, 11) or not ControlContractValidation.is_integer(production.get("state_revision"), 0, ProductionSimulationSystem.MAX_REVISION) or int(production["state_revision"]) < _revision or not TimedCanisterConstruction.valid_observation(production.get("timed_canister")):
 		_refresh()
 		return
 	var observed: Dictionary = production["timed_canister"]
