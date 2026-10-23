@@ -337,7 +337,11 @@ func _decode_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> S
 	for id in decoded_volumes:
 		if String(id).begins_with("constructed-room-") and not rooms.has(String(id)): return ConstructedRoomPressure.denied()
 	for id in decoded_sensors:
-		if String(id).begins_with("constructed-room-") and not rooms.values().any(func(room: Dictionary) -> bool: return room.sensor_id == String(id)): return ConstructedRoomPressure.denied()
+		if not String(id).begins_with("constructed-room-"): continue
+		var linked: bool = false
+		for room in rooms.values():
+			if room.sensor_id == String(id): linked = true
+		if not linked: return ConstructedRoomPressure.denied()
 	# Roomless legacy networks retain their original finite volumes. Only explicit
 	# commissioning (and a persisted commissioned allocation) requires 1000 m3.
 	return ServiceResult.success({
@@ -419,8 +423,14 @@ func prepare_room_change(context: AuthenticatedCommandContext, request: String, 
 			if volume.volume_id == room.volume_id:
 				ambient.gas_moles += volume.gas_moles
 				ambient.volume_m3 += volume.volume_m3
-		record.volumes = record.volumes.filter(func(volume: Dictionary) -> bool: return volume.volume_id != room.volume_id)
-		record.sensors = record.sensors.filter(func(sensor: Dictionary) -> bool: return sensor.sensor_id != room.sensor_id)
+		var remaining_volumes: Array = []
+		for volume in record.volumes:
+			if volume.volume_id != room.volume_id: remaining_volumes.append(volume)
+		var remaining_sensors: Array = []
+		for sensor in record.sensors:
+			if sensor.sensor_id != room.sensor_id: remaining_sensors.append(sensor)
+		record.volumes = remaining_volumes
+		record.sensors = remaining_sensors
 		record.constructed_rooms.clear()
 	else: return ConstructedRoomPressure.denied()
 	var decoded: ServiceResult = _decode_snapshot_record(record, tick)
