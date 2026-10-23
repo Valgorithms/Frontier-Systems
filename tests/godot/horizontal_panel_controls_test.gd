@@ -133,7 +133,7 @@ func run() -> void:
 	controls.observe(frame()["production"])
 	controls.observe(JSON.parse_string(JSON.stringify(frame()["production"])))
 	check(not controls._record.is_empty() and not preview._panels.is_empty(), "integral JSON version preserves controls and paid panel preview")
-	for version in [true, 10.5, 14, "13"]:
+	for version in [true, 10.5, 16, "13"]:
 		var bad_version: Dictionary = frame()["production"].duplicate(true)
 		bad_version.schema_version = version
 		controls.observe(bad_version)

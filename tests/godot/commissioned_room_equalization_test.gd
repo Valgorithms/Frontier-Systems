@@ -50,7 +50,7 @@ func equalization_checks() -> void:
 	var install_request: String = "machine-test-%d" % sequence
 	var install_payload: Dictionary = {"expected_revision": production._state.state_revision - 1, "control_epoch": 0, "door_id": door_id}
 	var before_replay: Dictionary = production.capture_snapshot().value
-	check(production.apply_local(context, install_request, "door_bypass_install", install_payload, runner.tick_number).is_success and production.capture_snapshot().value == before_replay, "exact install replay cannot charge or fabricate twice")
+	check(production.apply_local(context, install_request, "door_bypass_install", install_payload, runner.tick_number + 1).is_success and production.capture_snapshot().value == before_replay, "exact install replay cannot charge or fabricate twice")
 	bypass_reject("door_bypass_install")
 	bypass_reject("door_bypass_recover")
 	bypass_reject("door_bypass_open", {"conductance": 10})
@@ -129,7 +129,7 @@ func equalization_checks() -> void:
 	var recover_payload: Dictionary = {"expected_revision": production._state.state_revision - 1, "control_epoch": 0, "door_id": door_id}
 	var recovered: Dictionary = production.capture_snapshot().value
 	check(recovered.schema_version == 12 and recovered.store.plate == 200000 and not recovered.has("room_bypasses") and gas_conserved(initial), "recover exact200000mg once without gas or material loss")
-	check(production.apply_local(context, "machine-test-%d" % sequence, "door_bypass_recover", recover_payload, runner.tick_number).is_success and production.capture_snapshot().value == recovered, "recovery exact replay cannot refund twice")
+	check(production.apply_local(context, "machine-test-%d" % sequence, "door_bypass_recover", recover_payload, runner.tick_number + 1).is_success and production.capture_snapshot().value == recovered, "recovery exact replay cannot refund twice")
 	bypass_reject("door_bypass_recover")
 	# These isolated rejection controls never fund the positive runtime path.
 	overrating_rejection_controls(open_snapshot)
@@ -142,7 +142,8 @@ func bypass_reject(operation: String, extra: Dictionary = {}) -> void:
 	var intent: Dictionary = {"expected_revision": production._state.state_revision, "control_epoch": 0, "door_id": door_id}
 	intent.merge(extra, true)
 	var before: Array = [production.capture_snapshot().value, access.capture_snapshot().value, pressure_owner().capture_snapshot().value]
-	check(not production.apply_local(context, "bypass-denied-%d" % sequence, operation, intent, runner.tick_number).is_success, "bypass rejection: " + operation + JSON.stringify(extra))
+	var rejected: ServiceResult = production.apply_local(context, "bypass-denied-%d" % sequence, operation, intent, runner.tick_number + 1)
+	check(not rejected.is_success and not rejected.message.contains("fresh fixed tick"), "bypass contract rejection: " + operation + JSON.stringify(extra) + ": " + rejected.message)
 	check(before == [production.capture_snapshot().value, access.capture_snapshot().value, pressure_owner().capture_snapshot().value], "rejected bypass command changes no owner or receipt")
 
 
@@ -189,7 +190,8 @@ func overrating_rejection_controls(snapshot: String) -> void:
 		var gas: PressureSystem = target.get_simulation_system(PressureSystem.SYSTEM_ID)
 		var actor := AuthenticatedCommandContext.for_local_development(&"local-inventory-target", target.world_id, target.region_id)
 		var before: Dictionary = owner.capture_snapshot().value
-		check(not owner.apply_local(actor, "overrating-door-reject", "door_open", {"door_id": door_id, "control_epoch": 0, "expected_revision": before.state_revision}, int(bad.tick_number)).is_success and owner.capture_snapshot().value == before, "real1000N force guard rejects0.6kPa with valve open or closed")
+		var rejected: ServiceResult = owner.apply_local(actor, "overrating-door-reject", "door_open", {"door_id": door_id, "control_epoch": 0, "expected_revision": before.state_revision}, int(bad.tick_number) + 1)
+		check(not rejected.is_success and not rejected.message.contains("fresh fixed tick") and owner.capture_snapshot().value == before, "real1000N force guard rejects0.6kPa with valve open or closed: " + rejected.message)
 		check(target.start_simulation().is_success, "start isolated overrating control")
 		var clock: SimulationRunner = target.get_node("SimulationRunner")
 		clock.set_physics_process(false); clock._physics_process(1.0 / 60.0)
