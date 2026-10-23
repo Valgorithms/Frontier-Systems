@@ -24,6 +24,8 @@ func run() -> void:
 	inventory_action("world", {"operation": "pickup", "item_id": "resource-canister-2", "world_container_id": "world.tray-1", "destination_container_id": "body.human-1", "slot_id": ""})
 	inventory_action("self", {"operation": "equip", "item_id": "extractor-2", "source_container_id": "storage.backpack-1", "destination_container_id": "", "slot_id": "hand.right"})
 	inventory_action("self", {"operation": "select_hand", "item_id": "", "source_container_id": "", "destination_container_id": "", "slot_id": "hand.right"})
+	move([-3000, 0, -1000])
+	catalog_extraction_paths(world.capture_world_snapshot_json().value)
 	for batch in range(39):
 		move([-3000, 0, -1000])
 		var source: String = "deposit.iron" if batch < 10 else ("deposit.iron.outcrop" if batch < 17 else ("deposit.iron.reinforcement" if batch < 24 else "deposit.iron.chamber"))
@@ -74,6 +76,7 @@ func run() -> void:
 	var projection := RemoteProductionProjection.new()
 	check(projection.accept_record(observation).is_success, "real complete v17 projection admits chamber controls")
 	projection.free()
+	observation_consumers(observation)
 	chamber_negatives(snapshot)
 	detached_chamber_controls(snapshot)
 	legacy_chamber_origins()
@@ -384,11 +387,54 @@ func detached_chamber_controls(snapshot: String) -> void:
 	target.free()
 
 
+func catalog_extraction_paths(snapshot: String) -> void:
+	var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world(); root.add_child(target)
+	check(target.restore_world_snapshot_json(snapshot).is_success, "isolated extraction catalog control restores actual equipped fixture")
+	var owner: ProductionSimulationSystem = target.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)
+	var actor := AuthenticatedCommandContext.for_local_development(context.principal_id, target.world_id, target.region_id)
+	var before: Dictionary = owner.capture_snapshot().value
+	var candidate: Dictionary = before.duplicate(true)
+	check(owner._plan(candidate, "mine", {"expected_revision": before.state_revision, "deposit_id": "deposit.iron.chamber"}).is_success and candidate.job.outputs == {"ore.iron": 1000000}, "catalog4 scheduled mining resolves pinned source material")
+	var reserved: ServiceResult = owner.apply_local(actor, "isolated-chamber-work", "start_tool_extract", {"expected_revision": before.state_revision, "deposit_id": "deposit.iron.chamber", "carrier_id": "resource-canister-2", "cycles": 1}, int(before.last_tick) + 1)
+	check(reserved.is_success, "catalog4 timed extraction reserves actual seam: " + reserved.message)
+	if reserved.is_success:
+		check(target.start_simulation().is_success, "isolated extraction world starts")
+		var clock: SimulationRunner = target.get_node("SimulationRunner"); clock.set_physics_process(false)
+		for tick in range(ToolExtractionWork.CYCLE_TICKS + 1): clock._physics_process(1.0 / 60.0)
+		check(owner._state.job.is_empty() and owner._state.deposits["deposit.iron.chamber"] == 14000000 and owner._state.cargo["resource-canister-2"]["ore.iron"] == 1000000, "timed completion resolves catalog4 with exact conserved output")
+	target.free()
+
+
+func observation_consumers(observation: Dictionary) -> void:
+	var timed := TimedCanisterControls.new(); root.add_child(timed); timed.configure(world)
+	var controls := HorizontalPanelControls.new(); root.add_child(controls); controls.configure(world)
+	var preview := HorizontalPanelPreview.new(); root.add_child(preview)
+	timed.observe(observation); controls.observe(observation); preview.observe(observation)
+	check(not timed._record.is_empty() and not controls._record.is_empty() and preview._panels.size() == production._state.panels.size(), "fresh-world17 populates actual timed/panel controls and panel preview")
+	var future: Dictionary = observation.duplicate(true); future.schema_version = 18
+	timed.observe(future); controls.observe(future); preview.observe(future)
+	check(timed._record.is_empty() and controls._record.is_empty() and preview._panels.is_empty() and not WorkstationResourceView.valid(future), "unsupported18 clears controls/preview and rejects resource projection")
+	timed.free(); controls.free(); preview.free()
+	check(not production.machine_recipe("extract.iron.chamber").is_empty(), "catalog4 machinery resolves distinct seam recipe")
+	var exhausted: Dictionary = production._state.duplicate(true)
+	var no_stock: ServiceResult = production._plan(exhausted, "extract", {"expected_revision": exhausted.state_revision, "deposit_id": "deposit.iron.chamber", "carrier_id": "resource-canister-2", "amount_milligrams": 1})
+	check(not no_stock.is_success and exhausted.deposits["deposit.iron.chamber"] == 0, "exhausted chamber source cannot mint extra payload")
+
+
 func legacy_chamber_origins() -> void:
 	for mode in [false, true]:
 		var legacy: WorldRuntime = FirstPlayableBootstrap.create_playable_world(mode, false); root.add_child(legacy)
 		var owner: ProductionSimulationSystem = legacy.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)
 		var before: Dictionary = owner.capture_snapshot().value
 		check(before.catalog_revision == (3 if mode else 2) and not before.deposits.has("deposit.iron.chamber"), "explicit old factory receives no chamber source")
+		var actor := AuthenticatedCommandContext.for_local_development(&"local-inventory-target", legacy.world_id, legacy.region_id)
+		for operation in ["extract", "tool_extract", "start_tool_extract", "mine"]:
+			check(not owner.apply_local(actor, "absent-chamber-" + operation, operation, {"expected_revision": 0, "deposit_id": "deposit.iron.chamber"}, 1).is_success and owner.capture_snapshot().value == before, "legacy catalog rejects absent chamber source without lookup/write:" + operation)
+		check(owner.machine_recipe("extract.iron.chamber").is_empty(), "legacy machinery never advertises future source")
+		var panel := ActorPanel.new(); panel.actor = actor; root.add_child(panel); panel.configure(legacy); panel.set_process(false)
+		var seam_found: bool = false
+		for option in range(panel._deposit.item_count): seam_found = seam_found or panel._deposit.get_item_text(option) == "deposit.iron.chamber"
+		check(not seam_found, "legacy actual source selector excludes absent chamber seam")
+		panel.free()
 		check(legacy.restore_world_snapshot_json(legacy.capture_world_snapshot_json().value).is_success and owner.capture_snapshot().value == before, "legacy reload never grants chamber ore")
 		legacy.free()

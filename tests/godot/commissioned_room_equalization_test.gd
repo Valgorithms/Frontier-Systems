@@ -84,7 +84,7 @@ func equalization_checks() -> void:
 	check(room().gas_moles == retained and not pressure_owner().room_valve_open(door_id), "closed reload retains actual gas and position")
 	var controls := PaidDoorControls.new()
 	root.add_child(controls); controls.configure(world, context.principal_id); controls.set_process(false); controls._process(0.2)
-	check(controls._buttons.size() == 14, "manual bypass actions share collapsed door controls")
+	check(controls._buttons.size() == 18 and controls._buttons[9].text == "Open bypass to surroundings", "manual bypass actions retain their collapsed door control position")
 	controls._buttons[9].pressed.emit()
 	check(not controls._pending.is_empty(), "actual open-bypass button queues authenticated command")
 	step(); controls._process(0.2)

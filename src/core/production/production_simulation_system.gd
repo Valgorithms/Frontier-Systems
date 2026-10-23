@@ -197,6 +197,16 @@ func _initial_deposits(new_world_outcrop: bool = false, new_world_reinforcement:
 	return result
 
 
+## Resolve source metadata from the candidate's pinned catalog, never latest.
+func _source_catalog(candidate: Dictionary) -> Dictionary:
+	match int(candidate.catalog_revision):
+		1: return _legacy_catalog
+		2: return _catalog
+		3: return _reinforced_catalog
+		4: return _chamber_catalog
+	return {}
+
+
 func _empty_stock() -> Dictionary:
 	var result: Dictionary = {}
 	for id in _catalog["materials"]:
@@ -615,14 +625,14 @@ func _prepare_tool_extraction(candidate: Dictionary, context: AuthenticatedComma
 			candidate["job"]["extraction"]["status"] = "running"
 			candidate["job"]["extraction"]["pause_reason"] = ""
 		return ServiceResult.success()
-	if _tools == null or not _fields(payload, ["expected_revision", "deposit_id", "carrier_id", "cycles"]) or not candidate["deposits"].has(payload.get("deposit_id")) or not ControlContractValidation.is_id(payload.get("carrier_id")) or not ControlContractValidation.is_integer(payload.get("cycles"), 1, ToolExtractionWork.MAX_CYCLES) or not candidate["job"].is_empty() or int(candidate["state_revision"]) > MAX_REVISION - 100: return _failure("Reserve 1Ã¢â‚¬â€œ10 extraction cycles with exact source/carrier identities while production is idle.")
+	if _tools == null or not _fields(payload, ["expected_revision", "deposit_id", "carrier_id", "cycles"]) or not candidate["deposits"].has(payload.get("deposit_id")) or not ControlContractValidation.is_id(payload.get("carrier_id")) or not ControlContractValidation.is_integer(payload.get("cycles"), 1, ToolExtractionWork.MAX_CYCLES) or not candidate["job"].is_empty() or int(candidate["state_revision"]) > MAX_REVISION - 100: return _failure("Reserve 1-10 extraction cycles with exact source/carrier identities while production is idle.")
 	var active: ServiceResult = _inventory.active_tool(context, "tool.extractor")
 	if not active.is_success: return active
 	var binding: Dictionary = {"request_id": request_id, "principal_id": String(context.principal_id), "tool_id": active.value, "carrier_id": payload["carrier_id"], "deposit_id": payload["deposit_id"], "remaining_cycles": int(payload["cycles"]), "completed_cycles": 0, "status": "running", "pause_reason": ""}
 	if _tool_extraction_reason(binding, context) != "": return _failure("The bound tool, carrier, power and energy must be available.")
 	var mass: int = int(payload["cycles"]) * ToolExtractionWork.CYCLE_MASS
 	if int(candidate["deposits"][payload["deposit_id"]]) < mass: return _failure("The source cannot satisfy this reservation.")
-	var material: String = _reinforced_catalog["deposits"][payload["deposit_id"]]["material"]
+	var material: String = _source_catalog(candidate)["deposits"][payload["deposit_id"]]["material"]
 	candidate["deposits"][payload["deposit_id"]] -= mass
 	candidate["job"] = {"recipe_id": "", "deposit_id": payload["deposit_id"], "station": "drill", "inputs": {material: mass}, "outputs": {material: mass}, "remaining_ticks": ToolExtractionWork.CYCLE_TICKS, "extraction": binding}
 	return ServiceResult.success()
@@ -663,7 +673,7 @@ func _simulate_tool_extraction(tick: int) -> void:
 	if not usage.is_success:
 		_pause_tool_extraction("capability")
 		return
-	var material: String = _reinforced_catalog["deposits"][binding["deposit_id"]]["material"]
+	var material: String = _source_catalog(candidate)["deposits"][binding["deposit_id"]]["material"]
 	var completed: int = int(binding["completed_cycles"]) + 1
 	if int(binding["remaining_cycles"]) == 1:
 		candidate["job"] = {}
@@ -751,7 +761,7 @@ func _plan(candidate: Dictionary, operation: String, payload: Dictionary) -> Ser
 		var energy: int = maxi(1, int(ceil(float(amount) / 4000.0)))
 		if int(candidate["deposits"][payload["deposit_id"]]) < amount or int(candidate["energy_joules"]) < energy or not candidate["powered"]["drill"]:
 			return _failure("Source mass, extractor power or finite energy is unavailable.")
-		var material: String = _reinforced_catalog["deposits"][payload["deposit_id"]]["material"]
+		var material: String = _source_catalog(candidate)["deposits"][payload["deposit_id"]]["material"]
 		candidate["cargo"][id][material] += amount
 		if not _cargo_valid(candidate["cargo"][id]):
 			return _failure("The receiving canister is full, incompatible or overpressure.")
@@ -837,7 +847,7 @@ func _plan(candidate: Dictionary, operation: String, payload: Dictionary) -> Ser
 		deposit_id = payload["deposit_id"]
 		if int(candidate["deposits"][deposit_id]) < 1000000:
 			return _failure("This deposit is exhausted.")
-		inputs = {_reinforced_catalog["deposits"][deposit_id]["material"]: 1000000}
+		inputs = {_source_catalog(candidate)["deposits"][deposit_id]["material"]: 1000000}
 		outputs = inputs.duplicate(true)
 		station = "drill"
 		duration = 60
@@ -899,11 +909,11 @@ func capture_snapshot() -> ServiceResult:
 
 
 ## Work recipes share the trusted refinery/chemistry recipes and finite deposits.
-func machine_recipe(id: String) -> Dictionary:
+func machine_recipe(id: String, source_state: Dictionary = {}) -> Dictionary:
 	if id == "chemical.electrolysis.micro":
 		# Portable 2 L carriers cannot receive the bulk one-kilogram gas batch.
 		# A separate exact 10 g recipe preserves old recipe/save semantics.
-		var micro: Dictionary = machine_recipe("chemical.electrolysis")
+		var micro: Dictionary = machine_recipe("chemical.electrolysis", source_state)
 		for stock in ["inputs", "outputs"]:
 			for material in micro[stock]: micro[stock][material] = int(micro[stock][material]) / 100
 		micro["energy_joules"] = int(micro["energy_joules"]) / 100
@@ -915,8 +925,10 @@ func machine_recipe(id: String) -> Dictionary:
 		return recipe
 	if id.begins_with("extract."):
 		var deposit: String = "deposit.%s" % id.trim_prefix("extract.")
-		if _chamber_catalog["deposits"].has(deposit):
-			var material: String = _chamber_catalog["deposits"][deposit]["material"]
+		var candidate: Dictionary = _state if source_state.is_empty() else source_state
+		var sources: Dictionary = _source_catalog(candidate)["deposits"]
+		if candidate.deposits.has(deposit) and sources.has(deposit):
+			var material: String = sources[deposit]["material"]
 			return {"inputs": {}, "outputs": {material: 1000000}, "duration_ticks": 60, "energy_joules": 1000, "capability": "extractor", "deposit": deposit}
 	return {}
 
@@ -1129,7 +1141,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	if not MachineryWorkshop.validate(normalized["machinery"]): return _failure("Malformed machinery record.")
 	normalized["machinery"]["catalog_fingerprint"] = MachineryWorkshop.initial()["catalog_fingerprint"]
 	for job in normalized["machinery"]["jobs"].values():
-		var spec: Dictionary = machine_recipe(job["recipe"])
+		var spec: Dictionary = machine_recipe(job["recipe"], normalized)
 		if spec.is_empty() or int(job["progress"]) >= int(spec["duration_ticks"]) or int(job["energy_spent"]) != int(job["progress"]) * int(spec["energy_joules"]) / int(spec["duration_ticks"]): return _failure("Invalid machine recipe progress or energy.")
 	if not PaidDoorConstruction.clear_installations(normalized["doors"], normalized): return _failure("Invalid door installation clearance.")
 	var structures: Variant = record.get("structures", {})

@@ -322,3 +322,12 @@ bounded simulation counters remain available; no per-frame diagnostic tracing
 or external service is added. See the
 [chamber milestone](../development/paid-chamber-sequential-interlocks-milestone.md)
 for pinned geometry, accepted physical corrections and verification scope.
+
+Source selectors derive choices from the current validated observation, rather
+than a hard-coded latest catalog. Scheduled mining, single and timed tool work,
+completion and machinery metadata use the candidate's pinned catalog. The
+server-only `machine_recipe(id, source_state={})` may receive a detached restore
+candidate; omitting it uses live state. This prevents restore validation from
+consulting the fresh factory's different catalog and does not grant absent ore.
+Timed construction, panel controls and panel previews accept observation17 and
+continue rejecting unsupported18+. Their old schema paths remain supported.
