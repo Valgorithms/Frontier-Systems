@@ -100,6 +100,7 @@ func run() -> void:
 	door_command("door_remove", {"door_id": door_id}, false)
 	move([3500, 0, -6000])
 	door_command("door_close", {"door_id": door_id})
+	var expected_doors: Dictionary = production.capture_snapshot().value["doors"]
 	var captured: ServiceResult = world.capture_world_snapshot_json()
 	check(captured.is_success, "whole paid-door snapshot: %s" % captured.message)
 	if not captured.is_success: finish(); return
@@ -109,7 +110,7 @@ func run() -> void:
 	root.add_child(target)
 	check(target.restore_world_snapshot_json(JSON.stringify(snapshot)).is_success, "populated paired door world restores")
 	var restored_prod: ProductionSimulationSystem = target.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)
-	check(restored_prod.capture_snapshot().value["doors"] == snapshot["systems"]["production"]["doors"], "stable paid door identity survives restart")
+	check(restored_prod.capture_snapshot().value["doors"] == expected_doors, "stable paid door identity survives restart")
 	target.free()
 	for mutation in ["missing-device", "orphan", "bill", "body"]:
 		var forged: Dictionary = snapshot.duplicate(true)

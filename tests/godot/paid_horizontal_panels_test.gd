@@ -17,7 +17,7 @@ func run() -> void:
 	old.erase("doors")
 	old["schema_version"] = 8
 	check(production.validate_snapshot_record(old, 0).is_success, "save8 migrates to empty paid panels")
-	check(production.restore_snapshot_record(old, 0).is_success and production.capture_snapshot().value["schema_version"] == 10, "save8 restores as save9")
+	check(production.restore_snapshot_record(old, 0).is_success and production.capture_snapshot().value["schema_version"] == 10, "save8 restores as save10")
 	for batch in range(10):
 		move([-3000, 0, -1000])
 		command("extract", {"deposit_id": "deposit.iron", "carrier_id": "resource-canister-1", "amount_milligrams": 1000000})

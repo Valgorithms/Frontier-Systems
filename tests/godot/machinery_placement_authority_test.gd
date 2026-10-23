@@ -183,7 +183,7 @@ func restore_checks(json: String, first: String, second: String, expander: Strin
 		if legacy:
 			# These matching poses were legal before deployment collision authority.
 			if variant == "legacy-v6":
-				for field in ["construction", "construction_bindings", "construction_commands", "panels"]: record["systems"]["production"].erase(field)
+				for field in ["doors", "construction", "construction_bindings", "construction_commands", "panels"]: record["systems"]["production"].erase(field)
 				record["systems"]["production"]["schema_version"] = 6
 				record["systems"]["production"].erase("walls")
 			record["systems"]["production"]["machinery"]["placements"][second]["position"] = [0, 0, -2500]
