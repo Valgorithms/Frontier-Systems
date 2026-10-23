@@ -101,8 +101,11 @@ No direct owner snapshot seed or store edit in the positive acceptance flow.
 
 New route controls cover exhausted source, absent active tool, foreign carrier,
 stale revision, out of reach, drill power, exact replay and changed-payload retry.
-Existing extraction regressions retain capacity and energy-shortage controls; each failure leaves material owners unchanged. Save/reload
-partly depleted and exhausted sources; reject injected origin budgets, unknown
+Separate, validated negative-only world fixtures cover full-carrier and
+insufficient-energy rejection; those fixtures never fund the positive route.
+Each failure leaves material owners unchanged. Save/reload partly depleted and
+exhausted sources into fresh pre-start worlds (the runner deliberately forbids
+live restore), then resume the positive route; reject injected origin budgets, unknown
 catalog/version, duplicate source mass, forged receipts and legacy grant attempts.
 Keep reservation-spend guards and whole-world restore tests. Confirm old-world
 25 kg roundtrip and new-world 32 kg conservation independently.

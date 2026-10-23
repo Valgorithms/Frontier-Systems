@@ -49,7 +49,8 @@ func run() -> void:
 			reject_extraction(context, stale, "stale revision")
 		if batch == 10:
 			var partial: String = world.capture_world_snapshot_json().value
-			check(world.restore_world_snapshot_json(partial).is_success, "partly depleted outcrop whole-world roundtrip")
+			constrained_extraction_checks(partial)
+			reload_playable(partial, "partly depleted outcrop whole-world roundtrip")
 		move([0, 0, 0])
 		command("unload_cargo", {"carrier_id": "resource-canister-2", "material": "ore.iron", "amount_milligrams": 1000000})
 		command("process", {"recipe_id": "refine.iron"})
@@ -84,7 +85,7 @@ func run() -> void:
 	var pressure: PressureSystem = world.get_simulation_system(PressureSystem.SYSTEM_ID)
 	check(pressure.constructed_rooms.size() == 1, "actual paid room commissioned from acquired finite matter")
 	var snapshot: String = world.capture_world_snapshot_json().value
-	check(world.restore_world_snapshot_json(snapshot).is_success, "exhausted source and built room whole-world restore")
+	reload_playable(snapshot, "exhausted source and built room whole-world restore")
 	check(production.capture_snapshot().value.deposits == final.deposits, "restore never refills exhausted seam")
 	var projection := RemoteProductionProjection.new()
 	check(projection.accept_record(production.observation(context).value).is_success, "new source observation accepts v14/catalog2")
@@ -188,3 +189,50 @@ func check_extractor_wear() -> void:
 		var part: Dictionary = tools.ledger.parts[part_id]
 		var wear: int = int(catalog.materials[part.material_id].wear_ppm_per_cycle) * int(catalog.components[part.definition_id].wear_scale_permille) * 17
 		check(int(part.integrity_ppm) == 1000000 - wear / 1000 and int(part.wear_remainder) == wear % 1000 and int(part.integrity_ppm) > 50000, "exact17-cycle wear needs no repair: " + part_id)
+
+
+## Restore admission is deliberately pre-start; resume in a fresh composition root.
+func reload_playable(snapshot: String, label: String) -> void:
+	var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world()
+	root.add_child(target)
+	var restored: ServiceResult = target.restore_world_snapshot_json(snapshot)
+	check(restored.is_success, "%s: %s" % [label, restored.message])
+	if not restored.is_success:
+		target.free()
+		return
+	check(target.capture_world_snapshot_json().value == snapshot, label + " preserves complete record")
+	world.free()
+	world = target
+	world.command_completed.connect(func(_command: SimulationCommand, result: ServiceResult) -> void: last = result)
+	runner = world.get_node("SimulationRunner")
+	production = world.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)
+	inventory = world.get_simulation_system(InventorySimulationSystem.SYSTEM_ID)
+	access = world.get_simulation_system(AccessControlSystem.SYSTEM_ID)
+	check(world.start_simulation().is_success, label + " resumes restored simulation")
+	runner.set_physics_process(false)
+
+
+## Isolated negative fixtures never feed stock or energy into the positive route.
+func constrained_extraction_checks(snapshot: String) -> void:
+	for constraint in ["capacity", "energy"]:
+		var candidate: Dictionary = JSON.parse_string(snapshot)
+		var state: Dictionary = candidate.systems.production
+		if constraint == "capacity":
+			state.deposits["deposit.iron.outcrop"] -= 1000000
+			state.cargo["resource-canister-2"]["ore.iron"] += 1000000
+		else:
+			state.energy_joules = 249
+		var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world()
+		root.add_child(target)
+		var restored: ServiceResult = target.restore_world_snapshot_json(JSON.stringify(candidate))
+		check(restored.is_success, "isolated %s negative fixture validates: %s" % [constraint, restored.message])
+		if not restored.is_success:
+			target.free()
+			return
+		var owner: ProductionSimulationSystem = target.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)
+		var before: String = target.capture_world_snapshot_json().value
+		var result: ServiceResult = owner.apply_local(context, "bootstrap-" + constraint, "tool_extract", {"expected_revision": state.state_revision, "deposit_id": "deposit.iron.outcrop", "carrier_id": "resource-canister-2", "amount_milligrams": 1000000}, int(candidate.tick_number) + 1)
+		var expected_message: String = "The receiving canister is full, incompatible or overpressure." if constraint == "capacity" else "Source mass, extractor power or finite energy is unavailable."
+		check(not result.is_success and result.message == expected_message, "isolated %s rejects at intended resource guard: %s" % [constraint, result.message])
+		check(not result.is_success and target.capture_world_snapshot_json().value == before, "isolated %s failure leaves every world owner unchanged" % constraint)
+		target.free()
