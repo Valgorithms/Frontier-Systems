@@ -10,7 +10,7 @@ var body_id: String
 
 
 func current_session(simulation_context: Node) -> ServiceResult:
-	var host: FirstPlayableHost = host_reference.get_ref() if host_reference != null else null
+	var host: Variant = host_reference.get_ref() if host_reference != null else null
 	if not is_instance_valid(host) or not is_instance_valid(host._world) or host._world != simulation_context or not host._peers.has(peer_id) or host._peers[peer_id].slot != slot or authenticated_context == null or session_lease == null or host._peers[peer_id].get("door_session_lease") != session_lease:
 		return ServiceResult.failure(&"door_session_expired", "The door command's authenticated session has ended.")
 	var live: AuthenticatedCommandContext = host._context(slot, peer_id)
