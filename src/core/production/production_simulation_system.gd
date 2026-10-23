@@ -242,6 +242,8 @@ func construction_closure(context: AuthenticatedCommandContext) -> ServiceResult
 
 ## Internal v1 unsealed-aperture diagnostic; reads never yield or cache.
 func construction_openings(context: AuthenticatedCommandContext, expected_revision: Variant) -> ServiceResult:
+	var world: WorldRuntime = get_parent().get_parent() as WorldRuntime if get_parent() != null else null
+	if world == null or context == null or not context.is_valid_for(world.world_id, world.region_id): return _failure("Opening assessment requires the current world and region.")
 	var allowed: ServiceResult = _inventory.production_capability(context, false, []) if _inventory != null else _failure("Inventory is unavailable.")
 	if not allowed.is_success: return allowed
 	if not ControlContractValidation.is_integer(expected_revision, 0, MAX_REVISION) or int(expected_revision) != int(_state["state_revision"]): return _failure("A current integer Production revision is required.")

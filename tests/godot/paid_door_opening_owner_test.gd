@@ -91,6 +91,10 @@ func run() -> void:
 	var denied: ServiceResult = production.construction_openings(foreign, revision)
 	check(not denied.is_success and denied.value == null, "unbound principal receives no geometry")
 	if failures: finish(); return
+	for scope in [[&"other-world", world.region_id], [world.world_id, &"other-region"]]:
+		var wrong_scope := AuthenticatedCommandContext.for_local_development(context.principal_id, scope[0], scope[1])
+		denied = production.construction_openings(wrong_scope, revision)
+		check(not denied.is_success and denied.value == null, "wrong world/region receives no geometry despite principal grant")
 	# Detached internal state perturbations are negative controls only; always
 	# restore before commands. They prove own-only inclusion and no revision cache.
 	var panel_id: String = ""
