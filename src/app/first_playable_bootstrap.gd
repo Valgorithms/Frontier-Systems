@@ -268,6 +268,13 @@ func _start_client() -> void:
 	_terrain_preview = TerrainCellPreview.new()
 	_habitat.add_child(_terrain_preview)
 	_machinery_panel.bind_preview(_machinery_preview)
+	var panel_preview := HorizontalPanelPreview.new()
+	_habitat.add_child(panel_preview)
+	_machinery_panel.bind_horizontal_preview(panel_preview)
+	panel_preview.panel_selected.connect(func(id: String) -> void:
+		_open_panel(3)
+		_machinery_panel.select_panel(id)
+	)
 	_machinery_preview.machine_selected.connect(func(id: String) -> void:
 		_machinery_panel.select_machine(id)
 		_open_panel(3)

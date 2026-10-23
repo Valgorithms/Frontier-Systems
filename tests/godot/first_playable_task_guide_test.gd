@@ -163,5 +163,6 @@ func check_observed_prerequisites(initial: Dictionary) -> void:
 	changed["schema_version"] = 7
 	changed.erase("recipe_requirements")
 	changed.erase("timed_canister")
+	changed.erase("horizontal_panels")
 	panel.observe({"production": changed})
 	check(panel._rows[3].text.contains("costs unavailable") and not panel._rows[3].text.contains("1000 J"), "legacy projection does not invent recipe costs")

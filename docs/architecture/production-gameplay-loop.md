@@ -2,6 +2,31 @@
 
 ## Playable local loop
 
+Production observation v10 adds `horizontal_panels` with at most 64 own safe
+surface descriptors, a voluntary-capability hint and aggregate geometric closure
+status/revision. The authenticated host filters descriptors by principal. Aggregate
+closure uses all canonical walls/panels and cannot be reconstructed from the
+partial own-only descriptor list. No foreign IDs, principals, payment receipts or
+grants enter this projection. V7..9 observations remain readable; a connection
+that has accepted v10 rejects a downgrade. Persistence remains strict save9.
+
+The first-playable machinery drawer includes collapsed floor/ceiling controls.
+X/Z minima and width/depth use integer millimetres on the 50 mm grid; each side
+is 50..1000 mm. Floor Y=0 and ceiling Y=2000 are fixed. The panel shows the
+area-derived 1 mg plate/mm2 cost and shared plate stock, stable own selection,
+deliberate placement/removal and host result. Every action queues the existing
+`panel_build`/`panel_remove` command with current revision; the host rechecks
+scope, voluntary capability, reach, ownership, stock and refund capacity. Hints
+and previews grant nothing. Pending, stale, malformed, scope-changed or
+disconnected state clears actionable previews; an acknowledgement requires a
+fresh observation. Removed selections never switch to another sheet.
+
+Original procedural sheet meshes and a transparent candidate ghost are display
+geometry. Area3D picking permits selection without StaticBody collision or
+standing support. Closure status establishes geometry only, never sealing,
+pressure, load capacity, collision or deployment. See the
+[controls milestone](../development/horizontal-panel-controls-milestone.md).
+
 The desktop client exposes **Extract, store, refine and recycle** inside the existing inventory overlay. This follows the [community-selected first playable milestone](../development/first-playable-milestone.md) and the [environmental extraction route](environmental-extraction.md). No external services or proprietary art are required. The procedural habitat shows deposit depletion and constructed wall segments.
 
 1. Select an owned canister and 1000 g transfer mass. Extract from the iron ore source twice, then unload both kilograms into workstation storage. Extraction requires source reach; unloading requires workstation reach.

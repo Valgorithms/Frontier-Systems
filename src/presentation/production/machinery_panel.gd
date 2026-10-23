@@ -51,6 +51,7 @@ var _assembly_controls: Array[Control] = []
 var _operation_controls: Array[Control] = []
 var _request_identity := Label.new()
 var _timed_canister := TimedCanisterControls.new()
+var _horizontal_panels := HorizontalPanelControls.new()
 
 
 func configure(world: WorldRuntime) -> void:
@@ -68,6 +69,8 @@ func configure(world: WorldRuntime) -> void:
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		scroll.follow_focus = true
 	_world = world
+	add_child(_horizontal_panels)
+	_horizontal_panels.configure(world)
 	add_child(_timed_canister)
 	_timed_canister.configure(world)
 	_machine_controls.append(_timed_canister)
@@ -262,6 +265,7 @@ func observe(record: Dictionary) -> void:
 	if not _operation_feedback.observe(record.get("production", {})): record = {}
 	_record = record
 	_timed_canister.observe(record.get("production", {}))
+	_horizontal_panels.observe(record.get("production", {}))
 	if record.is_empty():
 		if not _selected(_wall).is_empty(): _wall_selection_lost = true
 		_status.text = _operation_feedback.grid_text
@@ -513,6 +517,15 @@ func _populate_designs(blueprints: Dictionary) -> void:
 
 
 ## Explicit scene-owned binding; no global intent bus or canonical state mutation.
+func bind_horizontal_preview(preview: HorizontalPanelPreview) -> void:
+	_horizontal_panels.observation_changed.connect(preview.observe)
+	_horizontal_panels.preview_changed.connect(preview.present)
+
+
+func select_panel(id: String) -> void:
+	_horizontal_panels.select_panel(id)
+
+
 func bind_preview(preview: MachineryPreview) -> void:
 	_preview = preview
 	placement_feedback_changed.connect(preview.present_feedback)
