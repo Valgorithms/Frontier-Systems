@@ -338,7 +338,8 @@ func _decode_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> S
 		if String(id).begins_with("constructed-room-") and not rooms.has(String(id)): return ConstructedRoomPressure.denied()
 	for id in decoded_sensors:
 		if String(id).begins_with("constructed-room-") and not rooms.values().any(func(room: Dictionary) -> bool: return room.sensor_id == String(id)): return ConstructedRoomPressure.denied()
-	if rooms.is_empty() and record.schema_version == 2 and decoded_volumes.has(PROTOTYPE_HABITAT_ID) and absf((decoded_volumes[PROTOTYPE_HABITAT_ID] as PressureVolumeState).volume_m3 - ConstructedRoomPressure.HABITAT_VOLUME) > 1e-9: return ConstructedRoomPressure.denied()
+	# Roomless legacy networks retain their original finite volumes. Only explicit
+	# commissioning (and a persisted commissioned allocation) requires 1000 m3.
 	return ServiceResult.success({
 		"volumes": decoded_volumes,
 		"airlocks": decoded_airlocks,

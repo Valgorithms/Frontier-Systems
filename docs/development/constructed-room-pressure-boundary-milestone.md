@@ -159,6 +159,9 @@ crowbar. Prepared Access/Pressure candidates are decoded and checked before
 the first write, then assigned with Production without callbacks or yielding.
 The pressure tick uses the existing finite bulk solver; its only new profiling
 counter is `constructed_rooms`. No configuration or dependency changes.
+Roomless legacy networks keep their original finite volumes through v1-to-v2
+round trips. The 1000 m3 allocation invariant applies to commissioned rooms;
+commissioning rejects legacy habitats with another volume without changing gas.
 
 Expected scope: `src/core/pressure/pressure_system.gd`, new small room policy/state
 types under `src/core/pressure/`, paid-door planning and Production guards/commands,

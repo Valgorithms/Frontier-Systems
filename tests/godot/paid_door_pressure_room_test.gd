@@ -19,6 +19,14 @@ func run() -> void:
 	var legacy: Dictionary = pressure.capture_snapshot().value
 	legacy.schema_version = 1; legacy.erase("constructed_rooms")
 	check(pressure.restore_snapshot_record(legacy, runner.tick_number).is_success and pressure.constructed_rooms.is_empty(), "legacy v1 pressure migrates without allocation or gas creation")
+	var custom_legacy: Dictionary = legacy.duplicate(true)
+	for volume in custom_legacy.volumes:
+		if volume.volume_id == String(PressureSystem.PROTOTYPE_HABITAT_ID): volume.volume_m3 = 500.0
+	check(pressure.restore_snapshot_record(custom_legacy, runner.tick_number).is_success, "legacy roomless arbitrary finite habitat volume remains supported")
+	var migrated: Dictionary = pressure.capture_snapshot().value
+	check(migrated.schema_version == 2 and pressure.restore_snapshot_record(migrated, runner.tick_number).is_success and pressure.capture_snapshot().value == migrated and conserved(initial_moles), "legacy non1000 roomless network captures and restores v2 unchanged")
+	room_reject("door_room_commission")
+	check(pressure.restore_snapshot_record(legacy, runner.tick_number).is_success, "restore original fixture after compatibility check")
 	# Use the real current tool/component owner, not a context capability string.
 	var tools: ToolSimulationSystem = world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID)
 	var active: ServiceResult = inventory.active_tool(context, "tool.crowbar")
