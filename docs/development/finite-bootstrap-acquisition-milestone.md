@@ -184,3 +184,20 @@ The total9.8kg bill and17kgore minimum are unchanged. Residuals are specifically
 0.2kgplate plus0.2kgiron, not0.4kgplate. The full material and energy budget fits
 with already usable starter gear; no additional ore above the reviewed7kg is
 needed. These are source-backed calculations, pending runtime acceptance.
+
+
+## Restore representation verification
+
+The diagnostic partial checkpoint at tick1264 changed no JSON values. Inventory
+restore normalized40 integer-contract fields from lexical `N.0` to `N`: owner and
+ledger schema versions, six container capacity triplets, eight item condition /
+definition revisions, and body profile/schema/state revisions. Exact candidate,
+restored and recursive-diff records are preserved in local CI evidence. No
+Production, Tools, receipt, tick, construction or physical body value changed.
+
+The regression compares parsed JSON recursively with exact types and values,
+exact object-key sets and ordered arrays; it uses no numeric tolerance or string /
+boolean coercion. JSON numbers are a single type, so equivalent `N` / `N.0`
+spellings normalize through the parser. Dedicated negative controls mutate source,
+energy, receipt, tool, body, tick, missing/extra fields and receipt array order. Raw
+candidate/restored records remain emitted for diagnosis.

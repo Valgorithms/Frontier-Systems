@@ -206,7 +206,10 @@ func reload_playable(snapshot: String, label: String) -> void:
 		var record := FileAccess.open("res://var/ci/godot/finite-bootstrap-roundtrip-%d-%s.json" % [runner.tick_number, entry[0]], FileAccess.WRITE)
 		record.store_string(entry[1])
 		record.close()
-	check(restored_snapshot == snapshot, label + " preserves complete record")
+	var candidate_record: Variant = JSON.parse_string(snapshot)
+	var restored_record: Variant = JSON.parse_string(restored_snapshot)
+	check(same_json_value(candidate_record, restored_record), label + " preserves exact typed JSON values and array order")
+	roundtrip_comparison_controls(candidate_record)
 	world.free()
 	world = target
 	world.command_completed.connect(func(_command: SimulationCommand, result: ServiceResult) -> void: last = result)
@@ -242,3 +245,41 @@ func constrained_extraction_checks(snapshot: String) -> void:
 		check(not result.is_success and result.message == expected_message, "isolated %s rejects at intended resource guard: %s" % [constraint, result.message])
 		check(not result.is_success and target.capture_world_snapshot_json().value == before, "isolated %s failure leaves every world owner unchanged" % constraint)
 		target.free()
+
+
+## JSON has one number type. Godot parses both N and N.0 as the same exact float;
+## Inventory restore normalizes its integer contracts to native integers on write.
+## Ignore object-key order only; no epsilon, coercion, field omission or array sort.
+func same_json_value(left: Variant, right: Variant) -> bool:
+	if typeof(left) != typeof(right): return false
+	if typeof(left) == TYPE_DICTIONARY:
+		if left.size() != right.size(): return false
+		for key in left:
+			if not right.has(key) or not same_json_value(left[key], right[key]): return false
+		return true
+	if typeof(left) == TYPE_ARRAY:
+		if left.size() != right.size(): return false
+		for index in range(left.size()):
+			if not same_json_value(left[index], right[index]): return false
+		return true
+	if typeof(left) == TYPE_FLOAT and (not is_finite(left) or not is_finite(right)): return false
+	return left == right
+
+
+func roundtrip_comparison_controls(record: Dictionary) -> void:
+	check(same_json_value(JSON.parse_string("{\"b\":1.0,\"a\":0}"), JSON.parse_string("{\"a\":0.0,\"b\":1}")), "only key order and equivalent JSON number spelling normalize")
+	check(not same_json_value(JSON.parse_string("true"), JSON.parse_string("1")) and not same_json_value(JSON.parse_string("\"1\""), JSON.parse_string("1")), "comparison distinguishes bool/string/number")
+	check(not same_json_value(JSON.parse_string("[1,2]"), JSON.parse_string("[2,1]")), "comparison preserves array ordering")
+	for field in ["source", "energy", "receipt", "tool", "body", "tick", "missing", "extra", "array"]:
+		var changed: Dictionary = record.duplicate(true)
+		match field:
+			"source": changed.systems.production.deposits["deposit.iron.outcrop"] += 1
+			"energy": changed.systems.production.energy_joules += 1
+			"receipt": changed.systems.production.receipts[0].fingerprint += "changed"
+			"tool": changed.systems.tools.ledger.parts.values()[0].integrity_ppm -= 1
+			"body": changed.systems.inventory.owner.bodies[0].profile_revision += 1
+			"tick": changed.tick_number += 1
+			"missing": changed.systems.production.erase("store")
+			"extra": changed.systems.production["client_extra"] = 1
+			"array": changed.systems.production.receipts.reverse()
+		check(not same_json_value(record, changed), "exact world comparison rejects changed " + field)
