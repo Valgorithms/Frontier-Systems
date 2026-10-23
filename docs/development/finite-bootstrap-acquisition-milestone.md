@@ -49,7 +49,7 @@ explicit increase in finite world-resource commissioning, not an existing path
 or a permitted implementation under the current no-bootstrap-inflation scope.
 No alternate recipe, replenishment, free depot credit or salvage relabeling is
 proposed. Crafting eight 1 kg plates for a 7.6 kg plate bill can leave 0.4 kg plate
-rather than 0.4 kg raw iron; acceptance must assert actual retained identities.
+before the 0.2 kg plate seal debit; final residuals are 0.2 kg plate and 0.2 kg iron.
 
 ## Proposed smallest complete acquisition slice, subject to review
 
