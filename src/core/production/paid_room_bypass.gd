@@ -44,7 +44,7 @@ static func plan(state: Dictionary, door_id: String, actuator: ActuatorState, de
 					var other: AccessControlledDeviceState = access.devices.get(StringName(id))
 					if other == null or pressure.room_area(id) != 0.0 or not PaidChamber.closed_intact(other.actuator(PaidDoorConstruction.actuator_id(id))): candidate_pair = false
 	if operation == "door_bypass_install":
-		if parts.has(door_id) or (pressure.room_area(door_id) == 0.0 and not candidate_pair) or actuator.position != 0.0 or int(state.store.plate) < MASS: return PaidDoorConstruction.failure("A closed commissioned door and 0.2 kg unreserved plate are required.")
+		if parts.has(door_id) or (pressure.room_area(door_id) == 0.0 and not candidate_pair) or actuator.position != 0.0 or int(state.store.plate) < MASS: return PaidDoorConstruction.failure("A closed commissioned door or a complete chamber pair with both seals fitted, plus 0.2 kg unreserved plate, is required.")
 		parts[door_id] = {"bypass_id": "room-bypass-%s" % JSON.stringify([String(context.principal_id), request]).sha256_text().substr(0, 32), "blueprint_id": BLUEPRINT, "blueprint_revision": 1, "materials": {"plate": MASS}}
 		state.store.plate -= MASS
 	elif operation == "door_bypass_recover":

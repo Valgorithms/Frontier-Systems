@@ -38,7 +38,7 @@ func configure(world: WorldRuntime, local_principal: StringName = &"local-invent
 	_details.add_child(_doors)
 	_doors.item_selected.connect(func(index: int) -> void: _selected = _doors.get_item_metadata(index))
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_status.text = "Requires a paid floor under the full swing. Stand outside the swing within 1.5 m, with a usable crowbar. Seal: 0.2 kg plate. Commission one complete habitat enclosure for finite pressure service; open before decommissioning."
+	_status.text = "Requires a paid floor under the full swing. Stand outside the swing within 1.5 m of the handle, with a usable crowbar. Seal: 0.2 kg plate. For a two-door chamber, fit both seals first, then both bypasses, then the 6 kg kit on the inner door, then commission. Close the current door and valve before operating the opposite side. Chamber dismantling requires both valves closed and both sides pressure-safe; it may require habitat depressurization. A single habitat compartment uses its separate commission/decommission actions."
 	_details.add_child(_status)
 	for operation in ["door_build", "door_open", "door_close", "door_remove", "door_seal_install", "door_seal_remove", "door_room_commission", "door_room_decommission"] + PaidRoomBypass.OPERATIONS + PaidRoomReinforcement.OPERATIONS + PaidChamber.OPERATIONS:
 		var button := Button.new()
