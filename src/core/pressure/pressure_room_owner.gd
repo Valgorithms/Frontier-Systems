@@ -1,6 +1,6 @@
-extends SimulationSystem
 @abstract
 class_name PressureRoomOwner
+extends SimulationSystem
 
 ## Typed construction boundary without dependencies on concrete owner scripts.
 ## No base instance can accept a command or install an unvalidated candidate.
