@@ -273,7 +273,8 @@ Inventory item/root must match exactly. Recover prepares original item into the
 body subject to capacity/available-hand/ownership checks; no condition reset or
 material refund. Salvage only an owned carried inactive item; remove exact ID and
 refund original bill once, preserving lifetime audit. Record existing condition
-verbatim; only condition1000 can start, with other conditions retained for salvage.
+verbatim; only condition1000 can start, resume or perform a running batch, with
+other conditions retained without healing for salvage.
 No new damage model, wear/repair operation or healing path.
 
 ### Versions, lifetime limits and reciprocal accounting
@@ -473,6 +474,15 @@ The transaction test emits `var/chamber-recovery-fixture.json` for the strict
 schema check. The existing Windows/Linux production-contract workflow runs all
 three scripts and validates this fixture. No capture or full device/physical
 acceptance is claimed by these backend tests.
+
+The Phase 1 review correction adds pre-admission condition999/1/0 controls for
+start, resume and an otherwise eligible running batch through real Inventory
+restore, with full owner/receipt equality after rejection. The successful batch
+case now captures and reloads the complete genuinely charged world: only job
+parking and its Production revision may change, while reciprocal audit, finite
+gas/J and physical identity persist. Fresh resume retains identity, target, cap
+and spend, rejects at tick+59 and permits preparation at tick+60. These added
+regressions remain authored and unrun while local Godot execution is on hold.
 
 Local checks: `git diff --check` and
 `tests/schema/chamber_recovery_schema_test.py --syntax-only` passed. The local

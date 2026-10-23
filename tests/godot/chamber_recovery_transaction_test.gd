@@ -26,6 +26,8 @@ func verify_chamber_extension() -> void:
 	var mounted_inventory: Dictionary = inventory.capture_snapshot().value.duplicate(true)
 	var picked_up: ServiceResult = inventory.apply_local(context, "generic-pump-pickup", "world", {"operation": "pickup", "item_id": assembly.item_id, "world_container_id": ChamberRecoveryRecords.root_id(assembly.assembly_id), "destination_container_id": "body.human-1", "slot_id": "", "expected_revision": mounted_inventory.owner.state_revision}, int(mounted_inventory.last_tick) + 1)
 	check(not picked_up.is_success and inventory.capture_snapshot().value == mounted_inventory, "mounted item cannot escape through generic pickup")
+	var mounted_snapshot: String = world.capture_world_snapshot_json().value
+	for condition in [999, 1, 0]: damaged_admission_case(mounted_snapshot, "start", condition)
 	prepared = production.prepare_chamber_recovery_job(context)
 	check(prepared.is_success, "server derives immutable twenty-percent target and finite job cap")
 	if not prepared.is_success: return
@@ -35,6 +37,9 @@ func verify_chamber_extension() -> void:
 	var baseline: String = world.capture_world_snapshot_json().value
 	var fixture := FileAccess.open("res://var/chamber-recovery-fixture.json", FileAccess.WRITE)
 	fixture.store_string(baseline); fixture.close()
+	for condition in [999, 1, 0]:
+		damaged_admission_case(baseline, "resume", condition)
+		damaged_admission_case(baseline, "step", condition)
 	for mutation in ["none", "bank", "claims", "gas", "valve", "door", "action_epoch", "control_epoch", "pose", "condition", "production_restore", "pressure_restore", "inventory_restore", "access_restore", "failed_restores"]:
 		transaction_case(baseline, mutation)
 	for corruption in ["production_only", "pressure_only", "paid_sum", "material_bill", "missing_item", "wrong_root", "unpaid_bank", "future_production", "future_pressure"]:
@@ -120,6 +125,91 @@ func transaction_case(baseline: String, mutation: String) -> void:
 		check(absf(source_after + receiver_after - source_before - receiver_before) < 1e-8, "real-owner publication conserves total bulk moles")
 	else: check(after == before_commit, "rejection leaves every owner and normal receipt unchanged: " + mutation)
 	check(not step_candidate.value.commit(p, g, i, a).is_success and owner_records(owners) == after, "successful and rejected prepared objects are single-use: " + mutation)
+	if mutation == "none" and committed.is_success: charged_reload_case(target, after)
+	target.free()
+
+
+func charged_reload_case(charged_world: WorldRuntime, charged: Array) -> void:
+	var saved: ServiceResult = charged_world.capture_world_snapshot_json()
+	check(saved.is_success, "whole-world capture accepts genuinely charged reciprocal batch")
+	if not saved.is_success: return
+	var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world()
+	root.add_child(target)
+	var restored: ServiceResult = target.restore_world_snapshot_json(saved.value)
+	check(restored.is_success, "whole-world reload accepts genuinely charged batch")
+	if not restored.is_success: target.free(); return
+	var p: ProductionSimulationSystem = target.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)
+	var g: PressureSystem = target.get_simulation_system(PressureSystem.SYSTEM_ID)
+	var i: InventorySimulationSystem = target.get_simulation_system(InventorySimulationSystem.SYSTEM_ID)
+	var a: AccessControlSystem = target.get_simulation_system(AccessControlSystem.SYSTEM_ID)
+	var owners: Array = [p, g, i, a]
+	var expected: Array = charged.duplicate(true)
+	var original_job: Dictionary = ChamberRecoveryRecords.active_job(charged[0].chamber_recovery)
+	var expected_job: Dictionary = ChamberRecoveryRecords.active_job(expected[0].chamber_recovery)
+	expected_job.state = "paused"
+	expected[0].state_revision += 1
+	check(owner_records(owners) == expected, "charged reload changes only running-to-paused state and its Production revision; gas, J, audit and physical identity persist")
+	var parked: Dictionary = ChamberRecoveryRecords.active_job(p.capture_snapshot().value.chamber_recovery)
+	check(parked.spent_joules > 0 and parked.returned_moles == 0.1 and p.capture_snapshot().value.energy_joules < 27250, "charged finite budget and returned quantity survive reload")
+	check(p.capture_snapshot().value.chamber_recovery.accounting == g.capture_snapshot().value.pump_accounting, "charged reciprocal audit remains identical after load")
+	for volume in g.volumes.values(): check(is_finite(volume.gas_moles) and volume.gas_moles >= 0.0, "reloaded gas remains finite and nonnegative")
+	check(target.start_simulation().is_success, "charged restored world starts")
+	var clock: SimulationRunner = target.get_node("SimulationRunner")
+	clock.set_physics_process(false)
+	var before_resume: Array = owner_records(owners)
+	check(not p.prepare_chamber_recovery_step(clock.tick_number).is_success and owner_records(owners) == before_resume, "charged reload cannot run before fresh resume")
+	var actor := AuthenticatedCommandContext.for_local_development(context.principal_id, target.world_id, target.region_id)
+	var resumed: ServiceResult = p.prepare_chamber_recovery_job(actor)
+	check(resumed.is_success, "fresh authority can resume a charged job")
+	if not resumed.is_success: target.free(); return
+	check(resumed.value.commit(p, g, i, a).is_success, "charged job resume publishes without a new cap or debit")
+	var continued: Dictionary = ChamberRecoveryRecords.active_job(p.capture_snapshot().value.chamber_recovery)
+	for field in ["job_id", "assembly_id", "initial_moles", "target_moles", "max_joules", "spent_joules", "returned_moles", "last_batch_tick"]:
+		check(continued[field] == original_job[field], "charged resume retains immutable identity/accounting: " + field)
+	check(continued.next_eligible_tick == clock.tick_number + 60, "charged resume starts a fresh sixty-tick interval")
+	for tick in range(59): clock._physics_process(1.0 / 60.0)
+	var too_soon: Array = owner_records(owners)
+	check(not p.prepare_chamber_recovery_step(clock.tick_number).is_success and owner_records(owners) == too_soon, "charged reload cannot catch up before sixty fresh ticks")
+	clock._physics_process(1.0 / 60.0)
+	check(p.prepare_chamber_recovery_step(clock.tick_number).is_success, "charged resumed job becomes eligible after exactly sixty fresh ticks")
+	target.free()
+
+
+## Damage is installed through the real Inventory restore before preparing any
+## start/resume/step. This exercises admission independently of stale-CAS tests.
+func damaged_admission_case(baseline: String, stage: String, condition: int) -> void:
+	var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world()
+	root.add_child(target)
+	var restored: ServiceResult = target.restore_world_snapshot_json(baseline)
+	check(restored.is_success, "damage control restores authentic paid provenance")
+	if not restored.is_success: target.free(); return
+	check(target.start_simulation().is_success, "damage admission world starts")
+	var clock: SimulationRunner = target.get_node("SimulationRunner")
+	clock.set_physics_process(false)
+	var p: ProductionSimulationSystem = target.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)
+	var g: PressureSystem = target.get_simulation_system(PressureSystem.SYSTEM_ID)
+	var i: InventorySimulationSystem = target.get_simulation_system(InventorySimulationSystem.SYSTEM_ID)
+	var a: AccessControlSystem = target.get_simulation_system(AccessControlSystem.SYSTEM_ID)
+	var actor := AuthenticatedCommandContext.for_local_development(context.principal_id, target.world_id, target.region_id)
+	if stage == "step":
+		var resumed: ServiceResult = p.prepare_chamber_recovery_job(actor)
+		check(resumed.is_success, "undamaged control resumes before damage")
+		if not resumed.is_success: target.free(); return
+		check(resumed.value.commit(p, g, i, a).is_success, "undamaged control admits running job")
+		for tick in range(60): clock._physics_process(1.0 / 60.0)
+		check(p.prepare_chamber_recovery_step(clock.tick_number).is_success, "undamaged eligible control can prepare before item damage")
+	var physical: Dictionary = i.capture_snapshot().value
+	var assembly: Dictionary = ChamberRecoveryRecords.current(p.capture_snapshot().value.chamber_recovery)
+	for item in physical.owner.ledger.items:
+		if item.item_id == assembly.item_id: item.condition_permille = condition
+	check(i.restore_snapshot_record(physical, clock.tick_number).is_success, "real owner retains damaged pump without healing")
+	var owners: Array = [p, g, i, a]
+	var before: Array = owner_records(owners)
+	var attempted: ServiceResult = p.prepare_chamber_recovery_step(clock.tick_number) if stage == "step" else p.prepare_chamber_recovery_job(actor)
+	check(not attempted.is_success, "damaged item rejects before preparation: %s condition%d" % [stage, condition])
+	check(owner_records(owners) == before, "damage admission rejection preserves all owners, gas/J and normal receipts")
+	var retained: Dictionary = MachineryWorkshop.item(i.capture_snapshot().value.owner, assembly.item_id)
+	check(retained.condition_permille == condition and retained.item_id == assembly.item_id, "rejection retains the same damaged item and condition")
 	target.free()
 
 

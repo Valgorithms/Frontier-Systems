@@ -27,6 +27,7 @@ static func admit(production: ProductionSimulationSystem, context: Authenticated
 		if assembly.is_empty() or assembly.principal_id != chamber.principal_id or assembly.body_id != chamber.body_id or assembly.chamber_id != chamber.volume_id: return ChamberRecoveryRecords.denied()
 		var physical: Dictionary = MachineryWorkshop.item(inventory.capture_snapshot().value.owner, assembly.item_id)
 		if physical.is_empty() or int(physical.condition_permille) <= 0: return ChamberRecoveryRecords.denied()
+		if mode in ["start", "step"] and int(physical.condition_permille) != 1000: return ChamberRecoveryRecords.denied()
 		if mode != "mount" and assembly.state != "mounted": return ChamberRecoveryRecords.denied()
 	return ServiceResult.success(allowed.value)
 
