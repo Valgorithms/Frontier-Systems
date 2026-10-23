@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:frontier-systems:schema:paid-floor-locomotion-result:v1",
+  "title": "Current owner paid floor locomotion assessment v1",
+  "description": "Server-only synchronous assessment. Provenance is descriptive, never a reusable movement grant. No panel identities or principals are exposed.",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "production_revision", "production_tick", "inventory_tick", "body_action_epoch", "supported", "locomotion", "profiling"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "production_revision": {"$ref": "#/$defs/counter"},
+    "production_tick": {"$ref": "#/$defs/counter"},
+    "inventory_tick": {"$ref": "#/$defs/counter"},
+    "body_action_epoch": {"type": "integer", "minimum": 0, "maximum": 9007199254740990},
+    "supported": {"type": "boolean"},
+    "profiling": {
+      "type": "object", "additionalProperties": false,
+      "required": ["inspected_surfaces", "candidate_floors", "sweep_strips"],
+      "properties": {
+        "inspected_surfaces": {"type": "integer", "minimum": 0, "maximum": 64},
+        "candidate_floors": {"type": "integer", "minimum": 0, "maximum": 64},
+        "sweep_strips": {"type": "integer", "minimum": 1, "maximum": 129}
+      }
+    },
+    "locomotion": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "frame_id", "gravity_source", "generator_id", "acceleration_mm_s2", "locomotion_mode", "magnetic_attachment_available", "jetpack_thrust_available"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "frame_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "\\S"},
+        "gravity_source": {"enum": ["none", "natural", "generated"]},
+        "generator_id": {"type": "string", "maxLength": 128},
+        "acceleration_mm_s2": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "integer", "minimum": -100000, "maximum": 100000}},
+        "locomotion_mode": {"enum": ["magnetic_attachment", "gravity_supported", "free_motion"]},
+        "magnetic_attachment_available": {"type": "boolean"},
+        "jetpack_thrust_available": {"type": "boolean"}
+      }
+    }
+  },
+  "$defs": {"counter": {"type": "integer", "minimum": 0, "maximum": 9007199254740000}}
+}
