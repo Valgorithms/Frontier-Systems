@@ -20,7 +20,7 @@ static func describe(record: Dictionary, plate_id: String, wall_id: String, coor
 	var grid_ok: bool = valid_position
 	if valid_position:
 		for coordinate in displayed:
-			if abs(int(coordinate)) > 100000 or int(coordinate) % 100 != 0: grid_ok = false
+			if abs(int(coordinate)) > 100000 or int(coordinate) % SpatialWallConstruction.POSITION_STEP_MILLIMETRES != 0: grid_ok = false
 	var distance: float = 0.0
 	var reach_known: bool = valid_position and InventorySpatialMath.is_position(record.get("position", []))
 	var reachable: bool = false
@@ -30,10 +30,10 @@ static func describe(record: Dictionary, plate_id: String, wall_id: String, coor
 	var advisory: String = "Within estimated 1.5 m reach."
 	if not reachable: advisory = "Outside estimated 1.5 m reach; approach the target."
 	if not reach_known: advisory = "Current reach unavailable; waiting for a scoped body observation."
-	if not grid_ok: advisory = "Wall coordinates require the 0.1 m grid within ±100 m."
+	if not grid_ok: advisory = "Wall coordinates require the 0.05 m grid within ±100 m."
 	if not floor_ok: advisory = "Floor placement requires Y=0; walls have no Freeform mode."
 	if not owned and not selecting: advisory = "Select an owned physical plate in the module / canister selector."
-	var text: String = "Wall along %s · 1 × 2 × 0.1 m · 0.1 m grid" % ("X" if displayed_turn == 0 else "Z")
+	var text: String = "Wall along %s · 1 × 2 × 0.1 m · 0.05 m grid" % ("X" if displayed_turn == 0 else "Z")
 	if valid_position:
 		text += "\n%s X %.2f / Y %.2f / Z %.2f m" % ["Selected" if selecting else "Target", float(displayed[0]) / 1000.0, float(displayed[1]) / 1000.0, float(displayed[2]) / 1000.0]
 		text += " · distance %.2f m" % distance if reach_known else ""
@@ -51,7 +51,7 @@ static func describe(record: Dictionary, plate_id: String, wall_id: String, coor
 		if valid_position: text += "\nDraft pose [X, Y, Z] %s mm · quarter-turn %d." % [str(displayed), displayed_turn]
 		if not owned and not building: text += "\nSelect an owned physical plate in the module / canister selector."
 		text += "\nGeometry only; reach, collision, capacity and acceptance are determined by the host."
-		text += "\nFloor placement requires Y=0 on the 100 mm grid; walls have no Freeform mode."
+		text += "\nFloor placement requires Y=0 on the 50 mm grid; walls have no Freeform mode."
 	if waiting:
 		text += "\nWaiting for host command result; submitted identity and pose held. No plate return confirmed."
 	if record.is_empty() and not waiting: text = "Wall observation unavailable."
