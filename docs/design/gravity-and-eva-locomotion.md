@@ -32,6 +32,14 @@ Default fixtures cover Mars/Moon surface frames and a generated-gravity space st
 
 ## Implementation stages
 
+### Bounded paid-floor contact adapter
+
+`ProductionSimulationSystem.resolve_paid_floor_locomotion(context, environment, equipment)` is a trusted server API. It reads the authenticated Inventory human support pose and complete installed paid panel descriptors directly from current Production state, invokes `HorizontalFloorSupportQuery`, and passes the derived boolean contact into the existing policy without yielding. Production remains canonical; there is no retained support cache, token, duplicate panel registry or network command exposure. Other authorized builders' floors may support the actor. No panel IDs or builder principals leave this API.
+
+Environment and the eight equipment fields accepted by this API remain trusted server inputs, validated by the existing policy. Equipment excludes `surface_contact`; extra fields, including prior result/revision fields and client poses/descriptors, reject. `magnetic_surface` is a trusted compatibility input, never inferred from paid plate material. No resource is consumed by assessment. Results carry current Production revision/tick, Inventory tick and body action epoch plus bounded geometry profiling counters. They describe the synchronous read and cannot be resubmitted as movement grants; a later assessment always recomputes from both owners, including after removal/restore. Tick values are each owner's last committed tick, not a promise that the owners last mutated together.
+
+This adapter does not enforce floor-only movement, add forces/falling, replace fixture contacts, or drive the local preview capsule. Constructed-wall checks, gravity/equipment policy and reservations retain their existing contracts. Inventory defaults and save versions are unchanged. See the explicit body mapping in `docs/architecture/inventory-spatial-state.md` and result schema `docs/schema/paid-floor-locomotion-result-v1.schema.json`.
+
 1. **Implemented:** local-frame policy, default configurations and pure availability/gravity resolution.
 2. Add region/assembly gravity observations and generator components with power/condition/coverage and saved frame membership; integrate profiling and outage recovery.
 3. Replace fixed preview/server movement assumptions with authoritative frame-aware acceleration and free-motion inertia. Cover moving/docked assemblies and field boundary transitions.

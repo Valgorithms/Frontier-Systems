@@ -236,6 +236,18 @@ func construction_closure(context: AuthenticatedCommandContext) -> ServiceResult
 	return ConstructedRoomClosure.assess({"schema_version": 1, "production_revision": _state["state_revision"], "walls": walls.value, "surfaces": surfaces})
 
 
+## Server-only on-demand assessment, never a movement grant. No client contacts,
+## positions or prior support results are accepted. Reads do not yield or cache.
+func resolve_paid_floor_locomotion(context: AuthenticatedCommandContext, environment: Dictionary, equipment: Dictionary) -> ServiceResult:
+	if _inventory == null or _state.is_empty() or get_parent() == null or _inventory.get_parent() != get_parent(): return _failure("Support owners must share the current simulation runtime.")
+	var pose: ServiceResult = _inventory.own_floor_support_pose(context)
+	if not pose.is_success: return pose
+	var surfaces: Array[Dictionary] = []
+	for id in _state["panels"]:
+		surfaces.append(HorizontalPanelConstruction.descriptor(id, _state["panels"][id]))
+	return PaidFloorSupportAdapter.resolve(pose.value, surfaces, int(_state["state_revision"]), int(_state["last_tick"]), environment, equipment)
+
+
 func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 	var allowed: ServiceResult = _inventory.production_capability(context, false, []) if _inventory != null else _failure("Inventory is unavailable.")
 	if not allowed.is_success:

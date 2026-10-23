@@ -94,6 +94,23 @@ func own_position(context: AuthenticatedCommandContext) -> ServiceResult:
 	return ServiceResult.success(_bodies[allowed.value]["position_millimetres"].duplicate()) if allowed.is_success else allowed
 
 
+## Server-only, synchronous support input. Newly explicit prototype human mapping;
+## legacy saved positions and the optional presentation bridge are unchanged.
+func own_floor_support_pose(context: AuthenticatedCommandContext) -> ServiceResult:
+	var world: WorldRuntime = get_parent().get_parent() as WorldRuntime if get_parent() != null else null
+	if world == null or context == null or not context.is_valid_for(world.world_id, world.region_id):
+		return _failure("Support assessment requires the current world and region.")
+	var allowed: ServiceResult = authorize(context)
+	if not allowed.is_success: return allowed
+	for body in _owner.to_record()["bodies"]:
+		if body["body_id"] != allowed.value: continue
+		if body["profile_id"] != "inventory.body.human" or int(body["profile_revision"]) != 1:
+			return _failure("No floor support mapping is registered for this body profile.")
+		var actor: Dictionary = _bodies[allowed.value]
+		return ServiceResult.success({"position_millimetres": actor["position_millimetres"].duplicate(), "action_epoch": actor["action_epoch"], "inventory_tick": _last_tick})
+	return _failure("The canonical body profile is unavailable.")
+
+
 ## Bind one synchronous, read-only authority for constructed-world collision.
 func bind_motion_validator(validator: Callable) -> ServiceResult:
 	if _motion_validator.is_valid() or not validator.is_valid(): return _failure("Bind one valid motion authority.")

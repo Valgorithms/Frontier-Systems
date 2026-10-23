@@ -1,5 +1,13 @@
 # Inventory 3D spatial state and local capsule bridge
 
+## Paid-floor assessment mapping
+
+`InventorySimulationSystem.own_floor_support_pose` is a synchronous server-only accessor for an authorized current-world/current-region body with exactly `inventory.body.human` revision1. Cyborg, station-AI and unknown profiles have no registered support mapping and fail closed. Defaults and persisted positions retain their existing shapes and values.
+
+The paid-floor adapter introduces an explicit prototype human mapping: position is assessed as the center of an1800mm-high,600mm-wide capsule; foot height is center Y minus900mm, with a conservative600mm-square XZ footprint and10mm vertical tolerance. This is a new bounded interpretation for this API, not proof that historical logical fixture positions represented capsule centers. Default Y=0 fixtures therefore do not gain floor contact at Y=0. A pose outside the detached query's bounded region fails closed.
+
+Source evidence: `src/presentation/habitat/local_habitat_character.gd` creates an unshifted `CapsuleShape3D` with radius0.3m and height1.8m. `LocalInventoryBodyAdapter.sample` subtracts `ProceduralWorldInventoryPreview.DISPLAY_ORIGIN` from character position, multiplies by1000 and rounds all coordinates. That display origin is(-6,0,2)m, with no Y shift; the bridge never subtracts half-height. These presentation sources motivate the dimensions/convention but supply no contact authority. The authoritative adapter reads only the subsequently committed Inventory position.
+
 ## Implemented development model
 
 Logical inventory bodies and registered world storage now use bounded three-dimensional integer millimetre positions. Body-to-body interaction policy and world storage visibility/pickup/drop share `InventorySpatialMath`. This replaces the earlier x-axis-only reach calculations without changing material/item ownership.
