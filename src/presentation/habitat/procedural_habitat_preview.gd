@@ -10,6 +10,8 @@ var _door_shapes: Dictionary = {}
 var _doors: Dictionary = {}
 var _targets: Dictionary = {"inner": 1.2, "outer": 1.2}
 var _pressure_label: Label3D
+var _paid_worksite_legacy_wall: MeshInstance3D
+var _paid_worksite_legacy_collider: CollisionShape3D
 
 
 func _ready() -> void:
@@ -35,7 +37,11 @@ func _ready() -> void:
 	_box("BackWall", Vector3(0.2, 2.5, 10.0), Vector3(-21.0, 1.25, 0.0), wall_color)
 	for side in [-1.0, 1.0]:
 		_box("HabitatWall", Vector3(20.0, 2.5, 0.2), Vector3(-11.0, 1.25, side * 5.0), wall_color)
-		_box("DoorFrameWall", Vector3(0.2, 2.5, 4.0), Vector3(-1.0, 1.25, side * 3.0), wall_color)
+		var frame: MeshInstance3D = _box("DoorFrameWall", Vector3(0.2, 2.5, 4.0), Vector3(-1.0, 1.25, side * 3.0), wall_color, false)
+		var frame_collider: CollisionShape3D = _collider(frame, "Barrier", Vector3(0.2, 2.5, 4.0), Vector3.ZERO)
+		if side < 0.0:
+			_paid_worksite_legacy_wall = frame
+			_paid_worksite_legacy_collider = frame_collider
 		_box("ChamberWall", Vector3(2.0, 2.5, 0.12), Vector3(0.0, 1.25, side), Color("#96a8b1"))
 	_doors["inner"] = _box("InnerDoor", Vector3(0.12, 2.4, 1.8), Vector3(-1.0, 1.2, 0.0), Color("#52a3ba"), false)
 	_doors["outer"] = _box("OuterDoor", Vector3(0.12, 2.4, 1.8), Vector3(1.0, 1.2, 0.0), Color("#d69356"), false)
@@ -69,6 +75,10 @@ func _ready() -> void:
 
 
 func focus_production() -> void:
+	# Only this obsolete presentation wall intersects the paid worksite at
+	# world(-0.95,-2). Logical prototype pressure and its doors are unchanged.
+	if _paid_worksite_legacy_wall != null: _paid_worksite_legacy_wall.visible = false
+	if _paid_worksite_legacy_collider != null: _paid_worksite_legacy_collider.disabled = true
 	if _pressure_label != null:
 		_pressure_label.visible = false
 

@@ -5,7 +5,7 @@ class_name DoorContactObservation
 static func valid_items(value: Variant) -> bool:
 	if typeof(value) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value, PackedStringArray(["schema_version", "control_epoch", "can_operate", "doors"])): return false
 	if typeof(value.can_operate) != TYPE_BOOL: return false
-	if not ControlContractValidation.is_integer(value.schema_version, 1, 5) or not ControlContractValidation.is_integer(value.control_epoch, -1, ProductionSimulationSystem.MAX_REVISION) or typeof(value.doors) != TYPE_ARRAY or value.doors.size() > PaidDoorGeometry.MAX_DOORS: return false
+	if not ControlContractValidation.is_integer(value.schema_version, 1, 6) or not ControlContractValidation.is_integer(value.control_epoch, -1, ProductionSimulationSystem.MAX_REVISION) or typeof(value.doors) != TYPE_ARRAY or value.doors.size() > PaidDoorGeometry.MAX_DOORS: return false
 	var previous: String = ""
 	for d in value.doors:
 		var fields := PackedStringArray(["door_id", "position", "quarter_turn", "opened"])
@@ -13,6 +13,7 @@ static func valid_items(value: Variant) -> bool:
 		if int(value.schema_version) >= 3: fields.append("pressure_room")
 		if int(value.schema_version) >= 4: fields.append_array(["bypass_installed", "bypass_open"])
 		if int(value.schema_version) >= 5: fields.append_array(["reinforcement_installed", "reinforcement_intact"])
+		if int(value.schema_version) >= 6: fields.append_array(["chamber_kit_installed", "chamber"])
 		if typeof(d) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(d, fields) or not ControlContractValidation.is_id(d.door_id) or not String(d.door_id).begins_with("door-") or typeof(d.opened) != TYPE_BOOL: return false
 		if int(value.schema_version) >= 5 and (typeof(d.reinforcement_installed) != TYPE_BOOL or typeof(d.reinforcement_intact) != TYPE_BOOL or (d.reinforcement_intact and (not d.reinforcement_installed or not d.seal_installed or d.seal_condition != 1.0))): return false
 		if int(value.schema_version) >= 2:
@@ -27,6 +28,7 @@ static func valid_items(value: Variant) -> bool:
 				for key in ["volume_m3", "pressure_kpa", "ambient_pressure_kpa"]:
 					if typeof(d.pressure_room[key]) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(d.pressure_room[key])) or float(d.pressure_room[key]) < 0.0: return false
 				if d.pressure_room.volume_m3 <= 0.0 or d.pressure_room.volume_m3 > 999.0: return false
+		if int(value.schema_version) >= 6 and (typeof(d.chamber_kit_installed) != TYPE_BOOL or not valid_chamber(d.chamber, d.door_id)): return false
 		if String(d.door_id) <= previous or not SpatialWallConstruction.valid_pose({"position": d.position, "quarter_turn": d.quarter_turn}): return false
 		previous = d.door_id
 	return true
@@ -61,3 +63,14 @@ static func decode(value: Variant, world: StringName, region: StringName) -> Ser
 
 static func invalid() -> ServiceResult:
 	return ServiceResult.failure(&"invalid_door_contact", "Expected complete bounded door frame and leaf geometry in the current scope.")
+
+
+static func valid_chamber(value: Variant, door_id: String) -> bool:
+	if typeof(value) != TYPE_DICTIONARY: return false
+	if value.is_empty(): return true
+	if not ControlContractValidation.has_exact_fields(value, PackedStringArray(["inner_door_id", "outer_door_id", "side", "habitat_pressure_kpa", "chamber_pressure_kpa", "exterior_pressure_kpa", "inner_bypass_open", "outer_bypass_open"])): return false
+	if not ControlContractValidation.is_id(value.inner_door_id) or not ControlContractValidation.is_id(value.outer_door_id) or value.inner_door_id == value.outer_door_id or door_id not in [value.inner_door_id, value.outer_door_id]: return false
+	if value.side != ("inner" if door_id == value.inner_door_id else "outer") or typeof(value.inner_bypass_open) != TYPE_BOOL or typeof(value.outer_bypass_open) != TYPE_BOOL or (value.inner_bypass_open and value.outer_bypass_open): return false
+	for field in ["habitat_pressure_kpa", "chamber_pressure_kpa", "exterior_pressure_kpa"]:
+		if typeof(value[field]) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(value[field])) or float(value[field]) < 0.0: return false
+	return true

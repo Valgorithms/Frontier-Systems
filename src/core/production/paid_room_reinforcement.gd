@@ -50,5 +50,5 @@ static func plan(state: Dictionary, door_id: String, actuator: ActuatorState, de
 		parts.erase(door_id)
 	state.room_reinforcements = parts
 	if not state.has("room_bypasses"): state.room_bypasses = {}
-	state.schema_version = 14
+	state.schema_version = maxi(int(state.schema_version), 14)
 	return ServiceResult.success()

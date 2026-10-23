@@ -284,3 +284,50 @@ Local UI request IDs include a random runtime-session prefix and a monotonic
 sequence. Saved production receipts retain their original IDs for idempotent
 retry; creating a runtime to reload a snapshot cannot restart those identities.
 The prefix is transport identity only and grants no simulation authority.
+
+The default first-playable factory now selects catalog4 explicitly. Its distinct
+15 kg chamber iron seam extends the previous 24 kg ore origin to 39 kg; unchanged
+ice/regolith make 54 kg total origin. Catalog1/2/3 saves and explicit old factory
+modes receive no seam grant. The complete two-door route prints 21 kg plate,
+installs 20.4 kg, fabricates the 2 kg iron crowbar and spends 71,750 J. It leaves
+0.6 kg plate, 0.4 kg iron, 15.6 kg tailings and 28,250 J.
+
+`PaidChamber` owns synchronous pair validation and detached transaction planning;
+Production owns its 6 kg paid kit and geometry. Access owns both original sealed
+manual actuators. PreparedDoorChange validates both device comparisons before
+the first write. Pressure owns a 3.6 m3 finite allocation split from habitat_main,
+its sensor and two manual valve states. Each simulation tick exchanges inner
+then outer with finite habitat_main/exterior_reservoir at conductance1, using
+one path when leakage and an open valve coincide. This is logical prototype
+pressure service, with no spatial atmosphere or EVA capability claim.
+
+Opening either boundary requires its own valve closed and the opposite boundary
+closed, intact and valve closed. Closing retains only its own force/occupancy
+guards so an unsafe opposite cannot prevent isolation. Both pressure signs use
+the unchanged 1000 N crowbar limit over 1.71 m2. Closed intact kit boundaries
+retain up to 110 kPa; seal/actuator damage or overrating leaks even with valves
+closed. No extra health field or automatic repair is introduced. Decommissioning
+requires both boundaries force-safe and both valves closed; ordinary vacuum
+cycling does not supply this precondition. Recovery/refit preserves original
+seals, actuator damage and finite gas without refill.
+
+Production15/observation17/paid-door6 and Pressure5/chamber1 persist the explicit
+pair, bills, endpoints, geometry and sensor/volume links. Whole-world restore
+validates detached Production/Pressure/Access/Inventory candidates before any
+owner assignment; half pairs, orphan links and incompatible open states reject.
+The collapsed paid-door controls show the pair, three pressures, opposite state,
+valves and force load, and enqueue authenticated commands with current revision
+and epoch. Rejections retain owner state and expose the host reason. Existing
+bounded simulation counters remain available; no per-frame diagnostic tracing
+or external service is added. See the
+[chamber milestone](../development/paid-chamber-sequential-interlocks-milestone.md)
+for pinned geometry, accepted physical corrections and verification scope.
+
+Source selectors derive choices from the current validated observation, rather
+than a hard-coded latest catalog. Scheduled mining, single and timed tool work,
+completion and machinery metadata use the candidate's pinned catalog. The
+server-only `machine_recipe(id, source_state={})` may receive a detached restore
+candidate; omitting it uses live state. This prevents restore validation from
+consulting the fresh factory's different catalog and does not grant absent ore.
+Timed construction, panel controls and panel previews accept observation17 and
+continue rejecting unsupported18+. Their old schema paths remain supported.

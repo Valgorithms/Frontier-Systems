@@ -167,7 +167,7 @@ static func plan(production: ProductionSimulationSystem, state: Dictionary, inve
 		workshop["placements"][machine]["enabled"] = payload["enabled"]
 	elif operation == "machine_run":
 		var recipe: String = String(payload["recipe"])
-		var spec: Dictionary = production.machine_recipe(recipe)
+		var spec: Dictionary = production.machine_recipe(recipe, state)
 		if spec.is_empty() or workshop["jobs"].has(machine) or not MachineryWorkshop.operational(workshop, owner, machine, spec["capability"]): return failure("Select a compatible recipe on an operational idle machine.")
 		if not spec["deposit"].is_empty() and InventorySpatialMath.distance_millimetres(workshop["placements"][machine]["position"], ProductionSimulationSystem.SOURCE_POSITIONS[spec["deposit"]]) > 1500: return failure("The extractor must be deployed near its resource source.")
 		workshop["jobs"][machine] = {"recipe": recipe, "progress": 0, "energy_spent": 0, "paused": false}

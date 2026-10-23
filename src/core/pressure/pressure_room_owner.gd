@@ -22,3 +22,7 @@ extends SimulationSystem
 @abstract func room_observation(door_id: String) -> Dictionary
 
 @abstract func room_valve_open(door_id: String) -> bool
+
+@abstract func validate_room_open(door_id: String, bypass: bool = false) -> ServiceResult
+
+@abstract func chamber_observation(door_id: String) -> Dictionary

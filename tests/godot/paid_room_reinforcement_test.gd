@@ -7,7 +7,7 @@ class ActorPanel extends LocalProductionPanel:
 
 ## Real playable factory, finite acquisition and actual UI command queue.
 func run() -> void:
-	world = FirstPlayableBootstrap.create_playable_world()
+	world = FirstPlayableBootstrap.create_playable_world(true, false)
 	root.add_child(world)
 	world.command_completed.connect(func(_command: SimulationCommand, result: ServiceResult) -> void: last = result)
 	check(world.start_simulation().is_success, "new playable reinforcement world starts")
@@ -148,7 +148,7 @@ func reinforcement_negative_controls(snapshot: String) -> void:
 					if device.device_id == door_id: device.actuators[0].effective_pressure_area_m2 = 0.0
 			"grant": bad.systems.production.store.plate += PaidRoomReinforcement.MASS
 			"extra": bad.systems.production.room_reinforcements[door_id].health = 1.0
-		var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world(); root.add_child(target)
+		var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world(true, false); root.add_child(target)
 		var before: Variant = JSON.parse_string(target.capture_world_snapshot_json().value)
 		check(not target.restore_world_snapshot_json(JSON.stringify(bad)).is_success, "cross-owner malformed restore rejects: " + mutation)
 		check(same_json_value(before, JSON.parse_string(target.capture_world_snapshot_json().value)), "malformed restore preserves all owners: " + mutation)
@@ -166,7 +166,7 @@ func reinforcement_negative_controls(snapshot: String) -> void:
 		room_record.gas_moles += shift; ambient_record.gas_moles -= shift
 		for device in bad.systems.access_control.devices:
 			if device.device_id == door_id and entry[1] != "intact": device.actuators[0][entry[1]] = 0.5
-		var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world(); root.add_child(target)
+		var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world(true, false); root.add_child(target)
 		check(target.restore_world_snapshot_json(JSON.stringify(bad)).is_success, "finite isolated retention control restores")
 		var gas: PressureSystem = target.get_simulation_system(PressureSystem.SYSTEM_ID)
 		var owner: ProductionSimulationSystem = target.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)
