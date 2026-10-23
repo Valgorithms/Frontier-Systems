@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:frontier-systems:schema:chamber-recovery-assembly:v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "assembly_id",
+    "item_id",
+    "definition_id",
+    "definition_revision",
+    "blueprint_id",
+    "blueprint_fingerprint",
+    "materials",
+    "principal_id",
+    "body_id",
+    "world_id",
+    "region_id",
+    "chamber_id",
+    "original_condition_permille",
+    "assembly_spent_joules",
+    "state"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "assembly_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "item_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "definition_id": {
+      "const": "item.chamber-recovery-pump.fabricated"
+    },
+    "definition_revision": {
+      "const": 1
+    },
+    "blueprint_id": {
+      "const": "blueprint.chamber-recovery-pump.v1"
+    },
+    "blueprint_fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "materials": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plate",
+        "iron"
+      ],
+      "properties": {
+        "plate": {
+          "const": 400000
+        },
+        "iron": {
+          "const": 200000
+        }
+      }
+    },
+    "principal_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "body_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "world_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "region_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "chamber_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "original_condition_permille": {
+      "const": 1000
+    },
+    "assembly_spent_joules": {
+      "const": 1000
+    },
+    "state": {
+      "enum": [
+        "carried",
+        "mounted",
+        "salvaged"
+      ]
+    }
+  }
+}

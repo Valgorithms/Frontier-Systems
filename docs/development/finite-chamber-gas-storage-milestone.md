@@ -1,9 +1,13 @@
 # Bounded powered chamber gas recovery: revised design
 
 Status: revised outcome/budget/power binding accepted by Coordinator at
-`05e79b6a0c53b6f6b97fdec815c3da04def50141`; implementation amendment below awaits
-separate pinned acceptance. No runtime/schema
-implementation or Godot execution authorized. Revised on 2026-10-23 after the
+`05e79b6a0c53b6f6b97fdec815c3da04def50141`; implementation amendment
+`c198e59b8baddbf65a0ce6c7e42e93d480789810` accepted for Phase 1 backend
+transaction prerequisites and isolated failure controls only. Minimum persisted
+assembly/job/accounting records and real detached Inventory candidates were
+explicitly confirmed in scope. Device commands, scheduling, UI and physical
+presentation await frozen Phase 1 source review. No local Godot execution
+authorized. Revised on 2026-10-23 after the
 Coordinator declined the [two-litre receiver](deferred-two-litre-chamber-storage-design.md).
 Prototype shell reuse remains UNAPPROVED and is unnecessary here.
 Base: `db74161ab66b38365b9fd76b48de18480a98c036` (PR149).
@@ -45,7 +49,8 @@ Reviewed at the base:
 Accept a narrow prepared Production/Pressure transaction before pump behavior,
 or stop at this prerequisite. Do not debit energy after Pressure mutation, call
 live `MachineryWorkshop.draw`, compensate via restore, or claim existing APIs
-already make the operation atomic. This amendment must be reviewed before code.
+already make the operation atomic. The accepted Phase 1 amendment below defines
+this prerequisite; later device expansion still requires Coordinator review.
 
 ## Work model, bounds and finite acquisition
 
@@ -407,13 +412,72 @@ Explain 20% partial recovery and remaining manual vent/force sequence plainly.
 - Existing chamber/pressure stability, force/bypass, reinforcement, finite bootstrap,
   machinery energy, timed construction, Inventory/UI and strict emitted schemas.
 
-Current verification is source, arithmetic and diff review only. Outcome, budget
-and power binding are accepted; no runtime/schema edits until Coordinator accepts
-this pinned implementation amendment and transaction boundaries. Then freeze/push
-implementation head and request an explicit
+Current verification is source review and local JSON syntax/diff checks only.
+Godot tests and emitted runtime schema validation are authored, not yet run.
+Freeze/push the complete Phase 1 prerequisite for Coordinator source review;
+request an explicit
 exclusive exact-head NO-PORT lease with named stages/budget, AST-extracted versioned
 Invoke-GodotCheck, empty preflight inventory, first-diagnostic stop, no edit/retry,
 retained logs and postflight release. Final Windows/Linux exact-head CI and emitted
 schema negatives required; distinguish source head and tested merge revision.
 Capture only if actual UI/physical uncertainty remains. No successor, media,
 publication, spending, deployment or outreach.
+
+## Phase 1 implementation boundary and review packet
+
+Production exposes server-only preparation methods for one paid assembly, mount,
+job start/resume and batch. Nothing registers these as player commands or calls
+them from a simulation tick. The existing Pressure0/Production300 order and
+passive gas flows remain unchanged. Explicit stop/recover/refit/salvage, automatic
+authority-loss parking, physical pump collision, controls and observations are
+later device work. Admission and budget stalls in this prerequisite reject with
+unchanged canonical records. Reload alone parks a running job, increments the
+Production revision with checked capacity and clears ephemeral authority; resume
+retains target, cap and spend and starts a fresh 60-tick wait.
+
+`ChamberRecoveryWork` produces detached source/receiver states and integer work.
+`ChamberRecoveryPreparation` checks actual authority, crowbar, paid chamber,
+closed intact doors/bypasses, body reach, finite bank, unclaimed stock, mounted
+support and the real Inventory candidate. `ChamberRecoveryRecords` validates the
+bounded paid assembly history, job history, material/energy origin bounds,
+physical definition/root/body links and exact reciprocal audit. The new data
+files must equal their immutable pinned definition and bill at configuration.
+
+`PreparedChamberRecoveryChange` owns decoded detached candidates. Before writing,
+it reruns admission and consumes a single-use four-owner fence: exact object
+identity, complete canonical snapshots, Access tick and volatile successful-
+restore generations. Identical successful restores retire old preparations;
+failed restores do not advance the counters; exhaustion rejects in prevalidation
+and restore. Publication only installs the already-decoded Pressure state,
+optional Inventory owner/world-storage graph, Production state and ephemeral
+context map. No restore, compensating action, signal or fallible validation runs
+after the first write. Rejection consumes only the ephemeral prepared object;
+it cannot add an ordinary intent receipt.
+
+Save16 and Pressure6 are emitted only after the deliberate backend assembly
+transaction. New nested records are v1 and the world snapshot schema accepts the
+new versions. Old absence remains absence: no item, assembly, job, gas or joules
+are granted on migration. Existing immutable catalogs and legacy schema files
+are unchanged. Observation17 and paid-door observation6 remain the public shapes;
+the backend field is removed from that projection. Observation18/paid-door7 are
+reserved for later approved device work, not emitted by this prerequisite.
+
+Authored checks are `chamber_recovery_work_test.gd` (work bounds, rounding and the
+300-batch arithmetic model), `chamber_recovery_owner_fence_test.gd` (real-owner
+identity/ABA/exhaustion/single-use controls), and
+`chamber_recovery_transaction_test.gd` (inherits the authentic 39kg finite paid
+route; assembly/mount/job/one-batch commit; changed-owner rejection, budget stalls,
+reload delay and forged/one-sided restore controls). Direct owner substitutions
+occur only in isolated negative controls, not in successful route provenance.
+The transaction test emits `var/chamber-recovery-fixture.json` for the strict
+schema check. The existing Windows/Linux production-contract workflow runs all
+three scripts and validates this fixture. No capture or full device/physical
+acceptance is claimed by these backend tests.
+
+Local checks: `git diff --check` and
+`tests/schema/chamber_recovery_schema_test.py --syntax-only` passed. The local
+Python environments lack `jsonschema`; metaschema and genuine emitted-fixture
+checks remain unrun locally. A frozen-head exclusive NO-PORT lease is required
+before any local Godot import/test, with the existing first-diagnostic-stop and
+no-edit/no-retry procedure. CI results must identify the tested revision and do
+not substitute for pending Coordinator source review or later device acceptance.

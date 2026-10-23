@@ -24,6 +24,9 @@ var _motion_validator: Callable
 var _primary_payload_mass: Callable
 var _external_payload_masses: Callable
 var _checkpoint_payload_masses: Variant = null
+var _chamber_recovery_restore_guard: Callable
+
+
 ## Logical development targets; these are not inventory items or rigid bodies.
 const GRIP_TARGETS: Dictionary = {
 	"fixture.salvage-crate": {"position": [0, 0, 0], "movable": true, "required_force": 300000},
@@ -37,6 +40,12 @@ func _init() -> void:
 	tick_priority = 200
 
 
+func bind_chamber_recovery_restore_guard(guard: Callable) -> ServiceResult:
+	if _chamber_recovery_restore_guard.is_valid() or not guard.is_valid(): return _failure("Bind one chamber recovery provenance guard.")
+	_chamber_recovery_restore_guard = guard
+	return ServiceResult.success()
+
+
 func configure_defaults(include_resource_carriers: bool = false) -> ServiceResult:
 	for definition in JSON.parse_string(FileAccess.get_file_as_string("res://data/inventory/items.default.v1.json")):
 		var registered: ServiceResult = _catalog.register_definition(definition)
@@ -46,6 +55,10 @@ func configure_defaults(include_resource_carriers: bool = false) -> ServiceResul
 	if typeof(canister) != TYPE_DICTIONARY: return _failure("A versioned canister definition is required.")
 	var registered_canister: ServiceResult = _catalog.register_definition(canister)
 	if not registered_canister.is_success: return registered_canister
+	var pump: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/inventory/chamber-recovery-pump.v1.json"))
+	if pump != ChamberRecoveryRecords.definition(): return _failure("The immutable chamber pump definition changed.")
+	var registered_pump: ServiceResult = _catalog.register_definition(pump)
+	if not registered_pump.is_success: return registered_pump
 	for name in ["human", "cyborg", "station-ai"]:
 		var parsed: ServiceResult = InventoryEquipmentProfile.from_record(JSON.parse_string(FileAccess.get_file_as_string("res://data/inventory/%s.v1.json" % name)))
 		if not parsed.is_success:
@@ -379,6 +392,19 @@ func commit_factory_graph(record: Dictionary) -> ServiceResult:
 	return valid
 
 
+## Decode a detached factory candidate for a multi-owner publication. Does not
+## install it, refresh views, emit signals, or alter canonical revisions.
+func decode_factory_candidate(record: Dictionary, masses: Dictionary) -> ServiceResult:
+	var decoded: ServiceResult = _decode(record, _last_tick, _catalog.with_payload_masses(combined_payload_masses(masses)))
+	if not decoded.is_success: return decoded
+	# Prospective loads are already computed. The detached owner must retain the
+	# live catalog for later transactions/refreshes, not freeze this mass override.
+	var owner: SharedInventoryCoordinator = decoded.value.owner
+	owner._catalog = _catalog
+	owner._ledger._catalog = _catalog
+	return decoded
+
+
 func apply_local(context: AuthenticatedCommandContext, request_id: String, operation: String, payload: Dictionary, tick: int) -> ServiceResult:
 	var authorized: ServiceResult = authorize(context, true)
 	if not authorized.is_success or tick != _last_tick + 1:
@@ -386,6 +412,7 @@ func apply_local(context: AuthenticatedCommandContext, request_id: String, opera
 	var actor_id: String = authorized.value
 	var actor: Dictionary = _bodies[actor_id]
 	if operation in ["open_container", "close_container"]:
+		if String(payload.get("container_id", "")).begins_with("world.chamber-pump-"): return _failure("Mounted chamber pump storage is controlled by its assembly owner.")
 		if not ControlContractValidation.has_exact_fields(payload, PackedStringArray(["container_id", "expected_revision"])) or not ControlContractValidation.is_id(payload.get("container_id")) or not ControlContractValidation.is_integer(payload.get("expected_revision"), 0, MAX_EXACT_INTEGER) or not _has_unreserved_hand(actor_id):
 			return _failure("Closure requires exact container/revision intent and an available hand.")
 		var result: ServiceResult = _owner.set_container_open(actor_id, request_id, payload["container_id"], operation == "open_container", int(payload["expected_revision"]))
@@ -396,6 +423,7 @@ func apply_local(context: AuthenticatedCommandContext, request_id: String, opera
 	if operation in ["grip_join", "grip_release", "grip_resume"]:
 		return _apply_grip(actor_id, request_id, operation, payload)
 	if operation == "world":
+		if _contains_chamber_pump(String(payload.get("item_id", ""))): return _failure("The chamber assembly owner controls pump placement and recovery.")
 		if not _has_unreserved_hand(actor_id):
 			return _failure("Release a grip before manipulating world inventory.")
 		var fields := PackedStringArray(["operation", "item_id", "world_container_id", "destination_container_id", "slot_id", "expected_revision"])
@@ -472,6 +500,7 @@ func apply_local(context: AuthenticatedCommandContext, request_id: String, opera
 	for field in ["item_id", "slot_id", "destination_container_id"]:
 		if typeof(payload[field]) != TYPE_STRING or (payload[field] != "" and not ControlContractValidation.is_id(payload[field])):
 			return _failure("Optional item, slot and destination identities must be bounded strings.")
+	if payload["action"] != "search" and _contains_chamber_pump(payload["item_id"]): return _failure("Chamber pump provenance cannot transfer through a generic body interaction.")
 	for entry in _jobs.values():
 		if entry["job"].to_record()["actor_body_id"] == actor_id:
 			return _failure("This actor already has an active or paused inventory job.")
@@ -694,7 +723,12 @@ func validate_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> 
 	# Runner validates all systems before any restore; exhaustion must fail there.
 	if _controller_restore_generation >= MAX_EXACT_INTEGER:
 		return ServiceResult.failure(&"restore_generation_exhausted", "Restore fence cannot wrap.")
-	return _decode(record, snapshot_tick_number)
+	var decoded: ServiceResult = _decode(record, snapshot_tick_number)
+	if not decoded.is_success: return decoded
+	if _chamber_recovery_restore_guard.is_valid():
+		var guarded: ServiceResult = _chamber_recovery_restore_guard.call(record)
+		if not guarded.is_success: return guarded
+	return decoded
 
 
 ## Volatile fence is owned here so every direct or runner restore retires tokens.
@@ -708,6 +742,9 @@ func restore_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> S
 	var decoded: ServiceResult = _decode(record, snapshot_tick_number)
 	if not decoded.is_success:
 		return decoded
+	if _chamber_recovery_restore_guard.is_valid():
+		var guarded: ServiceResult = _chamber_recovery_restore_guard.call(record)
+		if not guarded.is_success: return guarded
 	_owner = decoded.value["owner"]
 	_bodies = decoded.value["bodies"]
 	_jobs = decoded.value["jobs"]
@@ -971,6 +1008,7 @@ func _release_lost_grip_contacts(tick: int) -> void:
 func _job_access(entry: Dictionary, owner: SharedInventoryCoordinator = null) -> ServiceResult:
 	var state: Dictionary = entry["job"].to_record()
 	var access_owner: SharedInventoryCoordinator = _owner if owner == null else owner
+	if state["action"] != "search" and _contains_chamber_pump(state["item_id"], access_owner): return _failure("Chamber pump provenance cannot transfer through a generic body interaction.")
 	var access: ServiceResult = access_owner.contents_access(state["target_container_id"])
 	if not access.is_success: return access
 	if state["action"] != "search":
@@ -978,6 +1016,25 @@ func _job_access(entry: Dictionary, owner: SharedInventoryCoordinator = null) ->
 			access = access_owner.contents_access(entry["request"][field])
 			if not access.is_success: return access
 	return ServiceResult.success()
+
+
+## Include ancestors so putting a carried pump in a backpack cannot bypass the
+## dedicated assembly/body ownership rule through a generic drop or handoff.
+func _contains_chamber_pump(item_id: String, owner: SharedInventoryCoordinator = null) -> bool:
+	if item_id == "": return false
+	var ledger: Dictionary = (_owner if owner == null else owner).to_record()["ledger"]
+	var locations: Dictionary = {}
+	var parents: Dictionary = {}
+	for item in ledger.items: locations[item.item_id] = item.container_id
+	for container in ledger.containers: parents[container.container_id] = container.owner_item_id
+	for item in ledger.items:
+		if item.definition_id != ChamberRecoveryRecords.DEFINITION: continue
+		var ancestor: String = item.item_id
+		for depth in range(InventoryLedger.MAX_DEPTH + 1):
+			if ancestor == item_id: return true
+			ancestor = parents.get(locations.get(ancestor, ""), "")
+			if ancestor == "": break
+	return false
 
 
 func _context(state: Dictionary) -> Dictionary:

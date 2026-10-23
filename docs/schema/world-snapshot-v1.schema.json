@@ -25,7 +25,8 @@
           { "$ref": "urn:frontier-systems:schema:pressure-system:v2" },
           { "$ref": "urn:frontier-systems:schema:pressure-system:v3" },
           { "$ref": "urn:frontier-systems:schema:pressure-system:v4" },
-          { "$ref": "urn:frontier-systems:schema:pressure-system:v5" }
+          { "$ref": "urn:frontier-systems:schema:pressure-system:v5" },
+          { "$ref": "urn:frontier-systems:schema:pressure-system:v6" }
         ] },
         "production": { "oneOf": [
           { "$ref": "urn:frontier-systems:schema:production-system:v1" },
@@ -42,7 +43,8 @@
           { "$ref": "urn:frontier-systems:schema:production-system:v12" },
           { "$ref": "urn:frontier-systems:schema:production-system:v13" },
           { "$ref": "urn:frontier-systems:schema:production-system:v14" },
-          { "$ref": "urn:frontier-systems:schema:production-system:v15" }
+          { "$ref": "urn:frontier-systems:schema:production-system:v15" },
+          { "$ref": "urn:frontier-systems:schema:production-system:v16" }
         ] },
         "health": { "oneOf": [
           { "$ref": "urn:frontier-systems:schema:health-system:v1" },
