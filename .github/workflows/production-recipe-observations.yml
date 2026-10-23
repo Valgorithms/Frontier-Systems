@@ -9,8 +9,11 @@ on:
       - 'src/presentation/production/**'
       - 'docs/schema/production*'
       - 'tests/godot/recipe_requirements*'
+      - 'tests/godot/timed_canister_controls*'
       - 'tests/godot/workstation_resource_view*'
       - 'tests/schema/recipe_requirements*'
+      - 'tests/schema/timed_canister_controls*'
+      - 'docs/schema/timed-canister-observation*'
       - '.github/workflows/production-recipe-observations.yml'
   push:
     branches: [codex/recipe-observations]
@@ -43,7 +46,7 @@ jobs:
           include-templates: false
       - name: Run bounded recipe, resource and maintenance checks
         shell: pwsh
-        run: ./tools/ci/run-godot-checks.ps1 -TestNames 'recipe_requirements_test.gd','workstation_resource_view_test.gd','repair_usability_test.gd','first_playable_task_guide_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd'
+        run: ./tools/ci/run-godot-checks.ps1 -TestNames 'recipe_requirements_test.gd','workstation_resource_view_test.gd','repair_usability_test.gd','first_playable_task_guide_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd','timed_canister_controls_test.gd'
       - name: Validate real emitted JSON against local versioned schemas
         shell: pwsh
         run: |
@@ -55,6 +58,8 @@ jobs:
           $env:PYTHONPATH = [IO.Path]::GetFullPath('var/ci/schema-python')
           & $schemaPython tests/schema/recipe_requirements_schema_test.py
           if ($LASTEXITCODE -ne 0) { throw 'Recipe requirement schema checks failed.' }
+          & $schemaPython tests/schema/timed_canister_controls_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Timed canister schema checks failed.' }
       - name: Preserve bounded evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -63,5 +68,6 @@ jobs:
           path: |
             var/ci/godot/
             var/recipe-requirements-fixture.json
+            var/timed-canister-controls-fixture.json
           retention-days: 3
           if-no-files-found: warn
