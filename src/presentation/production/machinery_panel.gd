@@ -532,6 +532,7 @@ func _refresh_placement() -> void:
 				if amount > 0: content.append("%s %.3f kg" % [material, float(amount) / 1000000.0])
 			if not content.is_empty(): _status.text += "\n%s: %s" % [id.right(8), ", ".join(content)]
 	var waiting: bool = not _pending.is_empty()
+	if not _pending_wall.is_empty(): _placement_kind.select(1)
 	var wall_mode: bool = _placement_kind.selected == 1 or not _pending_wall.is_empty()
 	for control in _machine_controls: control.visible = not wall_mode
 	for control in _wall_controls: control.visible = wall_mode

@@ -101,7 +101,9 @@ func run() -> void:
 	check(closed.is_success and closed.value.status == "closed_wall_perimeter", "actual six paid canonical panels close exact corners")
 	check(closed.value.interior_bounds_millimetres == [5100, 6900, -4500, -3500] and closed.value.required_surfaces == ["floor", "ceiling"], "exact interior still requires floor and ceiling")
 	var paid: Dictionary = production.capture_snapshot().value
-	check(paid["walls"].size() == 6 and paid["cargo"].size() == 2 and paid["store"]["plate"] == 0 and paid["store"]["iron"] == 0 and paid["store"]["tailings"] == 4000000 and paid["deposits"]["deposit.iron"] == 0, "six kilograms in walls plus four in tailings closes finite iron budget")
+	var cargo_mass: int = 0
+	for stock in paid["cargo"].values(): cargo_mass += ProductionSimulationSystem._mass(stock)
+	check(paid["walls"].size() == 6 and cargo_mass == 0 and paid["store"]["plate"] == 0 and paid["store"]["iron"] == 0 and paid["store"]["tailings"] == 4000000 and paid["deposits"]["deposit.iron"] == 0, "six kilograms in walls plus four in tailings closes finite iron budget")
 	check(production.validate_snapshot_record(paid, runner.tick_number).is_success, "complete fixture conservation validates")
 	check(not SpatialWallConstruction.motion_clear(paid["walls"], [6000, 0, -2500], [6000, 0, -4000]), "closed south seam blocks swept body entry")
 	var saved: String = world.capture_world_snapshot_json().value
@@ -125,18 +127,17 @@ func run() -> void:
 		check(not restored.restore_world_snapshot_json(JSON.stringify(forged)).is_success, "malformed or out-of-bounds wall restore rejects")
 		restored.free()
 	# Removal of all paid panels recovers six plates, no seventh plate on retry.
-	for id in paid["walls"]:
-		var pose: Dictionary = paid["walls"][id]
-		var position: Array = pose["position"]
-		var approach: Array = position.duplicate()
-		if int(pose["quarter_turn"]) == 0:
-			approach[2] += -1000 if int(position[2]) < -4000 else 1000
-		else:
-			approach[0] += -1000 if int(position[0]) < 6000 else 1000
-		# Above-wall transit avoids crossing the remaining perimeter.
-		move([6000, 4000, -2500])
-		move([approach[0], 4000, approach[2]])
-		move(approach)
+	# Route outside on the floor; ascending diagonally can still clip remaining walls.
+	var removal_routes: Array = [
+		[[4000, 0, -2500], [4000, 0, -6000], [5500, 0, -5550]],
+		[[6500, 0, -5550]],
+		[[4000, 0, -6000], [4050, 0, -4000]],
+		[[4000, 0, -6000], [8000, 0, -6000], [7950, 0, -4000]],
+		[[8000, 0, -2500], [5500, 0, -2450]],
+		[[6500, 0, -2450]]]
+	for index in range(poses.size()):
+		var id: String = wall_at(paid["walls"], poses[index]["position"])
+		for waypoint in removal_routes[index]: move(waypoint)
 		command("wall_remove", {"wall_id": id})
 		command("wall_remove", {"wall_id": id}, false)
 	check(production.capture_snapshot().value["walls"].is_empty() and production.observation(context).value["components"].size() == 6, "dismantling returns exactly six conserved plates")
