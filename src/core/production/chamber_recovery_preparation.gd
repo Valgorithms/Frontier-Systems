@@ -92,7 +92,11 @@ static func mount(production: ProductionSimulationSystem, context: Authenticated
 	var inventory: Dictionary = production._inventory.capture_snapshot().value
 	var owner: Dictionary = inventory.owner.duplicate(true)
 	var root: String = ChamberRecoveryRecords.root_id(assembly.assembly_id)
-	owner.ledger.containers.append({"container_id": root, "owner_item_id": "", "capacity": ChamberRecoveryRecords.capacity(), "is_open": true})
+	var container: Dictionary = {"container_id": root, "owner_item_id": "", "capacity": ChamberRecoveryRecords.capacity()}
+	# Match the existing ledger contract: v1 roots are implicitly open, while
+	# v2 requires explicit closure state. Mount must not upgrade other containers.
+	if int(owner.ledger.schema_version) == 2: container.is_open = true
+	owner.ledger.containers.append(container)
 	for item in owner.ledger.items:
 		if item.item_id == assembly.item_id: item.container_id = root
 	var locations: Array = inventory.world_storage.duplicate(true)

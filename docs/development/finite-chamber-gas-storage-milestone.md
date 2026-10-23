@@ -495,6 +495,16 @@ creation remain unchanged. Transaction coverage adds actual default/production
 Inventory-to-Tools initialization and malformed/pinned catalog controls; these
 corrections await a fresh exact-head review and execution lease.
 
+At `1fc11c8`, leased import/startup passed (8.33s/3.85s), then the transaction
+failed mount preparation (23.86s); pressure stability was not run. Source trace
+identified an extra `is_open` field on the new root in the authentic route's v1
+ledger. Mount now emits the existing ledger's exact root shape: implicit open
+for v1, explicit open for v2, without upgrading containers or altering closure
+authority. Regression assertions distinguish actor admission and exact paid
+support from candidate preparation, preserve ledger version, and check that the
+original paid item's sole change is location. This correction is source-only
+until a new exact-head review/lease.
+
 Local checks: `git diff --check` and
 `tests/schema/chamber_recovery_schema_test.py --syntax-only` passed. The local
 Python environments lack `jsonschema`; metaschema and genuine emitted-fixture

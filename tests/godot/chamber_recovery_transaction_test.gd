@@ -57,11 +57,23 @@ func verify_chamber_extension() -> void:
 	var dropped: ServiceResult = inventory.apply_local(context, "generic-pump-drop", "world", {"operation": "drop", "item_id": assembly.item_id, "world_container_id": "world.tray-1", "destination_container_id": "", "slot_id": "", "expected_revision": before_drop.owner.state_revision}, int(before_drop.last_tick) + 1)
 	check(not dropped.is_success and inventory.capture_snapshot().value == before_drop, "generic world movement cannot detach paid pump ownership or consume a receipt")
 	move([3600, 0, -5500]); move([5600, 0, -5000])
+	var before_mount: Dictionary = inventory.capture_snapshot().value
+	check(ChamberRecoveryPreparation.admit(production, context, "mount").is_success, "actual paid-route actor pose, reach, tool and chamber authority admit mounting")
+	check(ChamberRecoveryPreparation.supported(production.capture_snapshot().value), "unchanged paid panels cover the exact mount support rectangle")
+	if failures: return
 	prepared = production.prepare_chamber_recovery_mount(context, "paid-recovery-mount")
-	check(prepared.is_success, "same paid item prepares a supported fixed mount")
+	check(prepared.is_success, "same paid item prepares a supported fixed mount: " + prepared.message)
 	if not prepared.is_success: return
 	check(prepared.value.commit(production, pressure_owner(), inventory, access).is_success, "mount candidate commits without replacing item or condition")
 	var mounted_inventory: Dictionary = inventory.capture_snapshot().value.duplicate(true)
+	check(mounted_inventory.owner.ledger.schema_version == before_mount.owner.ledger.schema_version, "mount preserves the real ledger version and existing closure contract")
+	for container in mounted_inventory.owner.ledger.containers:
+		if container.container_id == ChamberRecoveryRecords.root_id(assembly.assembly_id):
+			check(container.has("is_open") == (int(before_mount.owner.ledger.schema_version) == 2) and container.get("is_open", true) == true, "mounted root uses the current ledger's exact open-root shape")
+	var mounted_item: Dictionary = MachineryWorkshop.item(mounted_inventory.owner, assembly.item_id)
+	var original_item: Dictionary = MachineryWorkshop.item(before_mount.owner, assembly.item_id).duplicate(true)
+	original_item.container_id = ChamberRecoveryRecords.root_id(assembly.assembly_id)
+	check(mounted_item == original_item, "mount changes only location of the original paid physical item")
 	var picked_up: ServiceResult = inventory.apply_local(context, "generic-pump-pickup", "world", {"operation": "pickup", "item_id": assembly.item_id, "world_container_id": ChamberRecoveryRecords.root_id(assembly.assembly_id), "destination_container_id": "body.human-1", "slot_id": "", "expected_revision": mounted_inventory.owner.state_revision}, int(mounted_inventory.last_tick) + 1)
 	check(not picked_up.is_success and inventory.capture_snapshot().value == mounted_inventory, "mounted item cannot escape through generic pickup")
 	var mounted_snapshot: String = world.capture_world_snapshot_json().value
