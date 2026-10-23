@@ -19,7 +19,7 @@ var _buttons: Array[Button] = []
 
 func configure(world: WorldRuntime) -> void:
 	_world = world
-	_toggle.text = "Manual doors · 2 kg plate and paid floor"
+	_toggle.text = "Manual doors: 2 kg plate and paid floor"
 	add_child(_toggle)
 	add_child(_details)
 	_details.visible = false
@@ -36,11 +36,11 @@ func configure(world: WorldRuntime) -> void:
 	_details.add_child(_doors)
 	_doors.item_selected.connect(func(index: int) -> void: _selected = _doors.get_item_metadata(index))
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_status.text = "Requires a paid 1 m square floor under the full swing. Stand outside the swing, within 1.5 m of the frame. Equip a usable crowbar to move it. No pressure seal."
+	_status.text = "Requires a paid 1 m square floor under the full swing. Stand outside the swing, within 1.5 m of the frame. Equip a usable crowbar to move it. Fit/rework seal: 0.2 kg plate and usable crowbar. No pressure boundary."
 	_details.add_child(_status)
-	for operation in ["door_build", "door_open", "door_close", "door_remove"]:
+	for operation in ["door_build", "door_open", "door_close", "door_remove", "door_seal_install", "door_seal_remove"]:
 		var button := Button.new()
-		button.text = {"door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
+		button.text = {"door_seal_install": "Fit/rework seal: 0.2 kg plate", "door_seal_remove": "Remove seal: recover 0.2 kg plate", "door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
 		button.disabled = true
 		button.pressed.connect(_send.bind(operation))
 		_details.add_child(button)
@@ -64,10 +64,10 @@ func _process(delta: float) -> void:
 	var context := AuthenticatedCommandContext.for_local_development(&"local-inventory-actor", _world.world_id, _world.region_id)
 	var observed: ServiceResult = _world.production_observation(context)
 	_record.clear()
-	if observed.is_success and observed.value.get("schema_version") == 11 and WorkstationResourceView.valid(observed.value): _record = observed.value
+	if observed.is_success and observed.value.get("schema_version") == 12 and WorkstationResourceView.valid(observed.value): _record = observed.value
 	_doors.clear()
 	for door in _record.get("paid_doors", {}).get("doors", []):
-		_doors.add_item("%s · %s" % [String(door.door_id).right(8), "open" if door.opened else "closed"])
+		_doors.add_item("%s: %s; %s" % [String(door.door_id).right(8), "open" if door.opened else "closed", seal_text(door)])
 		_doors.set_item_metadata(_doors.item_count - 1, door.door_id)
 		if _selected == door.door_id: _doors.select(_doors.item_count - 1)
 	if _doors.item_count > 0 and _selected.is_empty(): _selected = _doors.get_item_metadata(0)
@@ -88,3 +88,10 @@ func _send(operation: String) -> void:
 	_pending = String(command.command_id)
 	var queued: ServiceResult = _world.enqueue_command(command)
 	if not queued.is_success: _pending = ""; _status.text = queued.message
+
+
+static func seal_text(door: Dictionary) -> String:
+	if not door.seal_installed: return "seal absent"
+	if door.seal_condition == 0.0: return "seal failed (0%)"
+	if door.seal_condition < 1.0: return "seal degraded (%.0f%%)" % (door.seal_condition * 100.0)
+	return "seal fitted (100%)"

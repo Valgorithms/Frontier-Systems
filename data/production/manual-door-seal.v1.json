@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "blueprint_id": "door.manual.seal.prototype",
+  "revision": 1,
+  "materials": {"plate": 200000},
+  "provenance": "First-party MIT reworkable metal gasket prototype; no pressure rating or tick wear."
+}

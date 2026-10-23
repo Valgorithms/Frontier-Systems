@@ -144,7 +144,7 @@ func run() -> void:
 	var own: Dictionary = inventory.own_inventory_observation(context).value
 	check(own["items"].any(func(item: Dictionary) -> bool: return item["item_id"] == output and item["definition_revision"] == 2), "completed UI job creates actual revision-2 canister")
 	check(production.capture_snapshot().value["store"]["iron"] == 200000, "completion debits exactly one real bill")
-	check(JSON.parse_string(world.capture_world_snapshot_json().value)["systems"]["production"]["schema_version"] == 10, "UI preserves v10 save contract")
+	check(JSON.parse_string(world.capture_world_snapshot_json().value)["systems"]["production"]["schema_version"] == 11, "UI preserves v11 save contract")
 	panel.observe(paused)
 	check(controls._record.is_empty() and controls._buttons["resume"].disabled, "stale panel observation disables actions")
 	panel.observe(frame())
@@ -238,7 +238,7 @@ func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	remote_controls.configure(remote)
 	remote_controls.observe(remote.production_observation(context).value)
 	check(not remote_controls._record.is_empty(), "remote UI reads real completed host projection")
-	for version in [true, 10.5, 12, "11"]:
+	for version in [true, 10.5, 13, "12"]:
 		var bad_version: Dictionary = remote.production_observation(context).value.duplicate(true)
 		bad_version.schema_version = version
 		remote_controls.observe(bad_version)

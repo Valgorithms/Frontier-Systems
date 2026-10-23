@@ -31,7 +31,8 @@
           { "$ref": "urn:frontier-systems:schema:production-system:v7" },
           { "$ref": "urn:frontier-systems:schema:production-system:v8" },
           { "$ref": "urn:frontier-systems:schema:production-system:v9" },
-          { "$ref": "urn:frontier-systems:schema:production-system:v10" }
+          { "$ref": "urn:frontier-systems:schema:production-system:v10" },
+          { "$ref": "urn:frontier-systems:schema:production-system:v11" }
         ] },
         "health": { "oneOf": [
           { "$ref": "urn:frontier-systems:schema:health-system:v1" },

@@ -143,6 +143,14 @@ func run() -> void:
 		door_command(operation, {"door_id": id})
 		check(production.construction_openings(context, production.capture_snapshot().value.state_revision).value.status == "enclosure_with_unsealed_openings", "leaf position never establishes a seal")
 		check(production.construction_closure(context).value.status == "open_or_unsupported", "legacy closure excludes open and closed doorway")
+	door_command("door_seal_install", {"door_id": id})
+	for operation in ["door_open", "door_close"]:
+		door_command(operation, {"door_id": id})
+		check(production.construction_openings(context, production.capture_snapshot().value.state_revision).value.status == "enclosure_with_unsealed_openings", "paid fitted gasket never promotes opening topology to pressure authority")
+	var actuator: ActuatorState = access.devices[StringName(id)].actuator(PaidDoorConstruction.actuator_id(id))
+	actuator.seal_condition = 0.0
+	check(production.construction_openings(context, production.capture_snapshot().value.state_revision).value.status == "enclosure_with_unsealed_openings", "failed gasket retains unsealed topology and paid mass")
+	door_command("door_seal_remove", {"door_id": id})
 	door_command("door_remove", {"door_id": id})
 	if failures: finish(); return
 	assessment = production.construction_openings(context, production.capture_snapshot().value.state_revision)

@@ -172,3 +172,27 @@ detached integer-mm boxes are not physics bodies or reusable authority; restore
 may repeat a revision, and transport ingress owns session revocation. See the
 [collision boundary contract](../development/paid-panel-collision-boundary-milestone.md)
 for geometry, coordinates, provenance and the deferred scene lifecycle gates.
+
+## Paid manual-door gasket lifecycle
+
+Production save v11 retains an optional installed prototype metal gasket record
+on each paid door: stable install-request identity, pinned blueprint/revision and
+200,000mg processed plate. Earlier saves migrate to absent seals; migration and
+restore never heal Access condition. Mass is retained even when condition reaches0.
+Production owns provenance/material, Access owns condition, and Inventory/Tools
+resolve the real usable held crowbar and current controlled body. Install/remove
+use the existing detached candidate and single-device compare-and-swap transaction,
+with current session/epoch/revision, owner, reach, closed usable released manual
+hardware, foreign-work, claim and capacity checks before commit.
+
+Removing a gasket recovers its exact retained plate once. Refitting deliberately
+reworks/repairs this prototype gasket to condition1 using the crowbar at zero net
+material cost; it preserves all other hardware damage. No tick wear or permanent
+gasket damage is claimed. Remove the gasket before disassembling its door.
+Observation v12 carries paid-door v2 installation/condition fields; legacy v11
+observations still decode. The controls expose fitting/reworking and recovery.
+
+No pressure port, area, force, room, gas connection or airtightness is granted.
+PR142 topology always retains its unsealed-opening semantics, including fitted
+or failed gaskets and either leaf position. See the
+[design and acceptance checkpoint](../development/paid-door-seal-lifecycle-milestone.md).
