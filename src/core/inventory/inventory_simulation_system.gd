@@ -42,6 +42,10 @@ func configure_defaults(include_resource_carriers: bool = false) -> ServiceResul
 		var registered: ServiceResult = _catalog.register_definition(definition)
 		if not registered.is_success:
 			return registered
+	var canister: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/inventory/canister.v2.json"))
+	if typeof(canister) != TYPE_DICTIONARY: return _failure("A versioned canister definition is required.")
+	var registered_canister: ServiceResult = _catalog.register_definition(canister)
+	if not registered_canister.is_success: return registered_canister
 	for name in ["human", "cyborg", "station-ai"]:
 		var parsed: ServiceResult = InventoryEquipmentProfile.from_record(JSON.parse_string(FileAccess.get_file_as_string("res://data/inventory/%s.v1.json" % name)))
 		if not parsed.is_success:
@@ -217,12 +221,12 @@ func prepare_plate_change(context: AuthenticatedCommandContext, request_id: Stri
 	return prepare_equipment_change(context, request_id, item_id, create, masses, "item.plate.prototype")
 
 
-func factory_definition(id: String) -> ServiceResult:
-	return _catalog.get_definition(id, 1)
+func factory_definition(id: String, revision: int = 1) -> ServiceResult:
+	return _catalog.get_definition(id, revision)
 
 
 ## Trusted owner chooses the catalog definition; client output records are never accepted.
-func prepare_equipment_change(context: AuthenticatedCommandContext, request_id: String, item_id: String, create: bool, masses: Dictionary, definition_id: String, owner_record: Dictionary = {}, external: Variant = null) -> ServiceResult:
+func prepare_equipment_change(context: AuthenticatedCommandContext, request_id: String, item_id: String, create: bool, masses: Dictionary, definition_id: String, owner_record: Dictionary = {}, external: Variant = null, definition_revision: int = 1) -> ServiceResult:
 	var authorized: ServiceResult = authorize(context, true)
 	if not authorized.is_success or not ControlContractValidation.is_id(item_id):
 		return _failure("A capable bound actor and stable component identity are required.")
@@ -243,10 +247,10 @@ func prepare_equipment_change(context: AuthenticatedCommandContext, request_id: 
 	if create:
 		if found >= 0:
 			return _failure("That physical component already exists.")
-		var definition: ServiceResult = factory_definition(definition_id)
+		var definition: ServiceResult = factory_definition(definition_id, definition_revision)
 		if not definition.is_success:
 			return _failure("The factory requires a registered inventory definition.")
-		candidate["ledger"]["items"].append({"item_id": item_id, "definition_id": definition_id, "definition_revision": 1, "condition_permille": 1000, "container_id": body["body_container_id"]})
+		candidate["ledger"]["items"].append({"item_id": item_id, "definition_id": definition_id, "definition_revision": definition_revision, "condition_permille": 1000, "container_id": body["body_container_id"]})
 		if definition.value["storage"] != null:
 			var storage_record := {"container_id": factory_storage_id(item_id), "owner_item_id": item_id, "capacity": definition.value["storage"].duplicate(true)}
 			if int(candidate["ledger"]["schema_version"]) == 2: storage_record["is_open"] = true
@@ -256,7 +260,7 @@ func prepare_equipment_change(context: AuthenticatedCommandContext, request_id: 
 			return _failure("The recyclable component no longer exists.")
 		var item: Dictionary = candidate["ledger"]["items"][found]
 		var ledger: InventoryLedger = InventoryLedger.from_record(candidate["ledger"], _catalog).value
-		if item["definition_id"] != definition_id or int(item["definition_revision"]) != 1 or ledger.root_for_container(item["container_id"]).value != body["body_container_id"]:
+		if item["definition_id"] != definition_id or int(item["definition_revision"]) != definition_revision or ledger.root_for_container(item["container_id"]).value != body["body_container_id"]:
 			return _failure("Only owned equipment with the matching trusted definition can be salvaged.")
 		var access: ServiceResult = ledger.contents_access(item["container_id"])
 		if not access.is_success: return access
@@ -276,7 +280,7 @@ func prepare_equipment_change(context: AuthenticatedCommandContext, request_id: 
 	body["state_revision"] += 1
 	candidate["ledger"]["state_revision"] += 1
 	candidate["state_revision"] += 1
-	var fingerprint: String = JSON.stringify(["equipment", definition_id, item_id, create, authorized.value]).sha256_text()
+	var fingerprint: String = JSON.stringify(["equipment", definition_id, definition_revision, item_id, create, authorized.value]).sha256_text()
 	candidate["receipts"].append({"request_id": request_id, "fingerprint": fingerprint, "state_revision": candidate["state_revision"]})
 	if candidate["receipts"].size() > SharedInventoryCoordinator.MAX_RECEIPTS:
 		candidate["receipts"].pop_front()
