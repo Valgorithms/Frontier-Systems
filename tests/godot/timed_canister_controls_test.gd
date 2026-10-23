@@ -54,7 +54,7 @@ func run() -> void:
 	var before: Dictionary = production.capture_snapshot().value
 	check(route(1, "reserve", reserve, "host-reserve")["ok"], "exact request retry returns retained result")
 	check(production.capture_snapshot().value["construction"] == before["construction"], "retry cannot restart paused work")
-	for field in ["tick", "output_id", "actor_id", "body_id", "permissions"]:
+	for field in ["tick", "output_id", "actor_id", "body_id", "world_id", "region_id", "permissions"]:
 		var forged: Dictionary = intent("host-job")
 		forged[field] = 1
 		check(not route(1, "resume", forged)["ok"], "host rejects client authority field " + field)
@@ -111,6 +111,15 @@ func run() -> void:
 	step()
 	panel.observe(frame())
 	check(last.is_success and not controls._buttons["interrupt"].disabled, "UI resumes canonical work")
+	controls._buttons["cancel"].pressed.emit()
+	step()
+	panel.observe(frame())
+	check(last.is_success and controls._record["timed_canister"]["jobs"][ui_id]["state"] == "cancelled" and production.capture_snapshot().value["store"]["iron"] == 1200000, "UI cancel releases the unspent claim")
+	controls._buttons["reserve"].pressed.emit()
+	ui_id = controls._selected_id
+	step()
+	panel.observe(frame())
+	check(last.is_success, "UI starts a fresh job after cancellation")
 	step(120)
 	panel.observe(frame())
 	check(not controls._buttons["complete"].disabled, "ready observed job enables completion")

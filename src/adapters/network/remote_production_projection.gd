@@ -11,7 +11,7 @@ func accept_record(value: Dictionary) -> ServiceResult:
 	fields.append("machinery")
 	fields.append("walls")
 	fields.append_array(PackedStringArray(["structures", "blueprints", "loose_parts", "tool_extraction"]))
-	if value.get("schema_version") in [8, 9]: fields.append("recipe_requirements")
+	if value.get("schema_version") == 8 or value.get("schema_version") == 9: fields.append("recipe_requirements")
 	if value.get("schema_version") == 9: fields.append("timed_canister")
 	if not ControlContractValidation.has_exact_fields(value, fields) or not ControlContractValidation.is_integer(value.get("schema_version"), 7, 9) or not ControlContractValidation.is_integer(value.get("timebase_hz"), 60, 90) or not [60, 72, 90].has(int(value.get("timebase_hz"))) or typeof(value.get("can_operate")) != TYPE_BOOL:
 		return _invalid()
@@ -44,7 +44,7 @@ func accept_record(value: Dictionary) -> ServiceResult:
 		# The revision-2 timed canister coexists with unchanged revision-1 factories.
 		# This read-only definition identity grants no client output authority.
 		if typeof(structure) == TYPE_DICTIONARY and value.get("schema_version") == 9 and structure.get("blueprint_id") == ConstructionReservationPlan.BLUEPRINT and structure.get("fingerprint") == value["timed_canister"]["blueprint_fingerprint"]:
-			if not ControlContractValidation.is_id(id) or not ControlContractValidation.has_exact_fields(structure, PackedStringArray(["blueprint_id", "fingerprint", "materials"])) or structure["materials"] != {"iron": ConstructionReservationPlan.BILL}: return _invalid()
+			if not ControlContractValidation.is_id(id) or not ControlContractValidation.has_exact_fields(structure, PackedStringArray(["blueprint_id", "fingerprint", "materials"])) or not _valid_stock(structure["materials"]) or not _same_stock(structure["materials"], {"iron": ConstructionReservationPlan.BILL}): return _invalid()
 			continue
 		if not ControlContractValidation.is_id(id) or typeof(structure) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(structure, PackedStringArray(["blueprint_id", "fingerprint", "materials"])) or typeof(structure["blueprint_id"]) != TYPE_STRING or not value["blueprints"].has(structure["blueprint_id"]) or structure["fingerprint"] != value["blueprints"][structure["blueprint_id"]]["fingerprint"] or not _valid_stock(structure["materials"]):
 			return _invalid()

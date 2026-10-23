@@ -8,6 +8,8 @@ var _pending: String = ""
 var _selected_id: String = ""
 var _scope: Array = []
 var _revision: int = -1
+var _reservation_revision: int = -1
+var _epoch: int = -1
 var _toggle := CheckButton.new()
 var _details := VBoxContainer.new()
 var _jobs := OptionButton.new()
@@ -63,12 +65,20 @@ func observe(production: Dictionary) -> void:
 	if scope != _scope:
 		_scope = scope
 		_revision = -1
+		_reservation_revision = -1
+		_epoch = -1
 		_selected_id = ""
 	_record.clear()
 	if production.get("schema_version") != 9 or not ControlContractValidation.is_integer(production.get("state_revision"), 0, ProductionSimulationSystem.MAX_REVISION) or int(production["state_revision"]) < _revision or not TimedCanisterConstruction.valid_observation(production.get("timed_canister")):
 		_refresh()
 		return
+	var observed: Dictionary = production["timed_canister"]
+	if int(observed["revision"]) < _reservation_revision or int(observed["control_epoch"]) < _epoch:
+		_refresh()
+		return
 	_revision = int(production["state_revision"])
+	_reservation_revision = int(observed["revision"])
+	_epoch = int(observed["control_epoch"])
 	_record = production.duplicate(true)
 	_jobs.clear()
 	for id in _record["timed_canister"]["jobs"]:
