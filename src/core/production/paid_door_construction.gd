@@ -94,7 +94,7 @@ static func unoccupied(pose: Dictionary, inventory: Dictionary, state: Dictionar
 	return true
 
 
-static func plan(state: Dictionary, inventory: InventorySimulationSystem, access: AccessControlSystem, context: AuthenticatedCommandContext, request: String, operation: String, payload: Dictionary, pressure: PressureSystem = null) -> ServiceResult:
+static func plan(state: Dictionary, inventory: InventorySimulationSystem, access: AccessControlSystem, context: AuthenticatedCommandContext, request: String, operation: String, payload: Dictionary, pressure: PressureRoomOwner = null) -> ServiceResult:
 	var create: bool = operation == "door_build"
 	var fields: Array = ["expected_revision", "control_epoch", "position", "quarter_turn"] if create else ["expected_revision", "control_epoch", "door_id"]
 	if not ControlContractValidation.has_exact_fields(payload, PackedStringArray(fields)): return failure("An exact door intent is required.")

@@ -14,7 +14,7 @@ const MAX_RECEIPTS: int = 64
 const MAX_REVISION: int = 9007199254740000
 var _collision_restore_generation: int = 0
 var _door_access: AccessControlSystem
-var _room_pressure: PressureSystem
+var _room_pressure: PressureRoomOwner
 var _checkpoint_door_links: Dictionary = {}
 const STATIONS: Array[String] = ["drill", "refinery", "chemical", "printer", "recycler", "dispenser", "construction"]
 ## Stable fixture sites, relative to the inventory display origin in millimetres.
@@ -1277,7 +1277,7 @@ func validate_door_access_restore(record: Dictionary) -> ServiceResult:
 	return _validate_constructed_links(_state, record)
 
 
-func bind_room_pressure(pressure: PressureSystem, world: StringName, region: StringName) -> ServiceResult:
+func bind_room_pressure(pressure: PressureRoomOwner, world: StringName, region: StringName) -> ServiceResult:
 	if _room_pressure != null or pressure == null or _door_access == null: return _failure("Bind one pressure owner after Access.")
 	var bound: ServiceResult = pressure.bind_room_owners(self, _door_access, world, region)
 	if not bound.is_success: return bound

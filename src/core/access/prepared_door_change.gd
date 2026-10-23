@@ -9,7 +9,7 @@ var _before: Dictionary
 var _after: Dictionary
 var _remove: bool
 var _consumed: bool = false
-var pressure_owner: PressureSystem
+var pressure_owner: PressureRoomOwner
 var pressure_before: Dictionary = {}
 var pressure_after: Dictionary = {}
 

@@ -7,6 +7,13 @@ func run() -> void:
 	build_enclosure()
 	if failures: return
 	pressure = world.get_simulation_system(PressureSystem.SYSTEM_ID)
+	var unbound := PressureSystem.new()
+	var wrong_owner := Node.new()
+	check(not unbound.bind_room_owners(wrong_owner, access, context.world_id, context.region_id).is_success, "room boundary rejects a wrong concrete production owner")
+	check(not unbound.bind_room_owners(production, wrong_owner, context.world_id, context.region_id).is_success, "room boundary rejects a wrong concrete access owner")
+	check(not pressure.bind_room_owners(production, access, context.world_id, context.region_id).is_success, "room boundary cannot replace its bound owners")
+	unbound.free()
+	wrong_owner.free()
 	door_id = production._state.doors.keys()[0]
 	var initial_moles: float = total_moles()
 	var stock: Dictionary = production._state.store.duplicate(true)

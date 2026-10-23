@@ -1,4 +1,4 @@
-extends SimulationSystem
+extends PressureRoomOwner
 class_name PressureSystem
 
 ## First isothermal gas network and airlock example for the world simulation.
@@ -353,10 +353,13 @@ func _decode_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> S
 	})
 
 
-func bind_room_owners(production: ProductionSimulationSystem, access: AccessControlSystem, world: StringName, region: StringName) -> ServiceResult:
+func bind_room_owners(production: Node, access: Node, world: StringName, region: StringName) -> ServiceResult:
 	if _room_production != null or production == null or access == null: return ConstructedRoomPressure.denied()
-	_room_production = production
-	_room_access = access
+	# The abstract boundary must not load concrete owners. Its implementation
+	# admits only these exact server scripts before retaining typed owner refs.
+	if production.get_script() != load("res://src/core/production/production_simulation_system.gd") or access.get_script() != load("res://src/core/access/access_control_system.gd"): return ConstructedRoomPressure.denied()
+	_room_production = production as ProductionSimulationSystem
+	_room_access = access as AccessControlSystem
 	_room_world = world
 	_room_region = region
 	return ServiceResult.success()

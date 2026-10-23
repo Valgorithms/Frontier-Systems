@@ -199,3 +199,13 @@ Coordinator lease; no listeners, capture, export or Gaia1714. Required Windows/
 Linux CI remains necessary for implementation acceptance. Screenshots only if
 meaningful tests leave material uncertainty. No merge, successor, deployment,
 publication, outreach or PR85 changes in this worker scope.
+
+Construction consumers depend on the abstract `PressureRoomOwner` contract,
+which contains only their required operations and has no concrete Production,
+Access, paid-door or room-policy dependencies. `PressureSystem` implements it
+while retaining typed concrete owner references. Binding accepts only the exact
+server Production and Access scripts and succeeds once. This separates the
+consumer signatures from the implementation script and removes newly introduced
+concrete Pressure script dependency cycles without weakening snapshot validation
+or prepared compare-and-swap commits. Standalone pressure cleanup diagnostics
+remain acceptance failures, even when all gas-flow assertions pass.
