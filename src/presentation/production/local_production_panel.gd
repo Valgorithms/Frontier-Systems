@@ -89,7 +89,7 @@ func configure(world: WorldRuntime) -> ServiceResult:
 	_activity = _label()
 	_gather_details = _label()
 	_deposit = _picker()
-	for id in ["deposit.iron", "deposit.ice", "deposit.regolith", "deposit.iron.outcrop"]:
+	for id in ["deposit.iron", "deposit.ice", "deposit.regolith", "deposit.iron.outcrop", "deposit.iron.reinforcement"]:
 		_deposit.add_item(id)
 	_deposit.item_selected.connect(func(_index: int) -> void: refresh())
 	_extract_button = _button("Extract selected mass into canister (up to 1 kg)", _extract_action)

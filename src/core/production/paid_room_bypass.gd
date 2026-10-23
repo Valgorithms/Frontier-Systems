@@ -45,7 +45,9 @@ static func plan(state: Dictionary, door_id: String, actuator: ActuatorState, de
 		parts.erase(door_id)
 	else:
 		if not parts.has(door_id) or pressure.room_area(door_id) == 0.0: return PaidDoorConstruction.failure("Install a paid bypass on the commissioned door first.")
-	if parts.is_empty():
+	if int(state.schema_version) == 14:
+		state.room_bypasses = parts
+	elif parts.is_empty():
 		state.erase("room_bypasses")
 		state.schema_version = 12 if int(state.catalog_revision) == 2 else 11
 	else:

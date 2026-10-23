@@ -12,7 +12,7 @@ var _selected: String = ""
 
 func observe(production: Dictionary) -> void:
 	var surfaces: Array = []
-	if ControlContractValidation.is_integer(production.get("schema_version"), 10, 15) and HorizontalPanelObservation.valid(production.get("horizontal_panels"), production.get("state_revision")):
+	if ControlContractValidation.is_integer(production.get("schema_version"), 10, 16) and HorizontalPanelObservation.valid(production.get("horizontal_panels"), production.get("state_revision")):
 		surfaces = production["horizontal_panels"]["surfaces"]
 	var retained: Dictionary = {}
 	for surface in surfaces:

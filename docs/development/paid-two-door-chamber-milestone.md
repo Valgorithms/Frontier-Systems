@@ -1,6 +1,6 @@
-# Paid two-door chamber: design and prerequisite decision
+# Paid room reinforcement prerequisite and subsequent two-door target
 
-Status: **design only; awaiting Coordinator review before implementation**.
+Status: **Coordinator accepted bounded reinforcement prerequisite; implementation awaiting exact-head runtime verification**.
 Base: `2b0b8ffca77816658a038f3151dc2eaffdd897ed` (merged PR147).
 Worker: `01a16a80-e181-7aa2-92ab-5febf57042a3`, isolated managed worktree
 `paid-two-door-chamber`, branch `paid-two-door-chamber-design`.
@@ -23,7 +23,7 @@ the 1000 N crowbar, deliberately use the existing paid bypass, then regain manua
 door operation. It is not a room registry, pipe framework or another diagnostic.
 The two-door target below pins the subsequent outcome and prevents this
 prerequisite from becoming unbounded foundation work. Do not implement either
-scope until Coordinator selects and accepts it.
+full chamber scope in this PR. The Coordinator accepted only the prerequisite.
 
 ## Source evidence and independent constraints
 
@@ -275,23 +275,42 @@ partly depleted/exhausted sources on reload; legacy no-grant; malformed paired
 restore with exact all-owner unchanged state. Retain existing finite bootstrap,
 bypass, room, paid-door, snapshot and schema regressions.
 
-## Verification and review handoff
+## Accepted implementation and verification handoff
 
-This PR changes this design document only. Arithmetic/geometry below are source
-calculations, not Godot behavior or implementation acceptance. Run `git diff
---check` and the versioned CI-policy contracts; normal PR CI may run. After scope
-acceptance, implementation needs a new immutable-head review and an exclusive
-Coordinator NO-PORT lease before any local Godot operation. Use only approved
-bounded scripts, empty fresh process inventory, stop on the first diagnostic,
-preserve logs and release the lease; no edit/retry under a lease. Future final
-acceptance requires actual required Windows/Linux CI at the final head, with
-tested synthetic revision recorded separately. Captures only resolve material
-remaining uncertainty. No merge, deployment, public media or external operation
-belongs to this worker.
+The Coordinator accepted the distinct recoverable 4 kg processed-plate kit,
+new-world-only 7 kg ore seam (catalog3, 39 kg origin), zero electrical manual
+assembly/recovery and explicit first-party 110 kPa prototype game tuning.
+The full two-door chamber above remains subsequent design, outside this PR.
 
-Coordinator decision requested: accept the bounded4kg-kit/7kg-source prerequisite
-and its explicit prototype rating/manual-assembly policy, or return a revised
-rating/content direction. The full two-door target requires its own reviewed
-6kg-kit/37kg acquisition budget and paired-endpoint authority work. Nothing in
-this proposal silently upgrades existing hardware or creates implementation
-authority.
+Supported assembly condition is the existing Access actuator integrity and
+original seal condition only. Geometry, kit identity/bill and original seal links
+must also match. There is no independent wall/panel damage model or hidden kit
+health. Fitting never writes condition; seal rework/removal requires kit recovery.
+Damaged supported hardware loses reinforced retention and leaks through the
+existing baseline path. This is game tuning, with no physical certification.
+
+Implementation uses Production save14 / observation16 / paid-door5 and Pressure
+save4 with constructed-room2. Old catalogs and pressure policies remain separate;
+loading them never adds the new seam, kit, gas, energy or condition. New content
+is selected only by fresh playable commissioning. V14 also supports older origins
+which later pay their own kit bill; its origin mass remains unchanged.
+
+The new regression acquires 24 kg ore through real pickup/equip and queue paths,
+prints 12 kg plate and a 2 kg iron crowbar, then pays 7.6 kg geometry, 0.2 kg seal,
+0.2 kg bypass and 4 kg kit. Leftovers are 0.4 kg iron and 9.6 kg tails, with
+5 kg ice and 10 kg regolith untouched. Extraction/refining/printing/fabrication
+spends 44,000 J and leaves 56,000 J. Door UI commands fit the kit, demonstrate
+>0.6 kPa retention and 1000 N rejection, open/close passive bypass, then operate
+the same crowbar. Tests include refit/recovery, open/closed whole-world reload,
+both differential signs, overrating, supported damage/no-heal and malformed
+three-owner restore. Existing catalog2 acquisition and bypass regressions remain
+separate. Tests are authored; execution is not yet acceptance evidence.
+
+Before any local Godot operation, freeze/push the implementation and obtain an
+exclusive Coordinator NO-PORT lease for its exact head. Use approved bounded
+scripts, fresh empty process inventory, stop on the first diagnostic, preserve
+logs and release the lease. Do not edit or retry under the lease. GitHub CI may
+run normally. Final acceptance requires exact-head Windows/Linux CI and accepted
+runtime evidence, with synthetic tested revisions recorded separately. Captures
+resolve material uncertainty only. Coordinator alone reviews/merges. No deployment
+or external publication is authorized.

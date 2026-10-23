@@ -7,7 +7,7 @@ const MATERIALS: Array[String] = ["ore.iron", "ice", "regolith", "iron", "tailin
 
 
 func accept_record(value: Dictionary) -> ServiceResult:
-	if not ControlContractValidation.is_integer(value.get("schema_version"), 7, 15): return _invalid()
+	if not ControlContractValidation.is_integer(value.get("schema_version"), 7, 16): return _invalid()
 	var version: int = int(value["schema_version"])
 	var fields := PackedStringArray(["schema_version", "catalog_revision", "catalog_fingerprint", "timebase_hz", "last_tick", "state_revision", "deposits", "store", "vessel", "wall_mass_milligrams", "energy_joules", "powered", "job", "cargo", "components", "recipes", "dispensable", "can_operate", "vessel_pressure_kpa", "extractable_sources"])
 	fields.append("machinery")
@@ -17,8 +17,8 @@ func accept_record(value: Dictionary) -> ServiceResult:
 	if version >= 9: fields.append("timed_canister")
 	if version >= 10: fields.append("horizontal_panels")
 	if version >= 11: fields.append("paid_doors")
-	if version >= 11 and (not DoorContactObservation.valid_items(value.get("paid_doors")) or int(value.paid_doors.schema_version) != (4 if version >= 15 else (3 if version >= 13 else (2 if version >= 12 else 1)))): return _invalid()
-	if not ControlContractValidation.has_exact_fields(value, fields) or not ControlContractValidation.is_integer(value.get("schema_version"), 7, 15) or not ControlContractValidation.is_integer(value.get("timebase_hz"), 60, 90) or not [60, 72, 90].has(int(value.get("timebase_hz"))) or typeof(value.get("can_operate")) != TYPE_BOOL:
+	if version >= 11 and (not DoorContactObservation.valid_items(value.get("paid_doors")) or int(value.paid_doors.schema_version) != (5 if version >= 16 else (4 if version >= 15 else (3 if version >= 13 else (2 if version >= 12 else 1))))): return _invalid()
+	if not ControlContractValidation.has_exact_fields(value, fields) or not ControlContractValidation.is_integer(value.get("schema_version"), 7, 16) or not ControlContractValidation.is_integer(value.get("timebase_hz"), 60, 90) or not [60, 72, 90].has(int(value.get("timebase_hz"))) or typeof(value.get("can_operate")) != TYPE_BOOL:
 		return _invalid()
 	if not SpatialWallConstruction.valid(value["walls"]): return _invalid()
 	if version >= 10 and not HorizontalPanelObservation.valid(value["horizontal_panels"], value.get("state_revision")): return _invalid()
@@ -26,8 +26,8 @@ func accept_record(value: Dictionary) -> ServiceResult:
 	for field in ["last_tick", "state_revision", "catalog_revision", "wall_mass_milligrams", "energy_joules"]:
 		if not ControlContractValidation.is_integer(value[field], 0, 9007199254740000):
 			return _invalid()
-	if version == 15 and not ControlContractValidation.is_integer(value["catalog_revision"], 1, 2): return _invalid()
-	var catalog: int = int(value["catalog_revision"]) if version == 15 else (2 if version == 14 else 1)
+	if version >= 15 and not ControlContractValidation.is_integer(value["catalog_revision"], 1, 3 if version == 16 else 2): return _invalid()
+	var catalog: int = int(value["catalog_revision"]) if version >= 15 else (2 if version == 14 else 1)
 	if not ControlContractValidation.is_integer(value["catalog_revision"], catalog, catalog) or not _fingerprint_valid(value["catalog_fingerprint"]):
 		return _invalid()
 	if not _valid_stock(value["store"], true) or not _valid_stock(value["vessel"], true) or typeof(value["cargo"]) != TYPE_DICTIONARY or value["cargo"].size() > 32:
@@ -61,7 +61,7 @@ func accept_record(value: Dictionary) -> ServiceResult:
 	for field in ["components", "recipes", "dispensable", "extractable_sources"]:
 		if not ControlContractValidation.decode_ids(value[field], 0, 32).is_success:
 			return _invalid()
-	if typeof(value["deposits"]) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value["deposits"], PackedStringArray(SOURCE_POSITIONS.keys() if int(value["catalog_revision"]) == 2 else ["deposit.iron", "deposit.ice", "deposit.regolith"])):
+	if typeof(value["deposits"]) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value["deposits"], PackedStringArray(source_ids(int(value["catalog_revision"])))):
 		return _invalid()
 	for mass in value["deposits"].values():
 		if not ControlContractValidation.is_integer(mass, 0, MAX_MASS):

@@ -251,3 +251,31 @@ Recover the part after decommissioning before removing the door, refunding its
 exact plate once. Observation v15 / paid-door v4 expose own valve status; the
 collapsed manual-door controls display pressures, differential and force load.
 No new configuration variable, service, asset or external dependency is required.
+
+
+## Paid reinforced prototype boundary
+
+Fresh playable worlds now select catalog3: historical 25 kg origin plus the
+separate 7 kg outcrop and separate 7 kg reinforcement seam, for 39 kg total
+(24 kg ore). Catalog1 and catalog2 saves retain their original deposits and
+25/32 kg conservation; restore never grants new content. The actual source
+pickers expose the new reachable seam at the existing ore worksite.
+
+A commissioned one-door room can pay 4 kg processed plate for a recoverable
+`room.reinforcement.prototype` kit linked to its original seal. Production owns
+identity/bill and refunds, Access retains actuator and seal condition, Pressure
+owns the explicit reinforced room policy. Intact closed manual hardware retains
+up to 110 kPa under first-party prototype game tuning; unsupported condition
+uses the existing leak path. No independent wall/panel damage detection or
+physical certification is claimed. The original 0.5 kPa policy, 1.71 m2 area,
+1000 N crowbar and max(leak, valve) conductance1 remain unchanged.
+
+Fit/recover require the actual crowbar, ownership/body, reach, revision/epoch,
+clear swing and available unreserved stock/capacity. Fitting requires an intact
+closed commissioned room. Recovery requires safe open decommissioning first.
+Manual assembly/recovery cost zero electricity and never modify condition.
+Seal rework/removal is blocked while a kit remains linked. Production save14,
+Pressure save4/room2, observation16/paid-door5 encode this without upgrading
+legacy records. No service or external dependency is added. The
+[accepted prerequisite](../development/paid-two-door-chamber-milestone.md)
+records the finite 44,000 J route and the separately scoped subsequent chamber.

@@ -155,14 +155,14 @@ func capture_snapshot() -> ServiceResult:
 		sensor_records.append(sensor.to_record())
 
 	var result: Dictionary = {
-		"schema_version": SNAPSHOT_SCHEMA_VERSION if room_valves.is_empty() else 3,
+		"schema_version": _room_snapshot_version(constructed_rooms, room_valves),
 		"volumes": volume_records,
 		"airlocks": airlock_records,
 		"sensors": sensor_records,
 		"total_transferred_moles": total_transferred_moles,
 		"constructed_rooms": constructed_rooms.duplicate(true),
 	}
-	if not room_valves.is_empty(): result["room_valves"] = room_valves.duplicate(true)
+	if int(result.schema_version) >= 3: result["room_valves"] = room_valves.duplicate(true)
 	return ServiceResult.success(result)
 
 
@@ -236,16 +236,17 @@ func _sample_sensors(tick_number: int) -> void:
 
 
 func _decode_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> ServiceResult:
-	if not ControlContractValidation.is_integer(record.get("schema_version"), 1, 3):
+	if not ControlContractValidation.is_integer(record.get("schema_version"), 1, 4):
 		return ServiceResult.failure(&"unsupported_pressure_system_version", "The pressure-system record version is not supported.")
 	var rooms: Variant = record.get("constructed_rooms", {})
 	var fields := PackedStringArray(["schema_version", "volumes", "airlocks", "sensors", "total_transferred_moles"])
 	if int(record.schema_version) >= 2: fields.append("constructed_rooms")
-	if int(record.schema_version) == 3: fields.append("room_valves")
+	if int(record.schema_version) >= 3: fields.append("room_valves")
 	var valves: Variant = record.get("room_valves", {})
 	if typeof(rooms) != TYPE_DICTIONARY or rooms.size() > 1: return ConstructedRoomPressure.denied()
 	if typeof(valves) != TYPE_DICTIONARY or valves.size() > 1: return ConstructedRoomPressure.denied()
 	if int(record.schema_version) == 3 and valves.is_empty(): return ConstructedRoomPressure.denied()
+	if int(record.schema_version) == 4 and (rooms.size() != 1 or not rooms.values().all(func(r: Variant) -> bool: return typeof(r) == TYPE_DICTIONARY and r.get("policy_id") == PaidRoomReinforcement.POLICY)): return ConstructedRoomPressure.denied()
 	for id in valves:
 		if typeof(valves[id]) != TYPE_BOOL or not rooms.values().any(func(r: Variant) -> bool: return typeof(r) == TYPE_DICTIONARY and r.get("door_id") == id): return ConstructedRoomPressure.denied()
 	if not ControlContractValidation.has_exact_fields(record, fields) or typeof(rooms) != TYPE_DICTIONARY or rooms.size() > 1: return ConstructedRoomPressure.denied()
@@ -339,7 +340,7 @@ func _decode_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> S
 
 	for id in rooms:
 		var room: Variant = rooms[id]
-		if not ConstructedRoomPressure.valid_room(room) or room.volume_id != id or not decoded_volumes.has(StringName(id)) or not decoded_sensors.has(StringName(room.sensor_id)): return ConstructedRoomPressure.denied()
+		if not ConstructedRoomPressure.valid_room(room) or (room.policy_id == PaidRoomReinforcement.POLICY and int(record.schema_version) != 4) or room.volume_id != id or not decoded_volumes.has(StringName(id)) or not decoded_sensors.has(StringName(room.sensor_id)): return ConstructedRoomPressure.denied()
 		if _room_production != null and (room.world_id != String(_room_world) or room.region_id != String(_room_region)): return ConstructedRoomPressure.denied()
 		var room_volume: PressureVolumeState = decoded_volumes[StringName(id)]
 		var ambient: PressureVolumeState = decoded_volumes.get(PROTOTYPE_HABITAT_ID)
@@ -407,9 +408,8 @@ func validate_room_links(production: Dictionary, access: Dictionary, pressure_re
 
 func record_from_prepared(state: Dictionary) -> Dictionary:
 	var result: Dictionary = {"schema_version": 2, "volumes": [], "airlocks": [], "sensors": [], "total_transferred_moles": state.total_transferred_moles, "constructed_rooms": state.constructed_rooms.duplicate(true)}
-	if not state.room_valves.is_empty():
-		result.schema_version = 3
-		result["room_valves"] = state.room_valves.duplicate(true)
+	result.schema_version = _room_snapshot_version(state.constructed_rooms, state.room_valves)
+	if int(result.schema_version) >= 3: result["room_valves"] = state.room_valves.duplicate(true)
 	for field in ["volumes", "airlocks", "sensors"]:
 		for id in _sorted_ids(state[field]): result[field].append(state[field][id].to_record())
 	return result
@@ -439,6 +439,15 @@ func prepare_room_change(context: AuthenticatedCommandContext, request: String, 
 		record.volumes.append(PressureVolumeState.new(StringName(id), room_volume, ambient.temperature_kelvin, moles).to_record())
 		record.sensors.append(PressureSensorState.new(StringName("%s-sensor" % id), StringName(id)).to_record())
 		record.constructed_rooms[id] = {"schema_version": 1, "policy_id": ConstructedRoomPressure.POLICY, "volume_id": id, "sensor_id": "%s-sensor" % id, "principal_id": String(context.principal_id), "body_id": body, "world_id": String(context.world_id), "region_id": String(context.region_id), "door_id": door_id, "geometry": geometry}
+		if production.get("room_reinforcements", {}).has(door_id):
+			record.constructed_rooms[id].schema_version = 2
+			record.constructed_rooms[id].policy_id = PaidRoomReinforcement.POLICY
+	elif operation == "door_reinforcement_install":
+		if record.constructed_rooms.size() != 1 or not production.get("room_reinforcements", {}).has(door_id): return ConstructedRoomPressure.denied()
+		var room: Dictionary = record.constructed_rooms.values()[0]
+		if room.door_id != door_id or room.principal_id != String(context.principal_id) or room.policy_id != ConstructedRoomPressure.POLICY: return ConstructedRoomPressure.denied()
+		room.schema_version = 2
+		room.policy_id = PaidRoomReinforcement.POLICY
 	elif operation == "door_room_decommission":
 		if constructed_rooms.size() != 1: return ConstructedRoomPressure.denied()
 		var room: Dictionary = constructed_rooms.values()[0]
@@ -467,8 +476,8 @@ func prepare_room_change(context: AuthenticatedCommandContext, request: String, 
 	elif operation in ["door_room_commission", "door_bypass_install"] and production.get("room_bypasses", {}).has(door_id): next_valves[door_id] = false
 	elif operation in ["door_bypass_open", "door_bypass_close"]: next_valves[door_id] = operation == "door_bypass_open"
 	record.erase("room_valves")
-	record.schema_version = 2 if next_valves.is_empty() else 3
-	if not next_valves.is_empty(): record["room_valves"] = next_valves
+	record.schema_version = _room_snapshot_version(record.constructed_rooms, next_valves)
+	if int(record.schema_version) >= 3: record["room_valves"] = next_valves
 	var decoded: ServiceResult = _decode_snapshot_record(record, tick)
 	if not decoded.is_success: return decoded
 	var before_moles: float = 0.0
@@ -486,7 +495,7 @@ func room_observation(door_id: String) -> Dictionary:
 		var ambient: PressureVolumeState = volumes[PROTOTYPE_HABITAT_ID]
 		var device: AccessControlledDeviceState = _room_access.devices.get(StringName(door_id))
 		var actuator: ActuatorState = device.actuator(PaidDoorConstruction.actuator_id(door_id)) if device != null else null
-		return {"volume_m3": volume.volume_m3, "pressure_kpa": volume.pressure_kpa(), "ambient_pressure_kpa": ambient.pressure_kpa(), "leaking": not ConstructedRoomPressure.retained(actuator, room_difference(door_id))}
+		return {"volume_m3": volume.volume_m3, "pressure_kpa": volume.pressure_kpa(), "ambient_pressure_kpa": ambient.pressure_kpa(), "leaking": not ConstructedRoomPressure.retained(actuator, room_difference(door_id), room.policy_id == PaidRoomReinforcement.POLICY)}
 	return {}
 
 
@@ -503,7 +512,7 @@ func _step_constructed_room(delta: float) -> void:
 	for room in constructed_rooms.values():
 		var device: AccessControlledDeviceState = _room_access.devices[StringName(room.door_id)]
 		# Equal conductances: max(leak, valve), never additive or faster above rating.
-		if room_valve_open(room.door_id) or not ConstructedRoomPressure.retained(device.actuator(PaidDoorConstruction.actuator_id(room.door_id)), room_difference(room.door_id)):
+		if room_valve_open(room.door_id) or not ConstructedRoomPressure.retained(device.actuator(PaidDoorConstruction.actuator_id(room.door_id)), room_difference(room.door_id), room.policy_id == PaidRoomReinforcement.POLICY):
 			_step_transfer(StringName(room.volume_id), PROTOTYPE_HABITAT_ID, ConstructedRoomPressure.CONDUCTANCE, delta)
 
 
@@ -577,3 +586,9 @@ func _create_prototype_state() -> void:
 		PROTOTYPE_EXTERIOR_ID
 	)
 	airlocks[airlock.airlock_id] = airlock
+
+
+static func _room_snapshot_version(rooms: Dictionary, valves: Dictionary) -> int:
+	for room in rooms.values():
+		if room.policy_id == PaidRoomReinforcement.POLICY: return 4
+	return 2 if valves.is_empty() else 3

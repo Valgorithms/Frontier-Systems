@@ -2,7 +2,7 @@ extends "res://tests/godot/paid_door_lifecycle_test.gd"
 
 ## Same commissioning factory as actual playable host; no sockets or seed edits.
 func run() -> void:
-	world = FirstPlayableBootstrap.create_playable_world()
+	world = FirstPlayableBootstrap.create_playable_world(false)
 	root.add_child(world)
 	world.command_completed.connect(func(_command: SimulationCommand, result: ServiceResult) -> void: last = result)
 	check(world.start_simulation().is_success, "real playable initialization starts")
@@ -193,7 +193,7 @@ func check_extractor_wear() -> void:
 
 ## Restore admission is deliberately pre-start; resume in a fresh composition root.
 func reload_playable(snapshot: String, label: String) -> void:
-	var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world()
+	var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world(false)
 	root.add_child(target)
 	var restored: ServiceResult = target.restore_world_snapshot_json(snapshot)
 	check(restored.is_success, "%s: %s" % [label, restored.message])
@@ -231,7 +231,7 @@ func constrained_extraction_checks(snapshot: String) -> void:
 			state.cargo["resource-canister-2"]["ore.iron"] += 1000000
 		else:
 			state.energy_joules = 249
-		var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world()
+		var target: WorldRuntime = FirstPlayableBootstrap.create_playable_world(false)
 		root.add_child(target)
 		var restored: ServiceResult = target.restore_world_snapshot_json(JSON.stringify(candidate))
 		check(restored.is_success, "isolated %s negative fixture validates: %s" % [constraint, restored.message])

@@ -122,14 +122,19 @@ static func plan(state: Dictionary, inventory: InventorySimulationSystem, access
 		var actuator: ActuatorState = device.actuator(actuator_id(id))
 		if pressure != null and pressure.room_area(id) > 0.0 and operation in ["door_remove", "door_seal_install", "door_seal_remove"]: return failure("Decommission the pressure compartment before changing its paid boundary.")
 		if operation == "door_remove":
+			if state.get("room_reinforcements", {}).has(id): return failure("Recover the paid reinforcement before removing its door.")
 			if state.get("room_bypasses", {}).has(id): return failure("Recover the paid bypass before removing its door.")
 			if not door["seal"].is_empty(): return failure("Remove the installed seal before disassembling the door.")
 			if actuator.position != 0.0 or not device.bypass_jobs.is_empty() or not device.tamper_events.is_empty() or actuator.override_actor_id != &"": return failure("Close the door and clear foreign work before recovery.")
 			if ProductionSimulationSystem._mass(state["store"]) + ProductionSimulationSystem._reserved_mass(state) + PaidDoorGeometry.MASS > ProductionSimulationSystem.MAX_MASS: return failure("Receiving stock capacity is unavailable.")
 			state["store"]["plate"] += PaidDoorGeometry.MASS
 		elif operation in ["door_seal_install", "door_seal_remove"]:
+			if state.get("room_reinforcements", {}).has(id): return failure("Recover the reinforcement before changing its linked original seal.")
 			var seal_change: ServiceResult = PaidDoorSeal.plan(state, door, actuator, device, inventory, context, request, operation)
 			if not seal_change.is_success: return seal_change
+		elif operation in PaidRoomReinforcement.OPERATIONS:
+			var reinforcement: ServiceResult = PaidRoomReinforcement.plan(state, id, actuator, device, inventory, context, request, operation, pressure)
+			if not reinforcement.is_success: return reinforcement
 		elif operation in PaidRoomBypass.OPERATIONS:
 			var bypass: ServiceResult = PaidRoomBypass.plan(state, id, actuator, device, inventory, context, request, operation, pressure)
 			if not bypass.is_success: return bypass
