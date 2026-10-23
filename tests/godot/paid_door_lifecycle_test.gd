@@ -277,8 +277,12 @@ func seal_checks() -> void:
 	emitted.store_string(JSON.stringify({"persistent": production.capture_snapshot().value, "observation": production.observation(context).value})); emitted.close()
 	var legacy_observed: Dictionary = production.observation(context).value
 	legacy_observed.schema_version = 11; legacy_observed.paid_doors.schema_version = 1
-	for d in legacy_observed.paid_doors.doors: d.erase("seal_installed"); d.erase("seal_condition")
+	for d in legacy_observed.paid_doors.doors: d.erase("seal_installed"); d.erase("seal_condition"); d.erase("pressure_room")
 	check(WorkstationResourceView.valid(legacy_observed), "legacy v11/v1 door observation still decodes")
+	legacy_observed = production.observation(context).value
+	legacy_observed.schema_version = 12; legacy_observed.paid_doors.schema_version = 2
+	for d in legacy_observed.paid_doors.doors: d.erase("pressure_room")
+	check(WorkstationResourceView.valid(legacy_observed), "legacy v12/v2 seal observation still decodes")
 	for condition in [0.25, 0.0]:
 		a = access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)); a.seal_condition = condition
 		door_command("door_seal_remove", intent)

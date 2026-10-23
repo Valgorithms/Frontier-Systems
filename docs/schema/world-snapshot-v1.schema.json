@@ -20,7 +20,10 @@
           { "$ref": "urn:frontier-systems:schema:terrain-system:v3" }
         ] },
         "tools": { "$ref": "urn:frontier-systems:schema:tool-system:v1" },
-        "pressure": { "$ref": "#/$defs/pressureSystem" },
+        "pressure": { "oneOf": [
+          { "$ref": "#/$defs/pressureSystem" },
+          { "$ref": "urn:frontier-systems:schema:pressure-system:v2" }
+        ] },
         "production": { "oneOf": [
           { "$ref": "urn:frontier-systems:schema:production-system:v1" },
           { "$ref": "urn:frontier-systems:schema:production-system:v2" },

@@ -1,6 +1,9 @@
 extends "res://tests/godot/paid_door_lifecycle_test.gd"
 
-func run() -> void:
+var claims: int
+
+
+func build_enclosure() -> void:
 	world = WorldRuntime.new()
 	world.resource_carriers_enabled = true
 	root.add_child(world)
@@ -53,7 +56,7 @@ func run() -> void:
 	if failures: finish(); return
 	command("canister_reserve", {"job_id": "opening-reservation", "expected_reservation_revision": production.capture_snapshot().value.construction.revision, "control_epoch": 0})
 	if failures: finish(); return
-	var claims: int = ConstructionReservationPlan.claimed(production.capture_snapshot().value.construction)
+	claims = ConstructionReservationPlan.claimed(production.capture_snapshot().value.construction)
 	check(claims == 1000000, "one kg live raw iron claim")
 	if failures: finish(); return
 	if failures: finish(); return
@@ -86,6 +89,11 @@ func run() -> void:
 	command("panel_build", {"kind": "floor", "bounds_millimetres": [4100, 5100, -4500, -3500], "height_millimetres": 0})
 	if failures: finish(); return
 	door_command("door_build", {"position": [5050, 0, -4000], "quarter_turn": 1})
+	if failures: finish(); return
+
+
+func run() -> void:
+	build_enclosure()
 	if failures: finish(); return
 	var state: Dictionary = production.capture_snapshot().value
 	check(state.store.plate == 2400000 and state.store.iron == 1000000 and ConstructionReservationPlan.claimed(state.construction) == claims, "exact 7.6kg paid build debit preserves one kg iron claim")

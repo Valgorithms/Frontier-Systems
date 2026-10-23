@@ -36,11 +36,11 @@ func configure(world: WorldRuntime) -> void:
 	_details.add_child(_doors)
 	_doors.item_selected.connect(func(index: int) -> void: _selected = _doors.get_item_metadata(index))
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_status.text = "Requires a paid 1 m square floor under the full swing. Stand outside the swing, within 1.5 m of the frame. Equip a usable crowbar to move it. Fit/rework seal: 0.2 kg plate and usable crowbar. No pressure boundary."
+	_status.text = "Requires a paid floor under the full swing. Stand outside the swing within 1.5 m, with a usable crowbar. Seal: 0.2 kg plate. Commission one complete habitat enclosure for finite pressure service; open before decommissioning."
 	_details.add_child(_status)
-	for operation in ["door_build", "door_open", "door_close", "door_remove", "door_seal_install", "door_seal_remove"]:
+	for operation in ["door_build", "door_open", "door_close", "door_remove", "door_seal_install", "door_seal_remove", "door_room_commission", "door_room_decommission"]:
 		var button := Button.new()
-		button.text = {"door_seal_install": "Fit/rework seal: 0.2 kg plate", "door_seal_remove": "Remove seal: recover 0.2 kg plate", "door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
+		button.text = {"door_room_commission": "Commission habitat compartment", "door_room_decommission": "Decommission open compartment", "door_seal_install": "Fit/rework seal: 0.2 kg plate", "door_seal_remove": "Remove seal: recover 0.2 kg plate", "door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
 		button.disabled = true
 		button.pressed.connect(_send.bind(operation))
 		_details.add_child(button)
@@ -64,7 +64,7 @@ func _process(delta: float) -> void:
 	var context := AuthenticatedCommandContext.for_local_development(&"local-inventory-actor", _world.world_id, _world.region_id)
 	var observed: ServiceResult = _world.production_observation(context)
 	_record.clear()
-	if observed.is_success and observed.value.get("schema_version") == 12 and WorkstationResourceView.valid(observed.value): _record = observed.value
+	if observed.is_success and ControlContractValidation.is_integer(observed.value.get("schema_version"), 12, 13) and WorkstationResourceView.valid(observed.value): _record = observed.value
 	_doors.clear()
 	for door in _record.get("paid_doors", {}).get("doors", []):
 		_doors.add_item("%s: %s; %s" % [String(door.door_id).right(8), "open" if door.opened else "closed", seal_text(door)])
@@ -91,6 +91,9 @@ func _send(operation: String) -> void:
 
 
 static func seal_text(door: Dictionary) -> String:
+	if not door.get("pressure_room", {}).is_empty():
+		var room: Dictionary = door.pressure_room
+		return "%.2f m3, %.3f kPa (surroundings %.3f): %s" % [room.volume_m3, room.pressure_kpa, room.ambient_pressure_kpa, "leaking" if room.leaking else "retaining pressure"]
 	if not door.seal_installed: return "seal absent"
 	if door.seal_condition == 0.0: return "seal failed (0%)"
 	if door.seal_condition < 1.0: return "seal degraded (%.0f%%)" % (door.seal_condition * 100.0)

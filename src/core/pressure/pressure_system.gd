@@ -1,10 +1,10 @@
-extends SimulationSystem
+extends PressureRoomOwner
 class_name PressureSystem
 
 ## First isothermal gas network and airlock example for the world simulation.
 
 const SYSTEM_ID: StringName = &"pressure"
-const SNAPSHOT_SCHEMA_VERSION: int = 1
+const SNAPSHOT_SCHEMA_VERSION: int = 2
 const PROTOTYPE_TEMPERATURE_K: float = 293.15
 const PROTOTYPE_HABITAT_ID: StringName = &"habitat_main"
 const PROTOTYPE_CHAMBER_ID: StringName = &"airlock_chamber"
@@ -14,6 +14,11 @@ var volumes: Dictionary = {}
 var airlocks: Dictionary = {}
 var sensors: Dictionary = {}
 var total_transferred_moles: float = 0.0
+var constructed_rooms: Dictionary = {}
+var _room_production: ProductionSimulationSystem
+var _room_access: AccessControlSystem
+var _room_world: StringName
+var _room_region: StringName
 
 
 func _init() -> void:
@@ -39,11 +44,12 @@ func simulate_tick(_tick_number: int, fixed_delta: float) -> void:
 				airlock.vent_conductance_mol_per_second_kpa,
 				fixed_delta
 			)
+	_step_constructed_room(fixed_delta)
 	_sample_sensors(_tick_number)
 
 
 func profiling_counters() -> Dictionary:
-	return {"volumes": volumes.size(), "airlocks": airlocks.size(), "sensors": sensors.size(), "total_transferred_moles": total_transferred_moles}
+	return {"volumes": volumes.size(), "airlocks": airlocks.size(), "sensors": sensors.size(), "constructed_rooms": constructed_rooms.size(), "total_transferred_moles": total_transferred_moles}
 
 
 func validate_airlock_action(airlock_id: StringName, action: int) -> ServiceResult:
@@ -153,6 +159,7 @@ func capture_snapshot() -> ServiceResult:
 		"airlocks": airlock_records,
 		"sensors": sensor_records,
 		"total_transferred_moles": total_transferred_moles,
+		"constructed_rooms": constructed_rooms.duplicate(true),
 	})
 
 
@@ -167,12 +174,20 @@ func restore_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> S
 	var decoded: ServiceResult = _decode_snapshot_record(record, snapshot_tick_number)
 	if not decoded.is_success:
 		return decoded
-	var state: Dictionary = decoded.value
+	if _room_production != null:
+		var links: ServiceResult = _room_production.validate_pressure_restore(record, snapshot_tick_number)
+		if not links.is_success: return links
+	install_prepared_room_state(decoded.value)
+	return ServiceResult.success()
+
+
+## Only decoded, prevalidated server candidates reach this non-yielding write.
+func install_prepared_room_state(state: Dictionary) -> void:
 	volumes = state["volumes"]
 	airlocks = state["airlocks"]
 	sensors = state["sensors"]
 	total_transferred_moles = state["total_transferred_moles"]
-	return ServiceResult.success()
+	constructed_rooms = state["constructed_rooms"]
 
 
 func _step_transfer(first_id: StringName, second_id: StringName, conductance: float, delta_seconds: float) -> void:
@@ -217,8 +232,12 @@ func _sample_sensors(tick_number: int) -> void:
 
 
 func _decode_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> ServiceResult:
-	if typeof(record.get("schema_version")) != TYPE_INT or record["schema_version"] != SNAPSHOT_SCHEMA_VERSION:
+	if typeof(record.get("schema_version")) != TYPE_INT or record["schema_version"] not in [1, SNAPSHOT_SCHEMA_VERSION]:
 		return ServiceResult.failure(&"unsupported_pressure_system_version", "The pressure-system record version is not supported.")
+	var rooms: Variant = record.get("constructed_rooms", {})
+	var fields := PackedStringArray(["schema_version", "volumes", "airlocks", "sensors", "total_transferred_moles"])
+	if record.schema_version == 2: fields.append("constructed_rooms")
+	if not ControlContractValidation.has_exact_fields(record, fields) or typeof(rooms) != TYPE_DICTIONARY or rooms.size() > 1: return ConstructedRoomPressure.denied()
 	var volume_values: Variant = record.get("volumes")
 	var airlock_values: Variant = record.get("airlocks")
 	var sensor_values: Variant = record.get("sensors")
@@ -307,12 +326,147 @@ func _decode_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> S
 		if not _has_sensor_for_volume(decoded_sensors, airlock.exterior_volume_id):
 			return ServiceResult.failure(&"airlock_sensor_missing", "Every airlock volume must have a pressure sensor.")
 
+	for id in rooms:
+		var room: Variant = rooms[id]
+		if not ConstructedRoomPressure.valid_room(room) or room.volume_id != id or not decoded_volumes.has(StringName(id)) or not decoded_sensors.has(StringName(room.sensor_id)): return ConstructedRoomPressure.denied()
+		if _room_production != null and (room.world_id != String(_room_world) or room.region_id != String(_room_region)): return ConstructedRoomPressure.denied()
+		var room_volume: PressureVolumeState = decoded_volumes[StringName(id)]
+		var ambient: PressureVolumeState = decoded_volumes.get(PROTOTYPE_HABITAT_ID)
+		var sensor: PressureSensorState = decoded_sensors[StringName(room.sensor_id)]
+		if ambient == null or sensor.volume_id != StringName(id) or absf(room_volume.volume_m3 - float(ConstructedRoomPressure.assess(room.geometry).value)) > 1e-9 or room_volume.temperature_kelvin != ambient.temperature_kelvin or absf(ambient.volume_m3 + room_volume.volume_m3 - ConstructedRoomPressure.HABITAT_VOLUME) > 1e-9 or ambient.volume_m3 < 1.0: return ConstructedRoomPressure.denied()
+	for id in decoded_volumes:
+		if String(id).begins_with("constructed-room-") and not rooms.has(String(id)): return ConstructedRoomPressure.denied()
+	for id in decoded_sensors:
+		if not String(id).begins_with("constructed-room-"): continue
+		var linked: bool = false
+		for room in rooms.values():
+			if room.sensor_id == String(id): linked = true
+		if not linked: return ConstructedRoomPressure.denied()
+	# Roomless legacy networks retain their original finite volumes. Only explicit
+	# commissioning (and a persisted commissioned allocation) requires 1000 m3.
 	return ServiceResult.success({
 		"volumes": decoded_volumes,
 		"airlocks": decoded_airlocks,
 		"sensors": decoded_sensors,
 		"total_transferred_moles": float(transferred_value),
+		"constructed_rooms": rooms.duplicate(true),
 	})
+
+
+func bind_room_owners(production: Node, access: Node, world: StringName, region: StringName) -> ServiceResult:
+	if _room_production != null or production == null or access == null: return ConstructedRoomPressure.denied()
+	# The abstract boundary must not load concrete owners. Its implementation
+	# admits only these exact server scripts before retaining typed owner refs.
+	if production.get_script() != load("res://src/core/production/production_simulation_system.gd") or access.get_script() != load("res://src/core/access/access_control_system.gd"): return ConstructedRoomPressure.denied()
+	_room_production = production as ProductionSimulationSystem
+	_room_access = access as AccessControlSystem
+	_room_world = world
+	_room_region = region
+	return ServiceResult.success()
+
+
+func room_area(door_id: String) -> float:
+	for room in constructed_rooms.values():
+		if room.door_id == door_id: return ConstructedRoomPressure.AREA
+	return 0.0
+
+
+func room_difference(door_id: String) -> float:
+	for room in constructed_rooms.values():
+		if room.door_id == door_id:
+			return absf((volumes[StringName(room.volume_id)] as PressureVolumeState).pressure_kpa() - (volumes[PROTOTYPE_HABITAT_ID] as PressureVolumeState).pressure_kpa())
+	return 0.0
+
+
+func validate_room_links(production: Dictionary, access: Dictionary, pressure_record: Dictionary = {}, tick: int = 0, inventory: Dictionary = {}) -> ServiceResult:
+	var rooms: Dictionary = constructed_rooms
+	if not pressure_record.is_empty():
+		var decoded: ServiceResult = _decode_snapshot_record(pressure_record, tick)
+		if not decoded.is_success: return decoded
+		rooms = decoded.value.constructed_rooms
+	return ConstructedRoomPressure.validate_links(rooms, production, access, inventory)
+
+
+func record_from_prepared(state: Dictionary) -> Dictionary:
+	var result: Dictionary = {"schema_version": 2, "volumes": [], "airlocks": [], "sensors": [], "total_transferred_moles": state.total_transferred_moles, "constructed_rooms": state.constructed_rooms.duplicate(true)}
+	for field in ["volumes", "airlocks", "sensors"]:
+		for id in _sorted_ids(state[field]): result[field].append(state[field][id].to_record())
+	return result
+
+
+func prepare_room_change(context: AuthenticatedCommandContext, request: String, operation: String, door_id: String, production: Dictionary, tick: int) -> ServiceResult:
+	if context == null or not context.is_valid_for(_room_world, _room_region) or _room_region != &"local-habitat": return ConstructedRoomPressure.denied()
+	var captured: ServiceResult = capture_snapshot()
+	if not captured.is_success: return captured
+	var record: Dictionary = captured.value.duplicate(true)
+	var ambient: Dictionary = {}
+	for volume in record.volumes:
+		if volume.volume_id == String(PROTOTYPE_HABITAT_ID): ambient = volume
+	if ambient.is_empty() or ambient.temperature_kelvin != PROTOTYPE_TEMPERATURE_K: return ConstructedRoomPressure.denied()
+	if operation == "door_room_commission":
+		if not constructed_rooms.is_empty() or absf(float(ambient.volume_m3) - ConstructedRoomPressure.HABITAT_VOLUME) > 1e-9: return ConstructedRoomPressure.denied()
+		var body: String = production.doors[door_id].body_id
+		var geometry: Dictionary = ConstructedRoomPressure.geometry(production, String(context.principal_id), body)
+		var assessed: ServiceResult = ConstructedRoomPressure.assess(geometry)
+		if not assessed.is_success or not geometry.doors.has(door_id): return ConstructedRoomPressure.denied()
+		var id: String = "constructed-room-%s" % JSON.stringify([String(context.principal_id), request]).sha256_text().substr(0, 32)
+		if volumes.has(StringName(id)) or sensors.has(StringName("%s-sensor" % id)): return ConstructedRoomPressure.denied()
+		var room_volume: float = assessed.value
+		var moles: float = float(ambient.gas_moles) * (room_volume / float(ambient.volume_m3))
+		ambient.gas_moles -= moles
+		ambient.volume_m3 -= room_volume
+		record.volumes.append(PressureVolumeState.new(StringName(id), room_volume, ambient.temperature_kelvin, moles).to_record())
+		record.sensors.append(PressureSensorState.new(StringName("%s-sensor" % id), StringName(id)).to_record())
+		record.constructed_rooms[id] = {"schema_version": 1, "policy_id": ConstructedRoomPressure.POLICY, "volume_id": id, "sensor_id": "%s-sensor" % id, "principal_id": String(context.principal_id), "body_id": body, "world_id": String(context.world_id), "region_id": String(context.region_id), "door_id": door_id, "geometry": geometry}
+	elif operation == "door_room_decommission":
+		if constructed_rooms.size() != 1: return ConstructedRoomPressure.denied()
+		var room: Dictionary = constructed_rooms.values()[0]
+		if room.door_id != door_id or room.principal_id != String(context.principal_id): return ConstructedRoomPressure.denied()
+		for volume in record.volumes:
+			if volume.volume_id == room.volume_id:
+				ambient.gas_moles += volume.gas_moles
+				ambient.volume_m3 += volume.volume_m3
+		var remaining_volumes: Array = []
+		for volume in record.volumes:
+			if volume.volume_id != room.volume_id: remaining_volumes.append(volume)
+		var remaining_sensors: Array = []
+		for sensor in record.sensors:
+			if sensor.sensor_id != room.sensor_id: remaining_sensors.append(sensor)
+		record.volumes = remaining_volumes
+		record.sensors = remaining_sensors
+		record.constructed_rooms.clear()
+	else: return ConstructedRoomPressure.denied()
+	var decoded: ServiceResult = _decode_snapshot_record(record, tick)
+	if not decoded.is_success: return decoded
+	var before_moles: float = 0.0
+	var after_moles: float = 0.0
+	for volume in captured.value.volumes: before_moles += float(volume.gas_moles)
+	for volume in record.volumes: after_moles += float(volume.gas_moles)
+	if not is_finite(before_moles) or not is_finite(after_moles) or absf(before_moles - after_moles) > maxf(1e-9, before_moles * 1e-12): return ConstructedRoomPressure.denied()
+	return ServiceResult.success({"before": captured.value, "after": decoded.value})
+
+
+func room_observation(door_id: String) -> Dictionary:
+	for room in constructed_rooms.values():
+		if room.door_id != door_id: continue
+		var volume: PressureVolumeState = volumes[StringName(room.volume_id)]
+		var ambient: PressureVolumeState = volumes[PROTOTYPE_HABITAT_ID]
+		var device: AccessControlledDeviceState = _room_access.devices.get(StringName(door_id))
+		var actuator: ActuatorState = device.actuator(PaidDoorConstruction.actuator_id(door_id)) if device != null else null
+		return {"volume_m3": volume.volume_m3, "pressure_kpa": volume.pressure_kpa(), "ambient_pressure_kpa": ambient.pressure_kpa(), "leaking": not ConstructedRoomPressure.retained(actuator, room_difference(door_id))}
+	return {}
+
+
+func _step_constructed_room(delta: float) -> void:
+	if constructed_rooms.is_empty(): return
+	# Broken links stop flow, never erase gas or guess another ambient endpoint.
+	if _room_production == null or _room_access == null: return
+	var access: ServiceResult = _room_access.capture_snapshot()
+	if not access.is_success or not validate_room_links(_room_production._state, access.value).is_success: return
+	for room in constructed_rooms.values():
+		var device: AccessControlledDeviceState = _room_access.devices[StringName(room.door_id)]
+		if not ConstructedRoomPressure.retained(device.actuator(PaidDoorConstruction.actuator_id(room.door_id)), room_difference(room.door_id)):
+			_step_transfer(StringName(room.volume_id), PROTOTYPE_HABITAT_ID, ConstructedRoomPressure.CONDUCTANCE, delta)
 
 
 func _sorted_ids(values: Dictionary) -> Array:

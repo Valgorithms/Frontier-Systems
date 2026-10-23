@@ -13,7 +13,7 @@ def validator(name):
     Draft202012Validator.check_schema(s)
     return Draft202012Validator(s, registry=registry)
 f = json.loads((ROOT / "var/paid-door-fixture.json").read_text())
-for field, name in [("persistent", "production-system:v11"), ("legacy", "production-system:v9"), ("observation", "production-observation:v12"), ("contact", "door-contact:v1")]:
+for field, name in [("persistent", "production-system:v11"), ("legacy", "production-system:v9"), ("observation", "production-observation:v13"), ("contact", "door-contact:v1")]:
     validator(name).validate(f[field])
 for field, value in [("materials", {"plate": 0}), ("body_id", ""), ("quarter_turn", 2), ("position", [0, 50, 0]), ("blueprint_revision", 2)]:
     bad = deepcopy(f["persistent"])
@@ -30,7 +30,7 @@ print("Paid door schemas: emitted save/legacy/observation/contact, five malforme
 
 seal_fixture = json.loads((ROOT / "var/paid-door-seal-fixture.json").read_text())
 validator("production-system:v11").validate(seal_fixture["persistent"])
-validator("production-observation:v12").validate(seal_fixture["observation"])
+validator("production-observation:v13").validate(seal_fixture["observation"])
 for field, value in [("materials", {"plate": 0}), ("blueprint_revision", True), ("materials", {"plate": 200000.5}), ("seal_id", "forged")]:
     bad = deepcopy(seal_fixture["persistent"])
     next(iter(bad["doors"].values()))["seal"][field] = value

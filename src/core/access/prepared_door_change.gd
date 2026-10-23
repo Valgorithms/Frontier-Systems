@@ -9,6 +9,9 @@ var _before: Dictionary
 var _after: Dictionary
 var _remove: bool
 var _consumed: bool = false
+var pressure_owner: PressureRoomOwner
+var pressure_before: Dictionary = {}
+var pressure_after: Dictionary = {}
 
 
 func _init(owner: AccessControlSystem, id: StringName, previous: AccessControlledDeviceState, after: Dictionary, remove: bool) -> void:
@@ -24,16 +27,23 @@ func _init(owner: AccessControlSystem, id: StringName, previous: AccessControlle
 func commit(owner: AccessControlSystem) -> ServiceResult:
 	if _consumed or owner != _owner: return denied()
 	_consumed = true
+	if pressure_owner != null:
+		var captured: ServiceResult = pressure_owner.capture_snapshot()
+		if not captured.is_success or captured.value != pressure_before: return denied()
 	var live: AccessControlledDeviceState = owner.devices.get(_id)
 	if live != _previous or (live != null and live.to_record() != _before): return denied()
 	if live == null and owner.devices.size() >= AccessControlSystem.MAX_DEVICES: return denied()
+	var parsed: ServiceResult
+	if not _remove:
+		parsed = AccessControlledDeviceState.from_record(_after)
+		if not parsed.is_success or parsed.value.device_id != _id: return denied()
 	if _remove:
 		if live == null: return denied()
 		owner.devices.erase(_id)
 	else:
-		var parsed: ServiceResult = AccessControlledDeviceState.from_record(_after)
-		if not parsed.is_success or parsed.value.device_id != _id: return denied()
 		owner.devices[_id] = parsed.value
+	# All decoding/CAS/capacity work precedes the first write. No callbacks/yield.
+	if pressure_owner != null and not pressure_after.is_empty(): pressure_owner.install_prepared_room_state(pressure_after)
 	return ServiceResult.success()
 
 
