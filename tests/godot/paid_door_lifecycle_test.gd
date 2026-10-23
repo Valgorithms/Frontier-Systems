@@ -89,7 +89,9 @@ func run() -> void:
 	door_command("door_build", pose, false)
 	door_command("door_open", {"door_id": door_id}, false)
 	check(not crowbar.is_empty(), "real fabricated crowbar available")
-	if not crowbar.is_empty(): equip(crowbar)
+	if crowbar.is_empty(): finish(); return
+	equip(crowbar)
+	if not last.is_success: finish(); return
 	await authority_and_contact_checks()
 	door_command("door_open", {"door_id": door_id})
 	check(access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).position == 1.0, "existing Access actuator owns manual position")
@@ -170,15 +172,21 @@ func door_command(operation: String, payload: Dictionary, success: bool = true) 
 
 
 func equip(item: String) -> void:
-	var action := InventoryDevelopmentCommand.new()
-	sequence += 1
-	action.command_id = StringName("door-equip-%d" % sequence)
-	action.authenticated_context = context
-	action.operation = "self"
-	action.payload = {"operation": "equip", "item_id": item, "source_container_id": "body.human-1", "destination_container_id": "body.human-1", "slot_id": "hand.left", "expected_revision": inventory.capture_snapshot().value["owner"]["state_revision"]}
-	world.enqueue_command(action)
-	step()
-	check(last.is_success, "equip actual fabricated crowbar")
+	var actor: ServiceResult = inventory.authorize(context, true)
+	check(actor.is_success, "resolve actual actor body for fabricated crowbar")
+	if not actor.is_success: return
+	for operation in ["equip", "select_hand"]:
+		var action := InventoryDevelopmentCommand.new()
+		sequence += 1
+		action.command_id = StringName("door-equip-%d" % sequence)
+		action.authenticated_context = context
+		action.operation = "self"
+		action.payload = {"operation": operation, "item_id": item if operation == "equip" else "", "source_container_id": actor.value if operation == "equip" else "", "destination_container_id": "", "slot_id": "hand.left", "expected_revision": inventory.own_inventory_observation(context, true).value.inventory_revision}
+		world.enqueue_command(action)
+		step()
+		check(last.is_success, "actual fabricated crowbar %s: %s" % [operation, last.message])
+		if not last.is_success: return
+	check(inventory.active_tool(context, "tool.crowbar").is_success, "actual fabricated crowbar supplies active Tools capability")
 
 
 func connect_door_peer(peer: int, slot: int) -> void:
