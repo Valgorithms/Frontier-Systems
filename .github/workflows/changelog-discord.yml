@@ -23,6 +23,7 @@ permissions:
 concurrency:
   group: discord-player-changelog
   cancel-in-progress: false
+  queue: max
 jobs:
   publish:
     if: github.repository == 'Valgorithms/Frontier-Systems' && github.ref == 'refs/heads/dev-master'

@@ -15,3 +15,11 @@
 ## Requirement or design reference
 
 <!-- Link the issue, design section, or project requirement this PR addresses. -->
+
+## Changelog
+
+<!-- Optional: one concise reviewed change on the SAME line below, outside this comment.
+Blank/missing means no Discord post. Do not use TODO/required or add a second field.
+Merge announcements do not establish deployment. Use one announcement route per change.
+See docs/community/github-changelog-discord.md. -->
+Changelog:
