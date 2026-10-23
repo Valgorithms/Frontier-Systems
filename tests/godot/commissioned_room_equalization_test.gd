@@ -191,7 +191,7 @@ func overrating_rejection_controls(snapshot: String) -> void:
 		var actor := AuthenticatedCommandContext.for_local_development(&"local-inventory-target", target.world_id, target.region_id)
 		var before: Dictionary = owner.capture_snapshot().value
 		var rejected: ServiceResult = owner.apply_local(actor, "overrating-door-reject", "door_open", {"door_id": door_id, "control_epoch": 0, "expected_revision": before.state_revision}, int(bad.tick_number) + 1)
-		check(not rejected.is_success and not rejected.message.contains("fresh fixed tick") and owner.capture_snapshot().value == before, "real1000N force guard rejects0.6kPa with valve open or closed: " + rejected.message)
+		check(not rejected.is_success and rejected.error_code == &"actuator_force_exceeded" and owner.capture_snapshot().value == before, "real1000N force guard rejects0.6kPa with valve open or closed: " + rejected.message)
 		check(target.start_simulation().is_success, "start isolated overrating control")
 		var clock: SimulationRunner = target.get_node("SimulationRunner")
 		clock.set_physics_process(false); clock._physics_process(1.0 / 60.0)
