@@ -32,7 +32,7 @@ func _run() -> void:
 	legacy["systems"]["production"].erase("walls")
 	legacy["systems"]["production"].erase("machinery")
 	legacy["systems"]["production"].erase("loose_parts")
-	for field in ["construction", "construction_bindings", "construction_commands"]: legacy["systems"]["production"].erase(field)
+	for field in ["panels", "construction", "construction_bindings", "construction_commands"]: legacy["systems"]["production"].erase(field)
 	legacy["systems"]["production"]["schema_version"] = 2
 	legacy["systems"]["production"].erase("structures")
 	var clone := WorldRuntime.new()

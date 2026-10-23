@@ -9,7 +9,7 @@ paths = list((ROOT / "docs/schema").glob("*.schema.json"))
 schemas = [json.loads(p.read_text(encoding="utf-8-sig")) for p in paths]
 registry = Registry().with_resources([(s["$id"], Resource.from_contents(s)) for s in schemas if "$id" in s] + [(p.name, Resource.from_contents(s)) for p, s in zip(paths, schemas)])
 validators = {}
-for name in ("production-observation:v7", "production-observation:v9", "production-system:v7", "production-system:v8"):
+for name in ("production-observation:v7", "production-observation:v9", "production-system:v7", "production-system:v9"):
     schema = next(s for s in schemas if s.get("$id") == "urn:frontier-systems:schema:" + name)
     Draft202012Validator.check_schema(schema)
     validators[name] = Draft202012Validator(schema, registry=registry)
@@ -20,7 +20,7 @@ for key in ("current", "alternate"):
     assert set(requirements) == set(fixture[key]["recipes"])
     assert all(sum(r["inputs"].values()) <= 100000000 for r in requirements.values())
 validators["production-observation:v7"].validate(fixture["legacy"])
-validators["production-system:v8"].validate(fixture["persistent"])
+validators["production-system:v9"].validate(fixture["persistent"])
 assert not validators["production-observation:v7"].is_valid(fixture["current"])
 assert not validators["production-system:v7"].is_valid(fixture["current"])
 assert not validators["production-observation:v9"].is_valid(fixture["legacy"])
@@ -32,4 +32,4 @@ for invalid in fixture["malformed"]:
     # Dynamic key equality and total input mass are explicit runtime constraints.
     requirements = invalid["recipe_requirements"]
     assert set(requirements) != set(invalid["recipes"]) or any(sum(r["inputs"].values()) > 100000000 for r in requirements.values())
-print(f"Recipe schemas: real v9/alternate, legacy v7, persistent v8 and {schema_rejections} schema plus {len(fixture['malformed']) - schema_rejections} semantic rejections passed.")
+print(f"Recipe schemas: real v9/alternate, legacy v7, persistent v9 and {schema_rejections} schema plus {len(fixture['malformed']) - schema_rejections} semantic rejections passed.")

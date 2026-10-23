@@ -59,7 +59,7 @@ func initial_record(tick: int) -> Dictionary:
 	var powered: Dictionary = {}
 	for station in STATIONS:
 		powered[station] = true
-	return {"schema_version": 8, "construction": ConstructionReservationPlan.initial(), "construction_bindings": {}, "construction_commands": {}, "walls": {}, "machinery": MachineryWorkshop.initial(), "loose_parts": {}, "structures": {}, "catalog_revision": 1, "catalog_fingerprint": _catalog_fingerprint, "timebase_hz": Engine.physics_ticks_per_second,
+	return {"schema_version": 9, "panels": {}, "construction": ConstructionReservationPlan.initial(), "construction_bindings": {}, "construction_commands": {}, "walls": {}, "machinery": MachineryWorkshop.initial(), "loose_parts": {}, "structures": {}, "catalog_revision": 1, "catalog_fingerprint": _catalog_fingerprint, "timebase_hz": Engine.physics_ticks_per_second,
 		"last_tick": tick, "state_revision": 0, "deposits": _initial_deposits(), "store": _empty_stock(),
 		"vessel": _empty_stock(), "wall_mass_milligrams": 0, "energy_joules": 100000,
 		"powered": powered, "job": {}, "receipts": [], "cargo": {}}
@@ -197,7 +197,7 @@ func authorize_operation(context: AuthenticatedCommandContext, operation: String
 			for field in ["actor_id", "body_id", "world_id", "region_id", "fingerprint"]:
 				if previous[field] != binding.value[field]: return _failure("Construction belongs to another actor, body or world.")
 		return ServiceResult.success()
-	if operation in ["wall_build", "wall_remove"]: return _inventory.production_capability(context, true, [])
+	if operation in ["wall_build", "wall_remove", "panel_build", "panel_remove"]: return _inventory.production_capability(context, true, [])
 	if operation.begins_with("machine_"): return _inventory.production_capability(context, true, [])
 	if operation in ["cancel_tool_extract"]: return _inventory.production_capability(context, true, [])
 	if operation == "resume_tool_extract":
@@ -225,11 +225,23 @@ func construction_boundaries(context: AuthenticatedCommandContext) -> ServiceRes
 	return ConstructedWallBoundaries.describe(_state["walls"], _state["state_revision"])
 
 
+## Authenticated on-demand geometry from one canonical production revision.
+func construction_closure(context: AuthenticatedCommandContext) -> ServiceResult:
+	var walls: ServiceResult = construction_boundaries(context)
+	if not walls.is_success: return walls
+	var surfaces: Array[Dictionary] = []
+	var ids: Array = _state["panels"].keys()
+	ids.sort()
+	for id in ids: surfaces.append(HorizontalPanelConstruction.descriptor(id, _state["panels"][id]))
+	return ConstructedRoomClosure.assess({"schema_version": 1, "production_revision": _state["state_revision"], "walls": walls.value, "surfaces": surfaces})
+
+
 func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 	var allowed: ServiceResult = _inventory.production_capability(context, false, []) if _inventory != null else _failure("Inventory is unavailable.")
 	if not allowed.is_success:
 		return allowed
 	var observed: Dictionary = _state.duplicate(false)
+	observed.erase("panels")
 	observed.erase("receipts")
 	observed.erase("cargo")
 	observed.erase("structures")
@@ -260,7 +272,7 @@ func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 			observed["structures"][item["item_id"]] = _state["structures"][item["item_id"]].duplicate(true)
 	observed["machinery"] = machinery_observation(context)
 	observed["timed_canister"] = TimedCanisterConstruction.observation(_state, _inventory, context, _timed_blueprints.get_definition(ConstructionReservationPlan.BLUEPRINT).value["fingerprint"])
-	# Observation version is independent of the v8 persistence record.
+	# Observation version is independent of the v9 persistence record.
 	observed["schema_version"] = 9
 	observed["recipes"] = _catalog["recipes"].keys()
 	observed["recipe_requirements"] = {}
@@ -299,7 +311,10 @@ func apply_local(context: AuthenticatedCommandContext, request_id: String, opera
 	var prepared_inventory: Dictionary = {}
 	var prepared_graph: Dictionary = {}
 	var prepared_tools: ToolAssemblyLedger
-	var planned_work: bool = operation.begins_with("machine_") or operation.begins_with("canister_") or operation in ["start_tool_extract", "resume_tool_extract", "cancel_tool_extract"]
+	var planned_work: bool = operation in ["panel_build", "panel_remove"] or operation.begins_with("machine_") or operation.begins_with("canister_") or operation in ["start_tool_extract", "resume_tool_extract", "cancel_tool_extract"]
+	if operation in ["panel_build", "panel_remove"]:
+		var panel_plan: ServiceResult = HorizontalPanelConstruction.plan(candidate, _inventory, context, request_id, operation, payload)
+		if not panel_plan.is_success: return panel_plan
 	if operation.begins_with("canister_"):
 		var construction: ServiceResult = _prepare_canister(candidate, context, request_id, operation, payload, tick)
 		if not construction.is_success: return construction
@@ -313,7 +328,7 @@ func apply_local(context: AuthenticatedCommandContext, request_id: String, opera
 		if not machinery_plan.is_success: return machinery_plan
 		if not MachineryWorkshop.validate(candidate["machinery"]): return _failure("Invalid machinery candidate.")
 		prepared_graph = machinery_plan.value
-	elif planned_work and not operation.begins_with("canister_"):
+	elif planned_work and operation not in ["panel_build", "panel_remove"] and not operation.begins_with("canister_"):
 		var work: ServiceResult = _prepare_tool_extraction(candidate, context, request_id, operation, payload)
 		if not work.is_success: return work
 	if operation == "cancel" and candidate["job"].has("extraction"): return _failure("Use the owned sustained-extraction cancellation action.")
@@ -931,19 +946,20 @@ func restore_snapshot_record(record: Dictionary, tick: int) -> ServiceResult:
 
 func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	var fields: Array = ["schema_version", "catalog_revision", "catalog_fingerprint", "timebase_hz", "last_tick", "state_revision", "deposits", "store", "vessel", "wall_mass_milligrams", "energy_joules", "powered", "job", "receipts"]
-	if ControlContractValidation.is_integer(record.get("schema_version"), 2, 8):
+	if ControlContractValidation.is_integer(record.get("schema_version"), 2, 9):
 		fields.append("cargo")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 3, 8):
+	if ControlContractValidation.is_integer(record.get("schema_version"), 3, 9):
 		fields.append("structures")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 4, 8): fields.append("loose_parts")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 6, 8): fields.append("machinery")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 7, 8): fields.append("walls")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 8, 8): fields.append_array(["construction", "construction_bindings", "construction_commands"])
+	if ControlContractValidation.is_integer(record.get("schema_version"), 4, 9): fields.append("loose_parts")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 6, 9): fields.append("machinery")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 7, 9): fields.append("walls")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 8, 9): fields.append_array(["construction", "construction_bindings", "construction_commands"])
+	if ControlContractValidation.is_integer(record.get("schema_version"), 9, 9): fields.append("panels")
 	if _catalog.is_empty() or not _fields(record, fields):
 		return _failure("An exact configured production snapshot is required.")
 	if record["catalog_fingerprint"] != _catalog_fingerprint:
 		return _failure("The saved catalog differs; an explicit production migration is required.")
-	if not ControlContractValidation.is_integer(record["schema_version"], 1, 8) or not ControlContractValidation.is_integer(record["catalog_revision"], 1, 1):
+	if not ControlContractValidation.is_integer(record["schema_version"], 1, 9) or not ControlContractValidation.is_integer(record["catalog_revision"], 1, 1):
 		return _failure("Unsupported production/catalog version.")
 	if not ControlContractValidation.is_integer(record["last_tick"], tick, tick) or not ControlContractValidation.is_integer(record["timebase_hz"], Engine.physics_ticks_per_second, Engine.physics_ticks_per_second) or not [60, 72, 90].has(Engine.physics_ticks_per_second):
 		return _failure("Production tick and supported timebase must match the world.")
@@ -958,7 +974,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	normalized["loose_parts"] = record.get("loose_parts", {}).duplicate(true)
 	for field in ["schema_version", "catalog_revision", "timebase_hz", "last_tick", "state_revision", "wall_mass_milligrams", "energy_joules"]:
 		normalized[field] = int(record[field])
-	normalized["schema_version"] = 8
+	normalized["schema_version"] = 9
 	for field in ["construction", "construction_bindings", "construction_commands"]:
 		var fallback: Dictionary = ConstructionReservationPlan.initial() if field == "construction" else {}
 		if typeof(record.get(field, fallback)) != TYPE_DICTIONARY: return _failure("Construction fragments must be objects.")
@@ -975,6 +991,8 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 		if not normalized["construction"]["receipts"].has(id): return _failure("Construction command has no committed reservation receipt.")
 		if typeof(receipt["fingerprint"]) != TYPE_STRING or receipt["fingerprint"].length() != 64 or not receipt["fingerprint"].is_valid_hex_number(false) or not ControlContractValidation.is_integer(receipt["state_revision"], 1, int(normalized["state_revision"])) or not ControlContractValidation.is_integer(receipt["tick_number"], 1, tick): return _failure("Invalid retained construction receipt.")
 	if not SpatialWallConstruction.valid(record.get("walls", {})): return _failure("Invalid spatial wall records.")
+	if not HorizontalPanelConstruction.valid(record.get("panels", {})): return _failure("Invalid paid horizontal panel records.")
+	normalized["panels"] = record.get("panels", {}).duplicate(true)
 	normalized["walls"] = record.get("walls", {}).duplicate(true)
 	for wall in normalized["walls"].values():
 		wall["position"] = InventorySpatialMath.normalized(wall["position"])
@@ -991,7 +1009,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	if typeof(structures) != TYPE_DICTIONARY or structures.size() > 32:
 		return _failure("Structural equipment records must be bounded.")
 	normalized["structures"] = {}
-	var structural_mass: int = MachineryWorkshop.mass(normalized["machinery"]) + normalized["walls"].size() * SpatialWallConstruction.MASS
+	var structural_mass: int = HorizontalPanelConstruction.mass(normalized["panels"]) + MachineryWorkshop.mass(normalized["machinery"]) + normalized["walls"].size() * SpatialWallConstruction.MASS
 	if typeof(record.get("loose_parts", {})) != TYPE_DICTIONARY or normalized["loose_parts"].size() > 128: return _failure("Loose parts must be a bounded material map.")
 	for id in normalized["loose_parts"]:
 		if not ControlContractValidation.is_id(id) or not _stock_valid(normalized["loose_parts"][id]): return _failure("Invalid loose part materials.")
@@ -1180,4 +1198,4 @@ func profiling_counters() -> Dictionary:
 	var hopper_mass: int = 0
 	for id in _state["cargo"]:
 		if _state["machinery"]["parts"].get(id, {}).get("kind") == "frame": hopper_mass += _mass(_state["cargo"][id])
-	return {"construction_jobs": _state["construction"]["jobs"].size(), "construction_receipts": _state["construction"]["receipts"].size(), "construction_claimed_milligrams": ConstructionReservationPlan.claimed(_state["construction"]), "spatial_walls": _state["walls"].size(), "hopper_milligrams": hopper_mass, "deployed_machines": _state["machinery"]["placements"].size(), "machine_parts": _state["machinery"]["parts"].size(), "grid_cables": _state["machinery"]["links"].size(), "machine_batches": _state["machinery"]["jobs"].size(), "active_batches": 0 if _state["job"].is_empty() else 1, "fabricated_equipment": _state["structures"].size(), "physical_tool_parts": _state["loose_parts"].size(), "stored_milligrams": _mass(_state["store"]), "vessel_milligrams": _mass(_state["vessel"]), "energy_joules": _state["energy_joules"], "receipts": _state["receipts"].size()}
+	return {"horizontal_panels": _state["panels"].size(), "panel_milligrams": HorizontalPanelConstruction.mass(_state["panels"]), "construction_jobs": _state["construction"]["jobs"].size(), "construction_receipts": _state["construction"]["receipts"].size(), "construction_claimed_milligrams": ConstructionReservationPlan.claimed(_state["construction"]), "spatial_walls": _state["walls"].size(), "hopper_milligrams": hopper_mass, "deployed_machines": _state["machinery"]["placements"].size(), "machine_parts": _state["machinery"]["parts"].size(), "grid_cables": _state["machinery"]["links"].size(), "machine_batches": _state["machinery"]["jobs"].size(), "active_batches": 0 if _state["job"].is_empty() else 1, "fabricated_equipment": _state["structures"].size(), "physical_tool_parts": _state["loose_parts"].size(), "stored_milligrams": _mass(_state["store"]), "vessel_milligrams": _mass(_state["vessel"]), "energy_joules": _state["energy_joules"], "receipts": _state["receipts"].size()}
