@@ -248,7 +248,12 @@ func walk_to(actor: LocalHabitatCharacter, destination: Vector2) -> void:
 		await physics_frame
 		actor._physics_process(1.0 / 60.0)
 	actor.set_motion_intent(Vector2.ZERO, false)
-	check(false, "actual body reached continuous walking destination: %s, actual:%s" % [destination, actor.position])
+	var contacts: Array[String] = []
+	for index in range(actor.get_slide_collision_count()):
+		var contact: KinematicCollision3D = actor.get_slide_collision(index)
+		var collider: Object = contact.get_collider()
+		contacts.append("%s at%s normal%s" % [collider.get_path() if collider is Node else str(collider), contact.get_position(), contact.get_normal()])
+	check(false, "actual body reached continuous walking destination: %s, actual:%s, contacts:%s" % [destination, actor.position, contacts])
 
 
 func bridge_body(actor: LocalHabitatCharacter) -> void:
