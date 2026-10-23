@@ -1,6 +1,7 @@
 # Paid two-door chamber: implementation proposal
 
-Status: design only, awaiting Coordinator scope review before runtime/schema edits.
+Status: Coordinator accepted design `608d49c60651221f405cb6896066750bb5c16649`
+for bounded implementation on 2026-10-23. Runtime/schema implementation pending.
 Base: `1f2e5a71d0a2a9b6c1ac56ac0c1354ea2b200d58`, following PR148 merge
 `25293641ab9263f699768d7d585a42cd80a2ab2d`.
 Exclusive implementation owner: chat `01a16aa0-d610-7e41-b5a4-0868e3742b28`.
@@ -82,6 +83,8 @@ from the current 1000 m3 habitat proportionally at its actual temperature/moles;
 allocate nothing from an infinite reservoir. Decommission only with both doors
 closed, both valves closed, intact geometry and both boundaries within the manual
 pressure margin; merge chamber gas/volume back into habitat conservatively.
+The UI must explain that this may require depressurizing the finite habitat;
+routine lossless dismantling beside vacuum is not available in this slice.
 Decommission itself neither moves the body nor opens geometry. Recover the kit
 exactly once after decommission with reservation-aware receiving capacity; then
 allow ordinary paid-part recovery subject to current occupant/support guards.
@@ -92,7 +95,8 @@ epoch, authenticated session/body/owner and held crowbar/reach. Check both sides
 again at apply, including low-level Access admission. Opposite door and bypass
 must be closed/intact before opening a selected bypass or door; own bypass must
 be closed before door operation. Opening both valves, both doors or a
-door-plus-bypass is rejected. Closing remains available when safe for occupancy.
+door-plus-bypass is rejected. Opposite hardware damage must never block a safe
+closing action; own actuator and occupancy rules still apply.
 Request replay returns the same receipt; changed intent with reused ID rejects.
 
 Outbound: close inner, open outer bypass, wait for actual force-safe differential,
