@@ -223,3 +223,31 @@ records the exact 17 kg acquisition route, 31,250 J cost and remaining material.
 Its regression starts with the actual playable composition factory, uses real
 pickup/equip and command ingress, and commissions the existing enclosure through
 paid construction and seal commands without seeded Production stock.
+
+## Paid manual room equalization
+
+The [manual bypass contract](../development/commissioned-room-equalization-milestone.md)
+adds an optional 200,000 mg processed-plate hand valve on a commissioned paid
+doorframe. It spends PR146's remaining plate, consumes no electrical energy,
+starts closed and exchanges only existing gas with the finite surrounding habitat.
+Opening it intentionally reduces a subthreshold differential; above the existing
+0.5 kPa retention limit the same safety leakage remains in effect at the same
+rate. Closing the valve cannot suppress boundary leakage. No pump, pressure
+setpoint, new source, species mixture, breathing guarantee or generic network
+is introduced. Door area, 1000 N manual force and 1000 m3 subdivision stay unchanged.
+
+Production owns the pinned blueprint, recoverable part and mass ledger; Pressure
+owns its commissioned open/closed state and applies one bounded conservative
+pair transfer each fixed tick before sensors. Access remains authoritative for
+the door. Commands use the existing authenticated door session, exact revision,
+control epoch, real crowbar, owner/body and reach checks. The detached prepared
+transaction and whole-world restore validate all three owners before assignment;
+the abstract `PressureRoomOwner` prevents concrete dependency cycles.
+
+Production v13 and Pressure v3 persist paid parts and commissioned valve state;
+legacy absent-valve records retain v11/v12 and v2 without grants. Decommission
+requires a closed valve and retains its paid part; recommission starts it closed.
+Recover the part after decommissioning before removing the door, refunding its
+exact plate once. Observation v15 / paid-door v4 expose own valve status; the
+collapsed manual-door controls display pressures, differential and force load.
+No new configuration variable, service, asset or external dependency is required.
