@@ -36,6 +36,8 @@ var _pending_wall: Dictionary = {}
 var _wall_result: String = ""
 var _wall_selection_lost: bool = false
 var _placement_kind := OptionButton.new()
+var _coordinate_wall_mode: bool = false
+var _saved_wall_coordinates: Array = []
 var _show_placement := CheckBox.new()
 var _placement_status := Label.new()
 var _action_buttons: Array[Button] = []
@@ -143,7 +145,7 @@ func configure(world: WorldRuntime) -> void:
 	visibility_changed.connect(_refresh_placement)
 	_button("Use current player position (floor)", "position")
 	_button("Deploy assembled frame", "machine_deploy")
-	_label("Walls: select an owned physical plate above. Floor panels are 1 × 2 × 0.1 m and snap to the 0.1 m coordinate grid.", true)
+	_label("Walls: select an owned physical plate above. Floor panels are 1 × 2 × 0.1 m and snap to the 0.05 m coordinate grid.", true)
 	_new_wall.text = "Place a new wall\n(keep draft coordinates)"
 	_new_wall.pressed.connect(_begin_wall_placement)
 	add_child(_new_wall)
@@ -548,7 +550,16 @@ func _refresh_placement() -> void:
 	_new_wall.visible = wall_mode
 	_cancel_wall.visible = wall_mode
 	_reset_wall.visible = wall_mode
+	if _coordinate_wall_mode and not wall_mode:
+		_saved_wall_coordinates = [_axes[0].value, _axes[1].value, _axes[2].value]
+	var restore_wall_draft: bool = wall_mode and not _coordinate_wall_mode and not _saved_wall_coordinates.is_empty()
+	_coordinate_wall_mode = wall_mode
 	for index in range(_coordinate_labels.size()):
+		_axes[index].set_block_signals(true)
+		_axes[index].step = 0.05 if wall_mode else 0.1
+		if restore_wall_draft: _axes[index].value = _saved_wall_coordinates[index]
+		_axes[index].set_block_signals(false)
+		_axes[index].get_line_edit().tooltip_text = "%s coordinate in metres relative to workbench; %s m steps, ±100 m." % [["X", "Y", "Z"][index], "0.05" if wall_mode else "0.1"]
 		_coordinate_labels[index].text = ["X", "Y", "Z"][index] + (" (m)" if wall_mode else "")
 		_axes[index].custom_minimum_size.x = 140 if wall_mode else 0
 		_axes[index].size_flags_horizontal = Control.SIZE_EXPAND_FILL if wall_mode else Control.SIZE_FILL

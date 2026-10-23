@@ -615,7 +615,7 @@
             "prefixItems": [
               {
                 "type": "integer",
-                "multipleOf": 100,
+                "multipleOf": 50,
                 "minimum": -100000,
                 "maximum": 100000
               },
@@ -624,7 +624,7 @@
               },
               {
                 "type": "integer",
-                "multipleOf": 100,
+                "multipleOf": 50,
                 "minimum": -100000,
                 "maximum": 100000
               }
