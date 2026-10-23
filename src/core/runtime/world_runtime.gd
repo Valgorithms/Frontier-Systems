@@ -18,6 +18,7 @@ const DEFAULT_REGION_ID: StringName = &"local-habitat"
 @export var new_world_reinforcement_ore_enabled: bool = false
 var _simulation_runner: SimulationRunner
 var _local_request_sequence: int = 0
+var _local_request_nonce: String = Crypto.new().generate_random_bytes(8).hex_encode()
 var _control_setup_result: ServiceResult
 var _inventory_setup_result: ServiceResult
 var _health_setup_result: ServiceResult
@@ -114,7 +115,8 @@ func enqueue_command(command: SimulationCommand) -> ServiceResult:
 
 func next_local_request_id() -> StringName:
 	_local_request_sequence += 1
-	return StringName("local-%d" % _local_request_sequence)
+	# Saved receipts outlive this runtime; a fresh session must not reuse their IDs.
+	return StringName("local-%s-%d" % [_local_request_nonce, _local_request_sequence])
 
 
 func current_tick_number() -> int:

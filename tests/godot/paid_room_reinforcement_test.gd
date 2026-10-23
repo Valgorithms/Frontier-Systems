@@ -84,11 +84,19 @@ func run() -> void:
 	step(20)
 	check(room().gas_moles == retained and gas_conserved(initial), "closed reinforced boundary holds above 0.6 kPa")
 	var blocked: Dictionary = production.capture_snapshot().value
+	var blocked_hardware: Dictionary = access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).to_record()
 	ui_action(1, false)
-	check(last.error_code == &"actuator_force_exceeded" and production.capture_snapshot().value == blocked, "actual UI crowbar remains limited to 1000 N")
+	check(last.error_code == &"actuator_force_exceeded", "actual UI crowbar remains limited to 1000 N: %s" % last.error_code)
+	# The real queue advances one simulation tick even when a command rejects.
+	check(production._state.last_tick == int(blocked.last_tick) + 1, "rejected UI command advances exactly one tick")
+	blocked.last_tick += 1
+	check(production.capture_snapshot().value == blocked and room().gas_moles == retained and access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).to_record() == blocked_hardware, "force rejection preserves all production, finite gas and actuator state")
 	var snapshot: String = world.capture_world_snapshot_json().value
 	var observation: Dictionary = production.observation(context).value
 	reload_playable(snapshot, "reinforced three-owner JSON roundtrip")
+	var fresh_request: StringName = world.next_local_request_id()
+	for receipt in production._state.receipts:
+		check(String(fresh_request) != receipt.request_id, "reloaded runtime cannot reuse saved UI request identity")
 	check(room().gas_moles == retained and production._state.room_reinforcements == paid.room_reinforcements, "restore retains original paid kit, seal and finite gas")
 	ui_action(9); step(20)
 	reload_playable(world.capture_world_snapshot_json().value, "open reinforced bypass roundtrip")

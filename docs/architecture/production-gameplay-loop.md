@@ -279,3 +279,8 @@ Pressure save4/room2, observation16/paid-door5 encode this without upgrading
 legacy records. No service or external dependency is added. The
 [accepted prerequisite](../development/paid-two-door-chamber-milestone.md)
 records the finite 44,000 J route and the separately scoped subsequent chamber.
+
+Local UI request IDs include a random runtime-session prefix and a monotonic
+sequence. Saved production receipts retain their original IDs for idempotent
+retry; creating a runtime to reload a snapshot cannot restart those identities.
+The prefix is transport identity only and grants no simulation authority.
