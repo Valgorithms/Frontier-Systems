@@ -5,6 +5,7 @@ signal panel_selected(panel_id: String)
 
 ## MIT first-party box geometry. Area3D picking adds no standing-floor collision.
 var _panels: Dictionary = {}
+var _panel_records: Dictionary = {}
 var _ghost: MeshInstance3D
 var _selected: String = ""
 
@@ -17,6 +18,10 @@ func observe(production: Dictionary) -> void:
 	for surface in surfaces:
 		var id: String = surface["surface_id"]
 		retained[id] = true
+		if _panels.has(id) and _panel_records.get(id) != surface:
+			remove_child(_panels[id])
+			_panels[id].queue_free()
+			_panels.erase(id)
 		if not _panels.has(id):
 			var area := Area3D.new()
 			area.collision_layer = 0
@@ -37,11 +42,13 @@ func observe(production: Dictionary) -> void:
 			)
 			add_child(area)
 			_panels[id] = area
+			_panel_records[id] = surface.duplicate(true)
 	for id in _panels.keys():
 		if retained.has(id): continue
 		remove_child(_panels[id])
 		_panels[id].queue_free()
 		_panels.erase(id)
+		_panel_records.erase(id)
 	if surfaces.is_empty(): present({}, "")
 
 
@@ -65,7 +72,8 @@ static func _mesh(surface: Dictionary, color: Color) -> MeshInstance3D:
 	var box := BoxMesh.new()
 	box.size = Vector3(float(bounds[1] - bounds[0]) / 1000.0, 0.012, float(bounds[3] - bounds[2]) / 1000.0)
 	mesh.mesh = box
-	mesh.position = ProceduralWorldInventoryPreview.DISPLAY_ORIGIN + Vector3(float(bounds[0] + bounds[1]) / 2000.0, float(surface["height_millimetres"]) / 1000.0, float(bounds[2] + bounds[3]) / 2000.0)
+	var center_y: int = int(surface["height_millimetres"]) + (-6 if surface["kind"] == "floor" else 6)
+	mesh.position = ProceduralWorldInventoryPreview.DISPLAY_ORIGIN + Vector3(float(bounds[0] + bounds[1]) / 2000.0, float(center_y) / 1000.0, float(bounds[2] + bounds[3]) / 2000.0)
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	if color.a < 1.0: material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA

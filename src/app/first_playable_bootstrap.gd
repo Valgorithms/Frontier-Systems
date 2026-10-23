@@ -270,6 +270,9 @@ func _start_client() -> void:
 	_machinery_panel.bind_preview(_machinery_preview)
 	var panel_preview := HorizontalPanelPreview.new()
 	_habitat.add_child(panel_preview)
+	var panel_contact := PaidPanelContactScene.new()
+	_habitat.add_child(panel_contact)
+	panel_contact.bind(_remote)
 	_machinery_panel.bind_horizontal_preview(panel_preview)
 	panel_preview.panel_selected.connect(func(id: String) -> void:
 		_open_panel(3)

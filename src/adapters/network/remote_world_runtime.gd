@@ -3,6 +3,11 @@ class_name RemoteWorldRuntime
 
 signal observation_received(record: Dictionary)
 signal connection_closed(message: String)
+signal panel_contact_received(record: Dictionary)
+signal panel_contact_cleared
+var _connection_generation: int = 0
+var _contact_sequence: int = 0
+var _contact_fences: Array = [0, 0]
 var _socket := WebSocketPeer.new()
 var _projection := RemoteProductionProjection.new()
 var _invite_key: String = ""
@@ -33,6 +38,13 @@ func connect_host(url: String, invite_key: String) -> ServiceResult:
 	if _sent_auth or invite_key.length() < 32 or invite_key.length() > 256 or not (url.begins_with("ws://127.0.0.1:") or url.begins_with("ws://localhost:") or url.begins_with("wss://")):
 		return ServiceResult.failure(&"remote_configuration", "Use loopback WebSocket or TLS with an operator-provided invite key.")
 	_invite_key = invite_key
+	panel_contact_cleared.emit()
+	_connection_generation += 1
+	_contact_sequence = 0
+	_contact_fences = [0, 0]
+	# A reconnect has a new transport queue; packets from the retired socket cannot
+	# authenticate or revive the next connection.
+	_socket = WebSocketPeer.new()
 	_socket.inbound_buffer_size = 262144
 	_socket.outbound_buffer_size = 16384
 	_socket.max_queued_packets = 16
@@ -53,6 +65,7 @@ func _process(_delta: float) -> void:
 	if _connecting and Time.get_ticks_msec() - _connect_started > 5000 and _observation.is_empty():
 		_socket.close(-1)
 	if _socket.get_ready_state() == WebSocketPeer.STATE_CLOSED and _connecting:
+		panel_contact_cleared.emit()
 		_projection.record = {}
 		_terrain_record = {}
 		_observation = {}
@@ -82,7 +95,11 @@ func _process(_delta: float) -> void:
 		if typeof(frame) != TYPE_DICTIONARY:
 			_socket.close(1008, "Invalid host document")
 			return
-		_receive(frame)
+		_receive_from_transport(frame, _connection_generation)
+
+
+func _receive_from_transport(frame: Dictionary, source_generation: int) -> void:
+	if source_generation == _connection_generation: _receive(frame)
 
 
 func _receive(frame: Dictionary) -> void:
@@ -101,27 +118,48 @@ func _receive(frame: Dictionary) -> void:
 				elif loaded.error_code != &"terrain_retry_missing":
 					_socket.close(1008, "Invalid local terrain retry journal")
 		"observation":
+			if not _authenticated: return
+			var contact: ServiceResult = PaidPanelContactObservation.decode(frame.get("panel_contact"), world_id, region_id)
+			if not contact.is_success:
+				_reject_panel_contact()
+				return
+			var envelope: Dictionary = contact.value
+			if envelope.sequence <= _contact_sequence or envelope.inventory_restore < _contact_fences[0] or envelope.production_restore < _contact_fences[1]:
+				_reject_panel_contact()
+				return
 			if not TerrainObservationValidation.valid(frame.get("terrain")):
-				_socket.close(1008, "Invalid terrain observation")
+				_reject_panel_contact()
 				return
 			if not ToolObservationValidation.valid(frame.get("tools")):
-				_socket.close(1008, "Invalid tool observation")
+				_reject_panel_contact()
 				return
 			if not _authenticated or typeof(frame.get("production")) != TYPE_DICTIONARY or typeof(frame.get("inventory")) != TYPE_DICTIONARY or not InventorySpatialMath.is_position(frame.get("position")):
+				_reject_panel_contact()
+				return
+			if envelope.geometry.production_revision != frame.production.get("state_revision") or envelope.geometry.production_tick != frame.production.get("last_tick"):
+				_reject_panel_contact()
 				return
 			frame["position"] = InventorySpatialMath.normalized(frame["position"])
 			if typeof(frame.get("players")) != TYPE_ARRAY or frame["players"].size() > 2:
+				_reject_panel_contact()
 				return
 			for player in frame["players"]:
 				if typeof(player) != TYPE_DICTIONARY or not ControlContractValidation.is_integer(player.get("slot"), 0, 1) or not InventorySpatialMath.is_position(player.get("position")):
+					_reject_panel_contact()
 					return
 				player["position"] = InventorySpatialMath.normalized(player["position"])
+			if _contact_fences != [envelope.inventory_restore, envelope.production_restore]:
+				panel_contact_cleared.emit()
+				_projection.record = {}
 			if not _projection.accept_record(frame["production"]).is_success:
-				_socket.close(1008, "Invalid production observation")
+				_reject_panel_contact()
 				return
 			_terrain_record = TerrainObservationValidation.normalized(frame["terrain"])
 			frame["terrain"] = _terrain_record.duplicate(true)
 			_observation = frame.duplicate(true)
+			_contact_sequence = envelope.sequence
+			_contact_fences = [envelope.inventory_restore, envelope.production_restore]
+			panel_contact_received.emit(contact.value.duplicate(true))
 			observation_received.emit(_observation.duplicate(true))
 		"ack":
 			if _requests.has(frame.get("request_id")) and typeof(frame.get("ok")) == TYPE_BOOL and typeof(frame.get("code")) == TYPE_STRING and frame["code"].length() <= 128 and typeof(frame.get("message")) == TYPE_STRING and frame["message"].length() <= 512:
@@ -136,6 +174,12 @@ func _receive(frame: Dictionary) -> void:
 		"batch_completed":
 			if typeof(frame.get("recipe_id")) == TYPE_STRING and ControlContractValidation.is_integer(frame.get("tick_number"), 0, 9007199254740000):
 				_projection.batch_completed.emit(frame["recipe_id"], int(frame["tick_number"]))
+
+
+func _reject_panel_contact() -> void:
+	panel_contact_cleared.emit()
+	_authenticated = false
+	_socket.close(1008, "Invalid contact lifecycle")
 
 
 func get_simulation_system(id: StringName) -> SimulationSystem:
@@ -213,4 +257,5 @@ func current_tick_number() -> int:
 
 
 func _exit_tree() -> void:
+	panel_contact_cleared.emit()
 	_socket.close(-1)

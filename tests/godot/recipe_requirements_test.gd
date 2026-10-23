@@ -37,7 +37,7 @@ func run() -> void:
 	remote._authenticated = true
 	check(TerrainObservationValidation.valid(JSON.parse_string(JSON.stringify(world.terrain_observation(context).value))), "test terrain frame valid")
 	check(ToolObservationValidation.valid(JSON.parse_string(JSON.stringify(world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID).observation(context).value))), "test tools frame valid")
-	remote._receive(JSON.parse_string(JSON.stringify({"type": "observation", "production": observed, "terrain": world.terrain_observation(context).value, "tools": world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID).observation(context).value, "inventory": inventory.own_inventory_observation(context, true).value, "position": [0, 0, 0], "players": []})))
+	remote._receive(JSON.parse_string(JSON.stringify({"type": "observation", "panel_contact": preload("res://tests/support/paid_panel_contact_fixture.gd").envelope(world, context), "production": observed, "terrain": world.terrain_observation(context).value, "tools": world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID).observation(context).value, "inventory": inventory.own_inventory_observation(context, true).value, "position": [0, 0, 0], "players": []})))
 	check(remote.production_observation(context).is_success and remote.production_observation(context).value["recipe_requirements"] == wire["recipe_requirements"], "actual client receive adopts host requirements")
 	remote._connecting = true
 	remote._process(0.0)

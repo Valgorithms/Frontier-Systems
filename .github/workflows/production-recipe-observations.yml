@@ -29,6 +29,10 @@ on:
       - 'docs/schema/paid-floor-locomotion*'
       - 'tests/godot/paid_panel_collision_descriptors*'
       - 'tests/schema/paid_panel_collision*'
+      - 'tests/godot/paid_panel_contact_scene*'
+      - 'tests/schema/paid_panel_contact*'
+      - 'docs/schema/paid-panel-contact*'
+      - 'tests/support/paid_panel_contact_fixture.gd'
       - 'docs/schema/paid-panel-collision*'
       - 'docs/schema/timed-canister-observation*'
       - '.github/workflows/production-recipe-observations.yml'
@@ -63,7 +67,7 @@ jobs:
           include-templates: false
       - name: Run bounded recipe, resource and maintenance checks
         shell: pwsh
-        run: ./tools/ci/run-godot-checks.ps1 -TestNames 'recipe_requirements_test.gd','workstation_resource_view_test.gd','repair_usability_test.gd','first_playable_task_guide_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd','timed_canister_controls_test.gd','paid_horizontal_panels_test.gd','horizontal_panel_controls_test.gd','horizontal_floor_support_query_test.gd','paid_floor_support_adapter_test.gd','paid_panel_collision_descriptors_test.gd'
+        run: ./tools/ci/run-godot-checks.ps1 -TestNames 'recipe_requirements_test.gd','workstation_resource_view_test.gd','repair_usability_test.gd','first_playable_task_guide_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd','timed_canister_controls_test.gd','paid_horizontal_panels_test.gd','horizontal_panel_controls_test.gd','horizontal_floor_support_query_test.gd','paid_floor_support_adapter_test.gd','paid_panel_collision_descriptors_test.gd','paid_panel_contact_scene_test.gd'
       - name: Validate real emitted JSON against local versioned schemas
         shell: pwsh
         run: |
@@ -86,6 +90,8 @@ jobs:
           & $schemaPython tests/schema/paid_floor_locomotion_schema_test.py
           if ($LASTEXITCODE -ne 0) { throw 'Paid floor locomotion schema checks failed.' }
           & $schemaPython tests/schema/paid_panel_collision_schema_test.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $schemaPython tests/schema/paid_panel_contact_schema_test.py
           if ($LASTEXITCODE -ne 0) { throw 'Paid panel collision schema checks failed.' }
       - name: Preserve bounded evidence
         if: always()

@@ -12,6 +12,7 @@ const VESSEL_CAPACITY: int = 2000000
 const MAX_VESSEL_PRESSURE_KPA: float = 1000.0
 const MAX_RECEIPTS: int = 64
 const MAX_REVISION: int = 9007199254740000
+var _collision_restore_generation: int = 0
 const STATIONS: Array[String] = ["drill", "refinery", "chemical", "printer", "recycler", "dispenser", "construction"]
 ## Stable fixture sites, relative to the inventory display origin in millimetres.
 const SOURCE_POSITIONS: Dictionary = {"deposit.iron": [-3000, 0, -1000], "deposit.ice": [-6000, 0, -1000], "deposit.regolith": [-9000, 0, -1000]}
@@ -953,11 +954,17 @@ func _simulate_machinery() -> void:
 
 
 func validate_snapshot_record(record: Dictionary, tick: int) -> ServiceResult:
+	if _collision_restore_generation >= MAX_REVISION: return _failure("Collision restore fence cannot wrap.")
 	return _decode(record, tick)
 
 
+## Volatile trusted lifecycle fence, including independent Production restores.
+func collision_restore_generation() -> int:
+	return _collision_restore_generation
+
+
 func restore_snapshot_record(record: Dictionary, tick: int) -> ServiceResult:
-	var decoded: ServiceResult = _decode(record, tick)
+	var decoded: ServiceResult = validate_snapshot_record(record, tick)
 	if decoded.is_success:
 		_state = decoded.value
 		var restored: ServiceResult = ConstructionReservationPlan.restore(_state["construction"], int(_state["store"]["iron"]))
@@ -969,6 +976,7 @@ func restore_snapshot_record(record: Dictionary, tick: int) -> ServiceResult:
 			_state["job"]["extraction"]["status"] = "paused"
 			_state["job"]["extraction"]["pause_reason"] = "restart"
 		_inventory.refresh_payload_loads()
+		_collision_restore_generation += 1
 	return decoded
 
 

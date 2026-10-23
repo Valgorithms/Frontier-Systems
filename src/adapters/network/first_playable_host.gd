@@ -13,6 +13,8 @@ var _elapsed: float = 0.0
 var _events: Array[Dictionary] = []
 var persistence: WorldPersistenceAdapter
 var _checkpoint_request: Dictionary = {}
+var _contact_owners: Array = []
+var _contact_scope: Array = []
 
 
 func configure(world: WorldRuntime, keys: Array[String], port: int = 27840) -> ServiceResult:
@@ -186,7 +188,7 @@ func _receive(id: int, value: Dictionary) -> void:
 
 
 func _publish(id: int) -> void:
-	var context: AuthenticatedCommandContext = _context(_peers[id]["slot"])
+	var context: AuthenticatedCommandContext = _context(_peers[id]["slot"], id)
 	var inventory := _world.get_simulation_system(InventorySimulationSystem.SYSTEM_ID) as InventorySimulationSystem
 	var production: ServiceResult = _world.production_observation(context)
 	var own: ServiceResult = inventory.own_inventory_observation(context, true)
@@ -196,12 +198,45 @@ func _publish(id: int) -> void:
 	var tool_view: ServiceResult = tools.observation(context)
 	var terrain: ServiceResult = _world.terrain_observation(context)
 	if production.is_success and own.is_success and position.is_success:
+		var contact: ServiceResult = _panel_contact_snapshot(id, context, production.value["state_revision"])
+		if not contact.is_success:
+			_peers[id]["socket"].close(1008, "Contact lifecycle unavailable")
+			return
 		var players: Array = []
 		for peer in _peers.values():
 			if peer["slot"] >= 0:
 				var peer_position: ServiceResult = inventory.own_position(_context(peer["slot"]))
 				players.append({"slot": peer["slot"], "position": peer_position.value})
-		_send(id, {"type": "observation", "tick_number": _world.current_tick_number(), "production": production.value, "tools": tool_view.value if tool_view.is_success else {}, "terrain": terrain.value if terrain.is_success else {}, "inventory": own.value, "position": position.value, "players": players, "persistence": persistence.status() if persistence != null else {}, "world_items": world_items.value if world_items.is_success else {}})
+		_send(id, {"type": "observation", "tick_number": _world.current_tick_number(), "production": production.value, "panel_contact": contact.value, "tools": tool_view.value if tool_view.is_success else {}, "terrain": terrain.value if terrain.is_success else {}, "inventory": own.value, "position": position.value, "players": players, "persistence": persistence.status() if persistence != null else {}, "world_items": world_items.value if world_items.is_success else {}})
+
+
+## Called only for a current authenticated peer. Never accepts client geometry.
+func _panel_contact_snapshot(id: int, context: AuthenticatedCommandContext, revision: Variant) -> ServiceResult:
+	if not is_instance_valid(_world) or not _peers.has(id) or _peers[id].get("slot", -1) < 0: return PaidPanelContactObservation.invalid()
+	if context == null or context.session_id != _context(_peers[id]["slot"], id).session_id or context.principal_id != _context(_peers[id]["slot"], id).principal_id: return PaidPanelContactObservation.invalid()
+	var inventory := _world.get_simulation_system(InventorySimulationSystem.SYSTEM_ID) as InventorySimulationSystem
+	var production := _world.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID) as ProductionSimulationSystem
+	var owners: Array = [_world, inventory, production]
+	var scope: Array = [_world.world_id, _world.region_id]
+	if _contact_owners.is_empty():
+		_contact_owners = owners
+		_contact_scope = scope
+	if owners != _contact_owners or scope != _contact_scope or inventory == null or production == null: return PaidPanelContactObservation.invalid()
+	var sequence: Variant = _peers[id].get("contact_sequence", 0)
+	if typeof(sequence) != TYPE_INT or sequence < 0 or sequence >= PaidPanelContactObservation.MAX_INTEGER: return PaidPanelContactObservation.invalid()
+	var fences: Array = [inventory.controller_restore_generation(), production.collision_restore_generation()]
+	var prior: Array = _peers[id].get("contact_fences", [0, 0])
+	for axis in range(2):
+		if typeof(fences[axis]) != TYPE_INT or fences[axis] < prior[axis] or fences[axis] > PaidPanelContactObservation.MAX_INTEGER: return PaidPanelContactObservation.invalid()
+	var geometry: ServiceResult = production.paid_panel_collision_descriptors(context, revision)
+	if not geometry.is_success: return geometry
+	if fences != [inventory.controller_restore_generation(), production.collision_restore_generation()]: return PaidPanelContactObservation.invalid()
+	var envelope: Dictionary = {"schema_version": 1, "world_id": String(_world.world_id), "region_id": String(_world.region_id), "sequence": sequence + 1, "inventory_restore": fences[0], "production_restore": fences[1], "geometry": geometry.value}
+	var validated: ServiceResult = PaidPanelContactObservation.decode(envelope, _world.world_id, _world.region_id)
+	if not validated.is_success: return validated
+	_peers[id]["contact_sequence"] = sequence + 1
+	_peers[id]["contact_fences"] = fences
+	return validated
 
 
 func _send(id: int, value: Dictionary) -> void:
