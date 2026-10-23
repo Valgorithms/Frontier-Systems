@@ -54,6 +54,8 @@ obtain current authenticated context and rederive from the current owners;
 retained use needs explicit restore-generation and lifecycle invalidation.
 
 No scene wiring or physical-contact behavior is claimed here.
+The subsequent [scene contact milestone](paid-panel-physical-contact-milestone.md)
+documents the separately accepted read-only transport envelope and consumer.
 Future wiring must invalidate retained bodies on scope change, disconnect,
 staleness, removal, restore and teardown, and demonstrate actual
 PhysicsServer3D/CharacterBody3D contact and removal. A descriptor result alone

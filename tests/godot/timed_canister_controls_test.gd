@@ -226,6 +226,7 @@ func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	remote.set_process(false)
 	remote._authenticated = true
 	var wire: Dictionary = current.duplicate(true)
+	wire["panel_contact"] = preload("res://tests/support/paid_panel_contact_fixture.gd").envelope(world, host._context(0, 1))
 	wire.merge({"type": "observation", "tick_number": runner.tick_number, "players": [], "terrain": world.terrain_observation(host._context(0, 1)).value, "tools": world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID).observation(host._context(0, 1)).value})
 	check(TerrainObservationValidation.valid(JSON.parse_string(JSON.stringify(wire["terrain"]))), "actual terrain projection valid for remote frame")
 	check(ToolObservationValidation.valid(JSON.parse_string(JSON.stringify(wire["tools"]))), "actual tool projection valid for remote frame")
