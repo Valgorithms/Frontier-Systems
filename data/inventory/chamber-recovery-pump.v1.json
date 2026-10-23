@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "definition_id": "item.chamber-recovery-pump.fabricated",
+  "revision": 1,
+  "tags": ["item.handheld", "equipment.chamber-pump"],
+  "mass_milligrams": 0,
+  "volume_millilitres": 6000,
+  "storage": null
+}

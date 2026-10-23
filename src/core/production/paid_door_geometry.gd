@@ -38,6 +38,11 @@ static func supported(pose: Dictionary, panels: Dictionary) -> bool:
 	var c: Array = volume["center_millimetres"]
 	var s: Array = volume["size_millimetres"]
 	var bounds: Array[int] = [int(c[0] - s[0] / 2), int(c[0] + s[0] / 2), int(c[2] - s[2] / 2), int(c[2] + s[2] / 2)]
+	return supported_bounds(bounds, panels)
+
+
+## Exact paid-floor union coverage for an axis-aligned support rectangle.
+static func supported_bounds(bounds: Array, panels: Dictionary) -> bool:
 	var xs: Array[int] = [bounds[0], bounds[1]]
 	var zs: Array[int] = [bounds[2], bounds[3]]
 	var floors: Array = []

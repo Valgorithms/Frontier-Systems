@@ -9,6 +9,13 @@ extends SimulationSystem
 
 @abstract func install_prepared_room_state(state: Dictionary) -> void
 
+## Volatile ABA fence: identical saved records do not preserve prepared authority.
+@abstract func room_restore_generation() -> int
+
+@abstract func decode_chamber_recovery_candidate(record: Dictionary, tick: int) -> ServiceResult
+
+@abstract func prepare_chamber_recovery_transfer(assembly_id: String, job_id: String, quantity_moles: float, tick: int) -> ServiceResult
+
 @abstract func room_area(door_id: String) -> float
 
 @abstract func room_difference(door_id: String) -> float
