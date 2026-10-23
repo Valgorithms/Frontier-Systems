@@ -123,16 +123,24 @@ func run() -> void:
 	step(120)
 	panel.observe(frame())
 	check(not controls._buttons["complete"].disabled, "ready observed job enables completion")
+	var pre_completion: Dictionary = frame()
 	controls._buttons["complete"].pressed.emit()
 	step()
 	panel.observe(frame())
+	projection_checks(frame(), pre_completion)
+	check(not controls._record.is_empty(), "completed output remains readable by actual workbench")
+	if controls._record.is_empty():
+		scroll.free()
+		host.free()
+		world.free()
+		quit(1)
+		return
 	check(last.is_success and controls._record["timed_canister"]["jobs"][ui_id]["state"] == "completed", "UI completes real job")
 	var output: String = TimedCanisterConstruction.output_id(ui_id)
 	var own: Dictionary = inventory.own_inventory_observation(context).value
 	check(own["items"].any(func(item: Dictionary) -> bool: return item["item_id"] == output and item["definition_revision"] == 2), "completed UI job creates actual revision-2 canister")
 	check(production.capture_snapshot().value["store"]["iron"] == 200000, "completion debits exactly one real bill")
 	check(JSON.parse_string(world.capture_world_snapshot_json().value)["systems"]["production"]["schema_version"] == 8, "UI does not change v8 save contract")
-	projection_checks(frame())
 	panel.observe(paused)
 	check(controls._record.is_empty() and controls._buttons["resume"].disabled, "stale panel observation disables actions")
 	panel.observe(frame())
@@ -168,7 +176,7 @@ func frame() -> Dictionary:
 	return {"production": production.observation(context).value, "inventory": inventory.own_inventory_observation(context).value, "position": inventory.own_position(context).value}
 
 
-func projection_checks(current: Dictionary) -> void:
+func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	var observed: Dictionary = current["production"]
 	var projection := RemoteProductionProjection.new()
 	check(projection.accept_record(JSON.parse_string(JSON.stringify(observed))).is_success, "remote accepts completed timed structure alongside unchanged v1 catalog")
@@ -203,10 +211,9 @@ func projection_checks(current: Dictionary) -> void:
 	wire.merge({"type": "observation", "tick_number": runner.tick_number, "players": [], "terrain": world.terrain_observation(context).value, "tools": world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID).observation(context).value})
 	remote._receive(JSON.parse_string(JSON.stringify(wire)))
 	check(remote.production_observation(context).is_success, "actual remote receive accepts completed output")
-	var legacy: Dictionary = observed.duplicate(true)
+	var legacy: Dictionary = pre_completion["production"].duplicate(true)
 	# Use a pre-completion projection for legacy compatibility: old versions have
 	# no definition identity for revision-2 timed output.
-	legacy["structures"] = {}
 	legacy.erase("timed_canister")
 	legacy["schema_version"] = 8
 	var old_projection := RemoteProductionProjection.new()

@@ -565,7 +565,11 @@
                 "maxLength": 128
               },
               "definition_revision": {
-                "const": 1
+                "enum": [
+                  1,
+                  2
+                ],
+                "type": "integer"
               },
               "condition_permille": {
                 "type": "integer",
@@ -577,7 +581,25 @@
                 "minLength": 1,
                 "maxLength": 128
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "definition_revision": {
+                      "const": 2
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "definition_id": {
+                      "const": "item.resource-canister.fabricated"
+                    }
+                  }
+                }
+              }
+            ]
           }
         },
         "cargo": {

@@ -77,7 +77,9 @@ func accept_record(value: Dictionary) -> ServiceResult:
 	var machinery: Dictionary = value["machinery"].duplicate(true)
 	if typeof(machinery.get("inventory_items")) != TYPE_ARRAY or machinery["inventory_items"].size() > 512 or typeof(machinery.get("cargo")) != TYPE_DICTIONARY or machinery["cargo"].size() > 32: return _invalid()
 	for physical in machinery["inventory_items"]:
-		if typeof(physical) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(physical, PackedStringArray(["item_id", "definition_id", "definition_revision", "condition_permille", "container_id"])) or not ControlContractValidation.is_id(physical["item_id"]) or not ControlContractValidation.is_id(physical["definition_id"]) or not ControlContractValidation.is_id(physical["container_id"]) or not ControlContractValidation.is_integer(physical["definition_revision"], 1, 1) or not ControlContractValidation.is_integer(physical["condition_permille"], 0, 1000): return _invalid()
+		if typeof(physical) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(physical, PackedStringArray(["item_id", "definition_id", "definition_revision", "condition_permille", "container_id"])) or not ControlContractValidation.is_id(physical["item_id"]) or not ControlContractValidation.is_id(physical["definition_id"]) or not ControlContractValidation.is_id(physical["container_id"]) or not ControlContractValidation.is_integer(physical["condition_permille"], 0, 1000): return _invalid()
+		var timed_output: bool = value.get("schema_version") == 9 and physical["definition_id"] == "item.resource-canister.fabricated" and ControlContractValidation.is_integer(physical["definition_revision"], 2, 2)
+		if not timed_output and not ControlContractValidation.is_integer(physical["definition_revision"], 1, 1): return _invalid()
 	for stock in machinery["cargo"].values():
 		if not _valid_stock(stock, true): return _invalid()
 	machinery.erase("inventory_items")
