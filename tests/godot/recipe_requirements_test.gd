@@ -21,7 +21,7 @@ func run() -> void:
 	context = AuthenticatedCommandContext.from_authenticated_session(&"local-inventory-actor", &"recipe-test", world.world_id, world.region_id, PackedStringArray(["inventory.operate", "terrain.operate"]))
 	var snapshot: String = world.capture_world_snapshot_json().value
 	var observed: Dictionary = production.observation(context).value
-	check(observed["schema_version"] == 12 and JSON.parse_string(snapshot)["systems"]["production"]["schema_version"] == 11, "v12 observation and v11 seal persistence")
+	check(observed["schema_version"] == 13 and JSON.parse_string(snapshot)["systems"]["production"]["schema_version"] == 11, "v13 observation and v11 seal persistence")
 	var catalog: Dictionary = production._catalog.duplicate(true)
 	for id in observed["recipes"]:
 		var requirement: Dictionary = observed["recipe_requirements"][id]

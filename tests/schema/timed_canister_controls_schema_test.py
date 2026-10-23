@@ -20,7 +20,7 @@ def validator(name):
 
 
 fixture = json.loads((ROOT / "var/timed-canister-controls-fixture.json").read_text())
-current = validator("production-observation:v12")
+current = validator("production-observation:v13")
 current.validate(fixture["current"])
 validator("production-observation:v8").validate(fixture["legacy"])
 assert not current.is_valid(fixture["legacy"])

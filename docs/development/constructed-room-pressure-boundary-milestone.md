@@ -1,4 +1,4 @@
-# Constructed room pressure boundary: proposed design checkpoint
+# Constructed room pressure boundary: design and implementation contract
 
 Base: PR143 merge `a55d5b51f7fa30094f3afc3b1bc81d92e81c0866`.
 Coordinator `01a1283c-45d6-7e61-bedd-905e8797f03d` owns design acceptance,
@@ -149,6 +149,16 @@ with chamber/exterior. Unknown versions fail closed. Damaged commissioned doors
 restore with leakage and their actual gas, never with healed seals or reset pressure.
 
 ## Bounded implementation files and acceptance
+
+The implementation uses `ConstructedRoomPressure` for pure geometry/policy/link
+validation, Pressure snapshot v2 for the single room record, Production snapshot
+v11 unchanged, and Production observation v13 / paid-door observation v3 for
+optional own-room telemetry. Observation v11/v1 and v12/v2 remain decodable.
+Both commands use the existing hosted door session lease and the real active
+crowbar. Prepared Access/Pressure candidates are decoded and checked before
+the first write, then assigned with Production without callbacks or yielding.
+The pressure tick uses the existing finite bulk solver; its only new profiling
+counter is `constructed_rooms`. No configuration or dependency changes.
 
 Expected scope: `src/core/pressure/pressure_system.gd`, new small room policy/state
 types under `src/core/pressure/`, paid-door planning and Production guards/commands,

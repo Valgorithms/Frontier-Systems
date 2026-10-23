@@ -1,5 +1,11 @@
 # Paid doorway opening topology v1 (internal)
 
+Explicit pressure commissioning consumes this geometry through the separate
+[constructed-room pressure contract](../development/constructed-room-pressure-boundary-milestone.md).
+The diagnostic API and its `enclosure_with_unsealed_openings` result retain
+their original meaning even when a room is commissioned. Only the Pressure
+owner's linked finite allocation establishes pressure service.
+
 `ProductionSimulationSystem.construction_openings(context, expected_revision)` is a synchronous read-only server interface. It accepts the authenticated context and a bounded integral current Production revision (integral JSON numbers accepted; booleans, strings, fractions, nonfinite and stale values rejected). It has no network message, player command, persisted record or external serialization schema.
 
 The existing Inventory production visibility capability must resolve a current bound body before any geometry is returned. Include every canonical region wall, only the current principal's paid horizontal panels, and only that principal's paid doors attached to the currently bound body. Legacy walls have no ownership metadata: their inclusion asserts no ownership and grants no mutation rights. Excluded foreign doors/panels cannot complete a layout. The single rectangular layout restriction applies to the complete included set; unrelated region walls can make it unsupported. No caller-supplied IDs or geometry are accepted by the owner query.

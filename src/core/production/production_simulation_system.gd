@@ -14,6 +14,7 @@ const MAX_RECEIPTS: int = 64
 const MAX_REVISION: int = 9007199254740000
 var _collision_restore_generation: int = 0
 var _door_access: AccessControlSystem
+var _room_pressure: PressureSystem
 var _checkpoint_door_links: Dictionary = {}
 const STATIONS: Array[String] = ["drill", "refinery", "chemical", "printer", "recycler", "dispenser", "construction"]
 ## Stable fixture sites, relative to the inventory display origin in millimetres.
@@ -327,7 +328,7 @@ func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 	observed["machinery"] = machinery_observation(context)
 	observed["timed_canister"] = TimedCanisterConstruction.observation(_state, _inventory, context, _timed_blueprints.get_definition(ConstructionReservationPlan.BLUEPRINT).value["fingerprint"])
 	# Observation version is independent of the v9 persistence record.
-	observed["schema_version"] = 12
+	observed["schema_version"] = 13
 	observed["paid_doors"] = door_observation(context)
 	observed["horizontal_panels"] = HorizontalPanelObservation.project(_state, context, construction_closure(context), _inventory.production_capability(context, true, []).is_success)
 	observed["recipes"] = _catalog["recipes"].keys()
@@ -457,6 +458,9 @@ func apply_local(context: AuthenticatedCommandContext, request_id: String, opera
 	if not capacity.is_success:
 		return capacity
 	if not PaidDoorGeometry.valid(candidate["doors"], candidate["panels"]) or not PaidDoorConstruction.clear_installations(candidate["doors"], candidate): return _failure("Construction would remove paid door support or overlap its reserved swing.")
+	if _room_pressure != null:
+		var room_links: ServiceResult = _room_pressure.validate_room_links(candidate, _door_access.capture_snapshot().value)
+		if not room_links.is_success: return room_links
 	var previous: Dictionary = _state
 	if not candidate["walls"].is_empty() and not SpatialWallConstruction.scene_clear(candidate["walls"], candidate["machinery"], _inventory.capture_snapshot().value): return _failure("Construction overlaps a wall or world occupant.")
 	_state = candidate
@@ -997,7 +1001,7 @@ func restore_snapshot_record(record: Dictionary, tick: int) -> ServiceResult:
 	if decoded.is_success and _door_access != null:
 		var pair: Dictionary = _door_access.capture_snapshot().value if _checkpoint_door_links.is_empty() else _checkpoint_door_links["access"]
 		if not _checkpoint_door_links.is_empty() and record != _checkpoint_door_links["production"]: return _failure("Restore differs from the validated paired Production candidate.")
-		var links: ServiceResult = PaidDoorConstruction.links(decoded.value, pair)
+		var links: ServiceResult = _validate_constructed_links(decoded.value, pair)
 		if not links.is_success: return links
 	if decoded.is_success:
 		_state = decoded.value
@@ -1209,8 +1213,35 @@ func authorize_door(context: AuthenticatedCommandContext, payload: Dictionary) -
 
 func _apply_door(context: AuthenticatedCommandContext, request: String, operation: String, payload: Dictionary, tick: int, fingerprint: String) -> ServiceResult:
 	var candidate: Dictionary = _state.duplicate(true)
-	var prepared: ServiceResult = PaidDoorConstruction.plan(candidate, _inventory, _door_access, context, request, operation, payload)
+	var before: Dictionary = {}
+	if _room_pressure != null:
+		var captured: ServiceResult = _room_pressure.capture_snapshot()
+		if not captured.is_success: return captured
+		before = captured.value
+		var current_links: ServiceResult = _room_pressure.validate_room_links(_state, _door_access.capture_snapshot().value)
+		if not current_links.is_success: return current_links
+	var prepared: ServiceResult = PaidDoorConstruction.plan(candidate, _inventory, _door_access, context, request, operation, payload, _room_pressure)
 	if not prepared.is_success: return prepared
+	var pressure_record: Dictionary = before
+	if operation in ["door_room_commission", "door_room_decommission"]:
+		var pressure_plan: ServiceResult = _room_pressure.prepare_room_change(context, request, operation, payload.door_id, candidate, tick)
+		if not pressure_plan.is_success: return pressure_plan
+		prepared.value.pressure_after = pressure_plan.value.after
+		# Encode the prepared owner state for cross-owner validation before writes.
+		pressure_record = _room_pressure.record_from_prepared(pressure_plan.value.after)
+	if _room_pressure != null:
+		prepared.value.pressure_owner = _room_pressure
+		prepared.value.pressure_before = before
+		var after_access: Dictionary = _door_access.capture_snapshot().value.duplicate(true)
+		var found: bool = false
+		for index in range(after_access.devices.size()):
+			if after_access.devices[index].device_id == String(prepared.value._id):
+				found = true
+				if prepared.value._remove: after_access.devices.remove_at(index)
+				else: after_access.devices[index] = prepared.value._after.duplicate(true)
+				break
+		if not found and not prepared.value._remove: after_access.devices.append(prepared.value._after.duplicate(true))
+		if not _room_pressure.validate_room_links(candidate, after_access, pressure_record, tick).is_success: return _failure("Prepared pressure, construction and hardware links differ.")
 	if not TimedCanisterConstruction.covered(candidate): return _failure("Unfinished construction retains its reserved stock.")
 	if not PaidDoorGeometry.valid(candidate["doors"], candidate["panels"]): return _failure("Door support validation failed.")
 	candidate["state_revision"] = int(candidate["state_revision"]) + 1
@@ -1225,15 +1256,15 @@ func _apply_door(context: AuthenticatedCommandContext, request: String, operatio
 	return committed_result
 
 
-func with_checkpoint_door_links(production_record: Dictionary, access_record: Dictionary, tick: int, action: Callable) -> ServiceResult:
+func with_checkpoint_door_links(production_record: Dictionary, access_record: Dictionary, tick: int, action: Callable, pressure_record: Dictionary = {}) -> ServiceResult:
 	if not _checkpoint_door_links.is_empty() or not action.is_valid(): return _failure("A paired door restore cannot nest.")
 	var decoded: ServiceResult = validate_snapshot_record(production_record, tick)
 	if not decoded.is_success: return decoded
 	var access_valid: ServiceResult = _door_access.validate_snapshot_record(access_record, tick)
 	if not access_valid.is_success: return access_valid
-	var links: ServiceResult = PaidDoorConstruction.links(decoded.value, access_record)
+	var links: ServiceResult = _room_pressure.validate_room_links(decoded.value, access_record, pressure_record, tick) if _room_pressure != null else PaidDoorConstruction.links(decoded.value, access_record)
 	if not links.is_success: return links
-	_checkpoint_door_links = {"production": production_record.duplicate(true), "access": access_record.duplicate(true), "normalized_production": decoded.value.duplicate(true)}
+	_checkpoint_door_links = {"production": production_record.duplicate(true), "access": access_record.duplicate(true), "pressure": pressure_record.duplicate(true), "tick": tick, "normalized_production": decoded.value.duplicate(true)}
 	var result: ServiceResult = action.call()
 	_checkpoint_door_links.clear()
 	return result
@@ -1242,8 +1273,29 @@ func with_checkpoint_door_links(production_record: Dictionary, access_record: Di
 func validate_door_access_restore(record: Dictionary) -> ServiceResult:
 	if not _checkpoint_door_links.is_empty():
 		if record != _checkpoint_door_links["access"]: return _failure("Restore differs from the validated paired Access candidate.")
-		return PaidDoorConstruction.links(_checkpoint_door_links["normalized_production"], record)
-	return PaidDoorConstruction.links(_state, record)
+		return _validate_constructed_links(_checkpoint_door_links["normalized_production"], record)
+	return _validate_constructed_links(_state, record)
+
+
+func bind_room_pressure(pressure: PressureSystem, world: StringName, region: StringName) -> ServiceResult:
+	if _room_pressure != null or pressure == null or _door_access == null: return _failure("Bind one pressure owner after Access.")
+	var bound: ServiceResult = pressure.bind_room_owners(self, _door_access, world, region)
+	if not bound.is_success: return bound
+	_room_pressure = pressure
+	return ServiceResult.success()
+
+
+func _validate_constructed_links(production: Dictionary, access: Dictionary) -> ServiceResult:
+	if _room_pressure == null: return PaidDoorConstruction.links(production, access)
+	if not _checkpoint_door_links.is_empty(): return _room_pressure.validate_room_links(production, access, _checkpoint_door_links.pressure, _checkpoint_door_links.tick)
+	return _room_pressure.validate_room_links(production, access)
+
+
+func validate_pressure_restore(record: Dictionary, tick: int) -> ServiceResult:
+	if not _checkpoint_door_links.is_empty():
+		if record != _checkpoint_door_links.pressure or tick != _checkpoint_door_links.tick: return _failure("Pressure restore differs from the validated three-owner candidate.")
+		return _room_pressure.validate_room_links(_checkpoint_door_links.normalized_production, _checkpoint_door_links.access, record, tick)
+	return _room_pressure.validate_room_links(_state, _door_access.capture_snapshot().value, record, tick)
 
 
 func door_observation(context: AuthenticatedCommandContext) -> Dictionary:
@@ -1259,13 +1311,13 @@ func door_observation(context: AuthenticatedCommandContext) -> Dictionary:
 		if d["principal_id"] != String(context.principal_id): continue
 		var device: AccessControlledDeviceState = _door_access.devices.get(StringName(id))
 		if device == null: continue
-		items.append({"door_id": id, "position": d["position"].duplicate(), "quarter_turn": d["quarter_turn"], "opened": device.actuator(PaidDoorConstruction.actuator_id(id)).position == 1.0, "seal_installed": not d["seal"].is_empty(), "seal_condition": device.actuator(PaidDoorConstruction.actuator_id(id)).seal_condition})
-	return {"schema_version": 2, "control_epoch": epoch, "can_operate": authorize_door(context, {"control_epoch": epoch}).is_success, "doors": items}
+		items.append({"door_id": id, "position": d["position"].duplicate(), "quarter_turn": d["quarter_turn"], "opened": device.actuator(PaidDoorConstruction.actuator_id(id)).position == 1.0, "seal_installed": not d["seal"].is_empty(), "seal_condition": device.actuator(PaidDoorConstruction.actuator_id(id)).seal_condition, "pressure_room": _room_pressure.room_observation(id) if _room_pressure != null else {}})
+	return {"schema_version": 3, "control_epoch": epoch, "can_operate": authorize_door(context, {"control_epoch": epoch}).is_success, "doors": items}
 
 
 func door_solids() -> ServiceResult:
 	if _door_access == null: return _failure("Door owner unavailable.")
-	var links: ServiceResult = PaidDoorConstruction.links(_state, _door_access.capture_snapshot().value)
+	var links: ServiceResult = _validate_constructed_links(_state, _door_access.capture_snapshot().value)
 	if not links.is_success: return links
 	var result: Array = []
 	var ids: Array = _state["doors"].keys()

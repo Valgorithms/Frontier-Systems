@@ -20,7 +20,7 @@ static func new_device(id: String, principal: String) -> AccessControlledDeviceS
 	return device
 
 
-static func valid_device(id: String, door: Dictionary, record: Dictionary) -> bool:
+static func valid_device(id: String, door: Dictionary, record: Dictionary, area: float = 0.0) -> bool:
 	var decoded: ServiceResult = AccessControlledDeviceState.from_record(record)
 	if not decoded.is_success: return false
 	var device: AccessControlledDeviceState = decoded.value
@@ -31,10 +31,10 @@ static func valid_device(id: String, door: Dictionary, record: Dictionary) -> bo
 	var grant: Dictionary = policy.grants[0]
 	if not ControlContractValidation.has_exact_fields(grant, PackedStringArray(["subject_kind", "subject_id", "action_ids"])) or grant.subject_kind != "principal" or grant.subject_id != door.principal_id or grant.action_ids != ["door.manual_operate"]: return false
 	# Condition, latch and bypass history remain Access-owned. No hidden hardware.
-	return target.mode in [&"manual", &"disabled", &"jammed"] and target.position in [0.0, 1.0] and target.effective_pressure_area_m2 == 0.0 and target.maximum_force_newtons == 0.0 and (target.seal_condition == 0.0 or not door.get("seal", {}).is_empty()) and target.manual_override_available
+	return target.mode in [&"manual", &"disabled", &"jammed"] and target.position in [0.0, 1.0] and target.effective_pressure_area_m2 == area and target.maximum_force_newtons == 0.0 and (target.seal_condition == 0.0 or not door.get("seal", {}).is_empty()) and target.manual_override_available
 
 
-static func links(state: Dictionary, access: Dictionary, inventory: Dictionary = {}) -> ServiceResult:
+static func links(state: Dictionary, access: Dictionary, inventory: Dictionary = {}, areas: Dictionary = {}) -> ServiceResult:
 	var doors: Dictionary = state.get("doors", {})
 	if typeof(access.get("devices")) != TYPE_ARRAY: return failure("Missing Access device records.")
 	var seen: Dictionary = {}
@@ -42,7 +42,7 @@ static func links(state: Dictionary, access: Dictionary, inventory: Dictionary =
 		if typeof(device) != TYPE_DICTIONARY or typeof(device.get("device_id")) != TYPE_STRING: return failure("Invalid device identity.")
 		var id: String = device["device_id"]
 		if doors.has(id):
-			if seen.has(id) or not valid_device(id, doors[id], device): return failure("Door hardware or ownership differs from its commissioned identity.")
+			if seen.has(id) or not valid_device(id, doors[id], device, float(areas.get(id, 0.0))): return failure("Door hardware or ownership differs from its commissioned identity.")
 			seen[id] = true
 		elif id.begins_with("door-"): return failure("An orphan constructed door device is not allowed.")
 	if seen.size() != doors.size(): return failure("Every paid door requires exactly one commissioned Access device.")
@@ -94,7 +94,7 @@ static func unoccupied(pose: Dictionary, inventory: Dictionary, state: Dictionar
 	return true
 
 
-static func plan(state: Dictionary, inventory: InventorySimulationSystem, access: AccessControlSystem, context: AuthenticatedCommandContext, request: String, operation: String, payload: Dictionary) -> ServiceResult:
+static func plan(state: Dictionary, inventory: InventorySimulationSystem, access: AccessControlSystem, context: AuthenticatedCommandContext, request: String, operation: String, payload: Dictionary, pressure: PressureSystem = null) -> ServiceResult:
 	var create: bool = operation == "door_build"
 	var fields: Array = ["expected_revision", "control_epoch", "position", "quarter_turn"] if create else ["expected_revision", "control_epoch", "door_id"]
 	if not ControlContractValidation.has_exact_fields(payload, PackedStringArray(fields)): return failure("An exact door intent is required.")
@@ -117,9 +117,10 @@ static func plan(state: Dictionary, inventory: InventorySimulationSystem, access
 		door = doors[id]
 		if door["principal_id"] != String(context.principal_id) or door["body_id"] != authorized.value: return failure("Only the constructing principal/body may operate or recover this door.")
 		var current: ServiceResult = access.device_snapshot(StringName(id))
-		if not current.is_success or not valid_device(id, door, current.value): return failure("The commissioned door hardware is invalid.")
+		if not current.is_success or not valid_device(id, door, current.value, pressure.room_area(id) if pressure != null else 0.0): return failure("The commissioned door hardware is invalid.")
 		device = AccessControlledDeviceState.from_record(current.value).value
 		var actuator: ActuatorState = device.actuator(actuator_id(id))
+		if pressure != null and pressure.room_area(id) > 0.0 and operation in ["door_remove", "door_seal_install", "door_seal_remove"]: return failure("Decommission the pressure compartment before changing its paid boundary.")
 		if operation == "door_remove":
 			if not door["seal"].is_empty(): return failure("Remove the installed seal before disassembling the door.")
 			if actuator.position != 0.0 or not device.bypass_jobs.is_empty() or not device.tamper_events.is_empty() or actuator.override_actor_id != &"": return failure("Close the door and clear foreign work before recovery.")
@@ -128,6 +129,14 @@ static func plan(state: Dictionary, inventory: InventorySimulationSystem, access
 		elif operation in ["door_seal_install", "door_seal_remove"]:
 			var seal_change: ServiceResult = PaidDoorSeal.plan(state, door, actuator, device, inventory, context, request, operation)
 			if not seal_change.is_success: return seal_change
+		elif operation in ["door_room_commission", "door_room_decommission"]:
+			var tool: ServiceResult = inventory.active_tool(context, "tool.crowbar")
+			if not tool.is_success: return tool
+			if pressure == null: return failure("Pressure commissioning is unavailable.")
+			if actuator.mode != &"manual" or actuator.integrity <= 0.0 or actuator.latch_state != &"released" or not device.bypass_jobs.is_empty() or not device.tamper_events.is_empty() or actuator.override_actor_id != &"": return failure("Usable manual hardware and cleared work are required.")
+			if operation == "door_room_commission" and (actuator.position != 0.0 or actuator.integrity != 1.0 or door.seal.is_empty() or actuator.seal_condition != 1.0): return failure("Close the intact fitted seal before commissioning.")
+			if operation == "door_room_decommission" and actuator.position != 1.0: return failure("Open the door before decommissioning.")
+			actuator.effective_pressure_area_m2 = ConstructedRoomPressure.AREA if operation == "door_room_commission" else 0.0
 		else:
 			if operation not in ["door_open", "door_close"]: return failure("Unknown door operation.")
 			var tool: ServiceResult = inventory.active_tool(context, "tool.crowbar")
@@ -135,7 +144,7 @@ static func plan(state: Dictionary, inventory: InventorySimulationSystem, access
 			var verified := AuthenticatedCommandContext.from_authenticated_session(context.principal_id, context.session_id, context.world_id, context.region_id, PackedStringArray(context.permissions.keys()), {&"tool.pry": PackedStringArray([tool.value])})
 			verified.origin = context.origin
 			verified.permissions["airlock.manual_operate"] = true
-			var can_move: ServiceResult = access.validate_door_actuation(StringName(id), actuator_id(id), operation == "door_open", 0.0, true, verified)
+			var can_move: ServiceResult = access.validate_door_actuation(StringName(id), actuator_id(id), operation == "door_open", pressure.room_difference(id) if pressure != null else 0.0, true, verified)
 			if not can_move.is_success: return can_move
 			actuator.position = 1.0 if operation == "door_open" else 0.0
 	var reach: ServiceResult = inventory.production_capability(context, true, door["position"])
