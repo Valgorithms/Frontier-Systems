@@ -87,7 +87,7 @@ func _process(delta: float) -> void:
 
 func _context(slot: int, peer_id: int = 0) -> AuthenticatedCommandContext:
 	# These grants belong to the trusted two-slot host policy, never the frame.
-	return AuthenticatedCommandContext.from_authenticated_session(&"local-inventory-actor" if slot == 0 else &"local-inventory-target", StringName("invite-slot-%d-peer-%d" % [slot, peer_id]), _world.world_id, _world.region_id, PackedStringArray(["inventory.operate", "terrain.operate"]))
+	return AuthenticatedCommandContext.from_authenticated_session(&"local-inventory-actor" if slot == 0 else &"local-inventory-target", StringName("invite-slot-%d-peer-%d" % [slot, peer_id]), _world.world_id, _world.region_id, PackedStringArray(["inventory.operate", "terrain.operate", "door.manual_operate"]))
 
 
 func _route_key(command: SimulationCommand) -> String:
@@ -118,6 +118,7 @@ func _receive(id: int, value: Dictionary) -> void:
 			peer["socket"].close(1008, "Invalid or occupied invite")
 			return
 		peer["slot"] = slot
+		peer["door_session_lease"] = RefCounted.new()
 		_send(id, {"type": "authenticated", "slot": slot, "world_id": String(_world.world_id), "region_id": String(_world.region_id)})
 		_publish(id)
 		return
@@ -147,7 +148,12 @@ func _receive(id: int, value: Dictionary) -> void:
 			return
 		command = TerrainTransportCodec.command(int(value["request_number"]), value["operation"], value["payload"])
 	elif value["system"] == "production":
-		var production_command := ProductionDevelopmentCommand.new()
+		var production_command: ProductionDevelopmentCommand = HostedPaidDoorCommand.new() if typeof(value["operation"]) == TYPE_STRING and String(value["operation"]).begins_with("door_") else ProductionDevelopmentCommand.new()
+		if production_command is HostedPaidDoorCommand:
+			production_command.host_reference = weakref(self)
+			production_command.peer_id = id
+			production_command.slot = peer["slot"]
+			production_command.session_lease = peer.get("door_session_lease")
 		production_command.operation = value["operation"] if typeof(value["operation"]) == TYPE_STRING else ""
 		production_command.payload = value["payload"]
 		command = production_command
@@ -170,6 +176,10 @@ func _receive(id: int, value: Dictionary) -> void:
 		return
 	command.command_id = StringName(value["request_id"] if TerrainTransportCodec.is_terrain(command) else "net-%d-%s" % [peer["slot"], value["request_id"]])
 	command.authenticated_context = _context(peer["slot"], id)
+	if command is HostedPaidDoorCommand:
+		var door_inventory: InventorySimulationSystem = _world.get_simulation_system(InventorySimulationSystem.SYSTEM_ID)
+		var door_actor: ServiceResult = door_inventory.authorize(command.authenticated_context, true)
+		command.body_id = door_actor.value if door_actor.is_success else ""
 	var route: String = _route_key(command)
 	if _pending.has(route):
 		_ack(id, value["request_id"], ServiceResult.failure(&"request_pending", "That request is already queued."))
@@ -202,12 +212,16 @@ func _publish(id: int) -> void:
 		if not contact.is_success:
 			_peers[id]["socket"].close(1008, "Contact lifecycle unavailable")
 			return
+		var door_contact: ServiceResult = _door_contact_snapshot(context, contact.value)
+		if not door_contact.is_success:
+			_peers[id]["socket"].close(1008, "Door lifecycle unavailable")
+			return
 		var players: Array = []
 		for peer in _peers.values():
 			if peer["slot"] >= 0:
 				var peer_position: ServiceResult = inventory.own_position(_context(peer["slot"]))
 				players.append({"slot": peer["slot"], "position": peer_position.value})
-		_send(id, {"type": "observation", "tick_number": _world.current_tick_number(), "production": production.value, "panel_contact": contact.value, "tools": tool_view.value if tool_view.is_success else {}, "terrain": terrain.value if terrain.is_success else {}, "inventory": own.value, "position": position.value, "players": players, "persistence": persistence.status() if persistence != null else {}, "world_items": world_items.value if world_items.is_success else {}})
+		_send(id, {"type": "observation", "tick_number": _world.current_tick_number(), "production": production.value, "panel_contact": contact.value, "door_contact": door_contact.value, "tools": tool_view.value if tool_view.is_success else {}, "terrain": terrain.value if terrain.is_success else {}, "inventory": own.value, "position": position.value, "players": players, "persistence": persistence.status() if persistence != null else {}, "world_items": world_items.value if world_items.is_success else {}})
 
 
 ## Called only for a current authenticated peer. Never accepts client geometry.
@@ -282,3 +296,11 @@ func _exit_tree() -> void:
 	_listener.stop()
 	for peer in _peers.values():
 		peer["socket"].close(-1)
+
+
+func _door_contact_snapshot(context: AuthenticatedCommandContext, lifecycle: Dictionary) -> ServiceResult:
+	var production := _world.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID) as ProductionSimulationSystem
+	var solids: ServiceResult = production.door_solids()
+	if not solids.is_success: return solids
+	var record: Dictionary = {"schema_version": 1, "world_id": String(context.world_id), "region_id": String(context.region_id), "sequence": lifecycle.sequence, "inventory_restore": lifecycle.inventory_restore, "production_restore": lifecycle.production_restore, "production_revision": lifecycle.geometry.production_revision, "production_tick": lifecycle.geometry.production_tick, "inventory_tick": lifecycle.geometry.inventory_tick, "boxes": solids.value}
+	return DoorContactObservation.decode(record, context.world_id, context.region_id)

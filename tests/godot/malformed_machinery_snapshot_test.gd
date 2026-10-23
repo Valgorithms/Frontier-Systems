@@ -13,7 +13,7 @@ func run() -> void:
 		check(result != null and not result.is_success, "malformed machinery returns a structured failure")
 		check(world.capture_world_snapshot_json().value == before, "rejected restore preserves every live system")
 	var legacy: Dictionary = JSON.parse_string(before)
-	for field in ["panels", "construction", "construction_bindings", "construction_commands"]: legacy["systems"]["production"].erase(field)
+	for field in ["doors", "panels", "construction", "construction_bindings", "construction_commands"]: legacy["systems"]["production"].erase(field)
 	legacy["systems"]["production"]["schema_version"] = 5
 	legacy["systems"]["production"].erase("machinery")
 	legacy["systems"]["production"].erase("walls")

@@ -144,7 +144,7 @@ func run() -> void:
 	var own: Dictionary = inventory.own_inventory_observation(context).value
 	check(own["items"].any(func(item: Dictionary) -> bool: return item["item_id"] == output and item["definition_revision"] == 2), "completed UI job creates actual revision-2 canister")
 	check(production.capture_snapshot().value["store"]["iron"] == 200000, "completion debits exactly one real bill")
-	check(JSON.parse_string(world.capture_world_snapshot_json().value)["systems"]["production"]["schema_version"] == 9, "UI preserves v9 save contract")
+	check(JSON.parse_string(world.capture_world_snapshot_json().value)["systems"]["production"]["schema_version"] == 10, "UI preserves v10 save contract")
 	panel.observe(paused)
 	check(controls._record.is_empty() and controls._buttons["resume"].disabled, "stale panel observation disables actions")
 	panel.observe(frame())
@@ -227,6 +227,7 @@ func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	remote._authenticated = true
 	var wire: Dictionary = current.duplicate(true)
 	wire["panel_contact"] = preload("res://tests/support/paid_panel_contact_fixture.gd").envelope(world, host._context(0, 1))
+	wire["door_contact"] = preload("res://tests/support/paid_panel_contact_fixture.gd").door_envelope(world, host._context(0, 1))
 	wire.merge({"type": "observation", "tick_number": runner.tick_number, "players": [], "terrain": world.terrain_observation(host._context(0, 1)).value, "tools": world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID).observation(host._context(0, 1)).value})
 	check(TerrainObservationValidation.valid(JSON.parse_string(JSON.stringify(wire["terrain"]))), "actual terrain projection valid for remote frame")
 	check(ToolObservationValidation.valid(JSON.parse_string(JSON.stringify(wire["tools"]))), "actual tool projection valid for remote frame")
@@ -237,6 +238,13 @@ func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	remote_controls.configure(remote)
 	remote_controls.observe(remote.production_observation(context).value)
 	check(not remote_controls._record.is_empty(), "remote UI reads real completed host projection")
+	for version in [true, 10.5, 12, "11"]:
+		var bad_version: Dictionary = remote.production_observation(context).value.duplicate(true)
+		bad_version.schema_version = version
+		remote_controls.observe(bad_version)
+		check(remote_controls._record.is_empty(), "timed UI rejects boolean/fractional/unknown/string version")
+		remote_controls.observe(remote.production_observation(context).value)
+		check(not remote_controls._record.is_empty(), "current integral JSON version restores timed UI")
 	remote.connection_closed.emit("test disconnect")
 	check(remote_controls._record.is_empty() and remote_controls._buttons["complete"].disabled, "remote disconnect clears timed UI authority")
 	remote_controls.free()
@@ -245,6 +253,7 @@ func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	# no definition identity for revision-2 timed output.
 	legacy.erase("timed_canister")
 	legacy.erase("horizontal_panels")
+	legacy.erase("paid_doors")
 	legacy["schema_version"] = 8
 	var old_projection := RemoteProductionProjection.new()
 	check(old_projection.accept_record(legacy).is_success, "legacy v8 remains readable without timed controls")

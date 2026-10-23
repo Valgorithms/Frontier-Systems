@@ -7,8 +7,8 @@ surface descriptors, a voluntary-capability hint and aggregate geometric closure
 status/revision. The authenticated host filters descriptors by principal. Aggregate
 closure uses all canonical walls/panels and cannot be reconstructed from the
 partial own-only descriptor list. No foreign IDs, principals, payment receipts or
-grants enter this projection. V7..9 observations remain readable; a connection
-that has accepted v10 rejects a downgrade. Persistence remains strict save9.
+grants enter this projection. V7..10 observations remain readable; a connection
+that has accepted v11 rejects a downgrade. Persistence uses strict save v10.
 
 The first-playable machinery drawer includes collapsed floor/ceiling controls.
 X/Z minima and width/depth use integer millimetres on the 50 mm grid; each side
@@ -38,6 +38,35 @@ The desktop client exposes **Extract, store, refine and recycle** inside the exi
 7. Alternatively run `chemical.electrolysis` to separate water into stored hydrogen and oxygen. Dispense small gas quantities while respecting vessel pressure.
 
 The loop is executable runtime code, with command buttons and durable snapshot records. It is a finite shared workstation prototype: the bulk depot and vessel belong to production, separate from wearable/handheld inventory. Payload contents now attach to real inventory canisters through the [portable resource bridge](portable-resource-carriers.md); the same mass is never also minted as duplicate item stacks. Legacy wall segments remain aggregate blueprint mass records. [Physical floor panels](../development/spatial-wall-milestone.md) add owned-plate placement/removal, static collision and server movement validation, with production v7 persistence. Deployed machinery uses [server-owned placement envelopes](../development/machine-placement-authority-milestone.md) for deployment and expanding fits, with deliberate trusted-checkpoint compatibility. Neither path forms atmospheric enclosures; pressure topology remains future work.
+
+## Paid manual doors
+
+Production save v10 adds a bounded registry of paid manual door installations;
+v1-v9 records migrate to an empty registry. Production observation v11 adds the
+own-only `paid_doors` v1 projection, current body control epoch and operation hint.
+The machinery drawer submits build/open/close/remove intents with the current
+Production revision and epoch. Production owns the fixed 2 kg processed plate
+bill and installation identity. Access owns the single commissioned manual leaf;
+Inventory and Tools resolve the actual held usable crowbar. No controller,
+fixture spares, pressure ports or sealing capability are commissioned.
+
+Construction requires complete paid floor coverage under the 1 m square swing,
+clear installations and mapped canonical body/storage/grip occupancy. Removing
+support or operating into an occupied swing rejects before either owner changes.
+Closed leaves and permanent frames block canonical motion and derived physical
+contact; the open leaf has a distinct hinged box. Disassembly requires a closed,
+unoccupied assembly with no added hardware or active bypass work and refunds the
+trusted bill once, subject to capacity and existing reservation claims.
+
+A one-use prepared Access change compares the affected live reference and its
+complete original record before committing. Production assigns its validated
+candidate immediately after that final fallible step. Whole-world restore uses a
+synchronous paired Production/Access scope: pure-decode and cross-link validation
+precede mutation, nesting rejects, and independent owner restores must agree with
+the other live owner. No session identifier is persisted in the installation.
+See [the door milestone](../development/paid-door-construction-milestone.md) for
+geometry, failure bounds and verification status. These doors do not contribute
+to room closure or pressure topology.
 
 ## Ownership and commands
 

@@ -20,7 +20,7 @@ def validator(version):
 
 
 fixture = json.loads((ROOT / "var/horizontal-panel-controls-fixture.json").read_text())
-current = validator(10)
+current = validator(11)
 current.validate(fixture["current"])
 for version, record in zip((7, 8, 9), fixture["legacy"]):
     validator(version).validate(record)
@@ -34,4 +34,4 @@ for record in fixture["malformed"]:
     view = record["horizontal_panels"]
     ids = [s["surface_id"] for s in view["surfaces"]]
     assert len(ids) != len(set(ids)) or view["closure"]["production_revision"] != record["state_revision"]
-print(f"Panel controls schemas: real v10, legacy v7-9, {schema_rejections} schema and {len(fixture['malformed']) - schema_rejections} semantic rejections passed")
+print(f"Panel controls schemas: real v11, legacy v7-9, {schema_rejections} schema and {len(fixture['malformed']) - schema_rejections} semantic rejections passed")

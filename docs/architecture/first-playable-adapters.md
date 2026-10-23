@@ -42,6 +42,27 @@ Automatic checkpoints occur every five seconds. The authenticated `world/checkpo
 
 ## Extension points
 
+### Paid manual door ingress and contact
+
+Only door commands use `HostedPaidDoorCommand`. The host stamps a weak host
+reference, peer/slot, opaque authentication lease, authenticated context and
+resolved stable body. Validation and application both recheck the live peer,
+exact session/lease, principal and body binding. Disconnect or replacement between
+these phases rejects queued work. A newly authenticated session may operate its
+existing stable installation using its current body epoch. Client fields never
+supply identity. This transport-liveness correction is door-scoped; other
+Production commands do not gain that protection from this adapter.
+
+Production observation v11 requires a separate `door_contact` v1 envelope beside
+the unchanged horizontal panel contract. Four complete sorted boxes per door
+encode both jambs, lintel and the actual open/closed leaf. The strict decoder
+recomputes dimensions and integer quarter-turn geometry, bounds the view to 16
+doors, and checks scope, sequence, owner restore fences and ticks against the
+accompanying panel/Production publication. `PaidDoorContactScene` creates static
+boxes at the existing display offset and immediately removes old physics bodies
+on invalidation, disconnect, transform change or teardown. Freshness expires at
+500 ms. Client contact assists movement; canonical motion uses the same solids.
+
 ### Paid panel contact observations
 
 `paid-panel-contact-observation-v1.schema.json` defines a read-only, complete collision view of paid floor and ceiling panels from every builder in the authenticated world/region. The host derives it afresh from the actual canonical owners for each peer publication. It exposes only bounded stable geometry IDs, dimensions and revision/tick metadata, without principals, material records or session credentials. This contact assistance does not grant movement or change canonical command authorization.
@@ -54,7 +75,7 @@ Replace invite binding with Steam identity behind a session adapter; retain cano
 
 ## Versioned data contracts
 
-Production intents use production-intent-v1.schema.json; timed canister owner intents use timed-canister-intent-v1.schema.json. Canonical records use production-system-v8.schema.json (with v1 through v7 migration to empty construction claims). The world snapshot schema accepts all eight versioned Production records. Read-only scoped projections use production-observation-v8.schema.json; new clients also accept legacy v7 observations without recipe requirements. Observations are never valid restore inputs. Local checkpoint envelopes use local-checkpoint-v1.schema.json, with UTF-8 byte bounds and cross-system validation additionally enforced at runtime. These schemas live under docs/schema/.
+Production intents use production-intent-v1.schema.json; timed canister owner intents use timed-canister-intent-v1.schema.json. Canonical records use production-system-v10.schema.json with v1-v9 migration (older records acquire an empty paid-door registry). The world snapshot schema accepts all ten versioned Production records. Read-only scoped projections use production-observation-v11.schema.json; clients retain v7-v10 decoding with their original optional contracts. Observations are never valid restore inputs. Local checkpoint envelopes use local-checkpoint-v1.schema.json, with UTF-8 byte bounds and cross-system validation additionally enforced at runtime. These schemas live under docs/schema/.
 
 [Equipment fabrication](equipment-fabrication.md) extends the factory preparation boundary and conserved structural mass. V2 payload-only descriptions above refer to the earlier plate/canister implementation.
 

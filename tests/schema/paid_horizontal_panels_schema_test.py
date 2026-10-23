@@ -20,14 +20,14 @@ def validator(version):
 
 fixture = json.loads((ROOT / "var/paid-panels-fixture.json").read_text())
 current = fixture["persistent"]
-validator(9).validate(current)
+validator(10).validate(current)
 validator(8).validate(fixture["legacy"])
 assert not validator(8).is_valid(current)
 for field, value in (("materials", {"plate": 0}), ("bounds_millimetres", [0, 50.5, 0, 1000]), ("blueprint_revision", 2), ("principal_id", ""), ("kind", "wall")):
     malformed = deepcopy(current)
     next(iter(malformed["panels"].values()))[field] = value
-    assert not validator(9).is_valid(malformed), field
+    assert not validator(10).is_valid(malformed), field
 missing = deepcopy(current)
 del missing["panels"]
-assert not validator(9).is_valid(missing)
-print("Paid panel schemas: actual v9, legacy v8 and six malformed records passed")
+assert not validator(10).is_valid(missing)
+print("Paid panel schemas: actual v10, legacy v8 and six malformed records passed")

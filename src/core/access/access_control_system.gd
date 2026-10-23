@@ -16,6 +16,13 @@ const PROTOTYPE_AIRLOCK_ID: StringName = &"habitat_airlock"
 
 var devices: Dictionary = {}
 var current_tick: int = 0
+var _door_restore_guard: Callable
+
+
+func bind_door_restore_guard(guard: Callable) -> ServiceResult:
+	if _door_restore_guard.is_valid() or not guard.is_valid(): return ServiceResult.failure(&"door_guard_bound", "Bind one trusted door restore guard.")
+	_door_restore_guard = guard
+	return ServiceResult.success()
 
 
 func _init() -> void:
@@ -356,6 +363,9 @@ func restore_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> S
 	var decoded: ServiceResult = _decode_snapshot_record(record, snapshot_tick_number)
 	if not decoded.is_success:
 		return decoded
+	if _door_restore_guard.is_valid():
+		var links: ServiceResult = _door_restore_guard.call(record)
+		if not links.is_success: return links
 	devices = decoded.value
 	current_tick = snapshot_tick_number
 	return ServiceResult.success()

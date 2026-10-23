@@ -131,6 +131,14 @@ func run() -> void:
 	check(controls._record.is_empty() and preview._ghost == null, "scope change clears candidate before enqueue")
 	world.region_id = context.region_id
 	controls.observe(frame()["production"])
+	controls.observe(JSON.parse_string(JSON.stringify(frame()["production"])))
+	check(not controls._record.is_empty() and not preview._panels.is_empty(), "integral JSON version preserves controls and paid panel preview")
+	for version in [true, 10.5, 12, "11"]:
+		var bad_version: Dictionary = frame()["production"].duplicate(true)
+		bad_version.schema_version = version
+		controls.observe(bad_version)
+		check(controls._record.is_empty() and preview._panels.is_empty(), "panel UI and preview reject boolean/fractional/unknown/string version")
+		controls.observe(frame()["production"])
 	var invalid: Dictionary = frame()["production"].duplicate(true)
 	invalid["horizontal_panels"]["surfaces"][0]["height_millimetres"] = 123
 	controls.observe(invalid)
@@ -211,6 +219,7 @@ func check_projection(current: Dictionary) -> void:
 	for version in [7, 8, 9]:
 		var legacy: Dictionary = current.duplicate(true)
 		legacy.erase("horizontal_panels")
+		legacy.erase("paid_doors")
 		legacy["schema_version"] = version
 		if version < 9: legacy.erase("timed_canister")
 		if version < 8: legacy.erase("recipe_requirements")
