@@ -50,6 +50,10 @@ func run() -> void:
 	check(route(1, "reserve", reserve, "host-reserve")["ok"], "real authenticated host reserves finite stock")
 	check(not route(2, "cancel", intent("host-job"))["ok"], "other authenticated actor cannot cancel own job")
 	check(not production.observation(host._context(1, 2)).value["timed_canister"]["jobs"].has("host-job"), "other actor projection omits job and bindings")
+	for field in ["body_id", "world_id", "region_id"]:
+		var detached: Dictionary = production.capture_snapshot().value
+		detached["construction_bindings"]["host-job"][field] = "different-scope"
+		check(not TimedCanisterConstruction.observation(detached, inventory, context, production.observation(context).value["timed_canister"]["blueprint_fingerprint"])["jobs"].has("host-job"), "projection filters own job with different " + field)
 	check(route(1, "interrupt", intent("host-job"))["ok"], "host pause accepted")
 	var before: Dictionary = production.capture_snapshot().value
 	check(route(1, "reserve", reserve, "host-reserve")["ok"], "exact request retry returns retained result")
@@ -195,6 +199,20 @@ func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	excess["timed_canister"]["jobs"] = {}
 	for index in range(17): excess["timed_canister"]["jobs"]["excess-%d" % index] = {"state": "paused", "progress_ticks": 0}
 	malformed.append(excess)
+	for progress in [-1, 121, 1.5]:
+		var bad: Dictionary = observed.duplicate(true)
+		bad["timed_canister"]["jobs"].values()[0]["progress_ticks"] = progress
+		malformed.append(bad)
+	var unknown_state: Dictionary = observed.duplicate(true)
+	unknown_state["timed_canister"]["jobs"].values()[0]["state"] = "untrusted"
+	malformed.append(unknown_state)
+	for revision in [2, 3]:
+		var bad: Dictionary = observed.duplicate(true)
+		for physical in bad["machinery"]["inventory_items"]:
+			if physical["definition_revision"] == 2:
+				physical["definition_revision"] = revision
+				physical["definition_id"] = "item.plate.prototype" if revision == 2 else physical["definition_id"]
+		malformed.append(bad)
 	for bad in malformed:
 		check(not projection.accept_record(bad).is_success, "remote rejects malformed/private/oversized projection")
 	var stale: Dictionary = observed.duplicate(true)
@@ -208,9 +226,19 @@ func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	remote.set_process(false)
 	remote._authenticated = true
 	var wire: Dictionary = current.duplicate(true)
-	wire.merge({"type": "observation", "tick_number": runner.tick_number, "players": [], "terrain": world.terrain_observation(context).value, "tools": world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID).observation(context).value})
+	wire.merge({"type": "observation", "tick_number": runner.tick_number, "players": [], "terrain": world.terrain_observation(host._context(0, 1)).value, "tools": world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID).observation(host._context(0, 1)).value})
+	check(TerrainObservationValidation.valid(JSON.parse_string(JSON.stringify(wire["terrain"]))), "actual terrain projection valid for remote frame")
+	check(ToolObservationValidation.valid(JSON.parse_string(JSON.stringify(wire["tools"]))), "actual tool projection valid for remote frame")
 	remote._receive(JSON.parse_string(JSON.stringify(wire)))
 	check(remote.production_observation(context).is_success, "actual remote receive accepts completed output")
+	var remote_controls := TimedCanisterControls.new()
+	root.add_child(remote_controls)
+	remote_controls.configure(remote)
+	remote_controls.observe(remote.production_observation(context).value)
+	check(not remote_controls._record.is_empty(), "remote UI reads real completed host projection")
+	remote.connection_closed.emit("test disconnect")
+	check(remote_controls._record.is_empty() and remote_controls._buttons["complete"].disabled, "remote disconnect clears timed UI authority")
+	remote_controls.free()
 	var legacy: Dictionary = pre_completion["production"].duplicate(true)
 	# Use a pre-completion projection for legacy compatibility: old versions have
 	# no definition identity for revision-2 timed output.
