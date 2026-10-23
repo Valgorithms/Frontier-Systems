@@ -238,7 +238,7 @@ func projection_checks(current: Dictionary, pre_completion: Dictionary) -> void:
 	remote_controls.configure(remote)
 	remote_controls.observe(remote.production_observation(context).value)
 	check(not remote_controls._record.is_empty(), "remote UI reads real completed host projection")
-	for version in [true, 10.5, 12, "11"]:
+	for version in [true, 10.5, 13, "12"]:
 		var bad_version: Dictionary = remote.production_observation(context).value.duplicate(true)
 		bad_version.schema_version = version
 		remote_controls.observe(bad_version)
