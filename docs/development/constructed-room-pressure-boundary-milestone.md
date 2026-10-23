@@ -3,7 +3,8 @@
 Base: PR143 merge `a55d5b51f7fa30094f3afc3b1bc81d92e81c0866`.
 Coordinator `01a1283c-45d6-7e61-bedd-905e8797f03d` owns design acceptance,
 merge, ledger and active state. Worker branch: `constructed-room-pressure-boundary`.
-Status: proposal for review; no runtime, authority or schema implementation yet.
+Status: Coordinator accepted habitat subdivision and commissioned load area;
+implementation authorized with the corrected retention limit below. No runtime lease.
 
 ## Smallest usable outcome
 
@@ -42,7 +43,7 @@ the same modeled volume twice. Coordinator acceptance of this domain rule is
 required before implementing it.
 
 Proposed policy values, also requiring review: 1.71 m2 effective load area
-(0.9 x 1.9 m clear opening), 2 kPa maximum retained differential, zero modeled
+(0.9 x 1.9 m clear opening), 0.5 kPa maximum retained differential, zero modeled
 conductance only while closed with installed seal condition exactly 1, full
 actuator integrity, released intact latch and usable manual mode. Every open,
 missing/degraded/failed seal, damaged/disabled/jammed hardware, or over-rating
@@ -50,6 +51,16 @@ state uses conductance 1 mol/(s*kPa). This deliberately conservative binary
 leak model has no physical certification, continuum-flow or real gasket claim.
 Opening is never an instant deletion of gas. Integrity or seal damage remains
 Access-owned; the leak model cannot repair it or manufacture paid material.
+
+Coordinator correction: Access actually supplies 1000 N manual force, so its
+1.71 m2 opening becomes inoperable above approximately 0.584795 kPa. The earlier
+2 kPa proposal could trap a room above that threshold. Use a stateless threshold
+at 0.5 kPa plus 1e-9 kPa comparison tolerance, with no hysteresis or saved leak
+latch. Leakage continues above that threshold, and can stop only within the
+strictly operable margin. The existing solver's 0.001 kPa equilibrium epsilon
+is far below this margin. Test a differential inside the former trap interval,
+including restore, and prove conservative leakage reaches an operable state
+without a new valve, ignored force, healed hardware or injected gas.
 
 The policy grants pressure service through explicit commissioning, never from
 condition 1 alone. Existing uncommissioned PR143 seals/doors retain zero load
