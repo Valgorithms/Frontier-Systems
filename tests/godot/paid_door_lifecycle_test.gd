@@ -174,14 +174,19 @@ func run() -> void:
 func seal_checks() -> void:
 	var intent: Dictionary = {"door_id": door_id}
 	seal_denied("door_seal_install", intent) # no free plate
-	move([0, 0, 0])
+	move([0, 0, -6000]); move([0, 0, 0])
+	if failures: return
 	command("process", {"recipe_id": "craft.plate"}, false) # last iron is claimed
 	command("canister_cancel", {"job_id": "door-reservation", "expected_reservation_revision": production.capture_snapshot().value.construction.revision, "control_epoch": 0})
 	command("process", {"recipe_id": "craft.plate"}); step(120)
-	move([3500, 0, -6000])
+	if failures: return
+	move([0, 0, -6000]); move([3500, 0, -6000])
 	seal_denied("door_seal_remove", intent)
 	var tools: ToolSimulationSystem = world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID)
-	var real_tool: String = inventory.active_tool(context, "tool.crowbar").value
+	var tool_result: ServiceResult = inventory.active_tool(context, "tool.crowbar")
+	check(tool_result.is_success, "seal fixture retains actual active crowbar")
+	if not tool_result.is_success: return
+	var real_tool: String = tool_result.value
 	var tool_before: Dictionary = tools._ledger._record.duplicate(true)
 	for part_id in tools._ledger._record.assemblies[real_tool].slots.values(): tools._ledger._record.parts[part_id].integrity_ppm = 0
 	seal_denied("door_seal_install", intent)
@@ -189,14 +194,14 @@ func seal_checks() -> void:
 	var owner_before: SharedInventoryCoordinator = inventory._owner
 	var owner_record: Dictionary = owner_before.to_record()
 	for body in owner_record.bodies:
-		if body.principal_id == String(context.principal_id): body.active_hand_slot_id = "hand.right"
+		if body.body_id == inventory.authorize(context, true).value: body.active_hand_slot_id = "hand.right"
 	var different_hand: ServiceResult = SharedInventoryCoordinator.from_record(owner_record, inventory._profiles, inventory._catalog)
 	check(different_hand.is_success, "empty active hand test candidate validates")
 	if different_hand.is_success:
 		inventory._owner = different_hand.value
 		seal_denied("door_seal_install", intent)
 		inventory._owner = owner_before
-	move([0, 0, 0]); seal_denied("door_seal_install", intent); move([3500, 0, -6000])
+	move([0, 0, -6000]); move([0, 0, 0]); seal_denied("door_seal_install", intent); move([0, 0, -6000]); move([3500, 0, -6000])
 	var stale: Dictionary = operate_intent(); stale.control_epoch = 1
 	check(not door_route(3, "door_seal_install", stale).ok, "seal rejects stale epoch")
 	stale = operate_intent(); stale.expected_revision -= 1
@@ -248,6 +253,7 @@ func seal_checks() -> void:
 	var snapshot: Dictionary = JSON.parse_string(world.capture_world_snapshot_json().value)
 	var target := WorldRuntime.new(); target.resource_carriers_enabled = true; root.add_child(target)
 	check(target.restore_world_snapshot_json(JSON.stringify(snapshot)).is_success, "paired fitted degraded gasket save restores")
+	if failures: target.free(); return
 	var restored_access: AccessControlSystem = target.get_simulation_system(AccessControlSystem.SYSTEM_ID)
 	check(restored_access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).seal_condition == 0.25, "restore never heals degraded gasket")
 	target.free()
@@ -292,9 +298,9 @@ func seal_checks() -> void:
 	var legacy_save: Dictionary = production.capture_snapshot().value; legacy_save.schema_version = 10
 	for d in legacy_save.doors.values(): d.erase("seal")
 	check(production.restore_snapshot_record(legacy_save, runner.tick_number).is_success and production.capture_snapshot().value.doors[door_id].seal.is_empty(), "v10 populated door migrates to absent seal")
-	move([0, 0, 0]); command("process", {"recipe_id": "salvage.plate"}); step(60)
+	move([0, 0, -6000]); move([0, 0, 0]); command("process", {"recipe_id": "salvage.plate"}); step(60)
 	command("canister_reserve", {"job_id": "door-reservation-restored", "expected_reservation_revision": production.capture_snapshot().value.construction.revision, "control_epoch": 0})
-	move([3500, 0, -6000])
+	move([0, 0, -6000]); move([3500, 0, -6000])
 
 
 func seal_denied(operation: String, payload: Dictionary) -> void:

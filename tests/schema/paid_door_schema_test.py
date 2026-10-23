@@ -42,3 +42,22 @@ for operation in ["door_seal_install", "door_seal_remove"]:
     payload["materials"] = {"plate": 1}
     assert not v.is_valid({"operation": operation, "payload": payload})
 print("Paid gasket emitted save/observation, malformed provenance and strict install/remove intents passed")
+
+# Exercise the public save wrapper with populated current and legacy doors.
+world = {"schema_version": 1, "world_id": "seal-schema-world", "region_id": "seal-schema-region", "tick_number": 0, "systems": {"production": seal_fixture["persistent"]}}
+wrapper = validator("world-snapshot:v1")
+wrapper.validate(world)
+old = deepcopy(world)
+old["systems"]["production"] = deepcopy(f["persistent"])
+old["systems"]["production"]["schema_version"] = 10
+for door in old["systems"]["production"]["doors"].values():
+    door.pop("seal")
+wrapper.validate(old)
+for version in [12, True, 10]:
+    bad = deepcopy(world)
+    bad["systems"]["production"]["schema_version"] = version
+    assert not wrapper.is_valid(bad), version
+bad = deepcopy(world)
+next(iter(bad["systems"]["production"]["doors"].values()))["seal"]["extra"] = 1
+assert not wrapper.is_valid(bad)
+print("World wrapper accepts current/legacy populated doors and rejects unsupported/mismatched versions and extra seal fields")
