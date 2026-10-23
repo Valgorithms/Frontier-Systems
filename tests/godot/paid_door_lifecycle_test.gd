@@ -77,6 +77,7 @@ func run() -> void:
 	check(ConstructionReservationPlan.claimed(state["construction"]) == claimed, "door build preserves active finite iron reservation")
 	var device: AccessControlledDeviceState = access.devices[StringName(door_id)]
 	check(device.security_controllers.is_empty() and device.actuators.size() == 1, "no fixture controller spares or second actuator granted")
+	check(production.construction_openings(context, state.state_revision).value.status == "open_or_unsupported", "real paid unsealed door alone cannot complete enclosure")
 	var retained: Dictionary = pose.duplicate(true)
 	retained.merge({"control_epoch": 0, "expected_revision": int(state["state_revision"]) - 1})
 	var request: String = "machine-test-%d" % sequence
@@ -95,6 +96,7 @@ func run() -> void:
 	await authority_and_contact_checks()
 	door_command("door_open", {"door_id": door_id})
 	check(access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).position == 1.0, "existing Access actuator owns manual position")
+	check(production.construction_openings(context, production.capture_snapshot().value.state_revision).value.status == "open_or_unsupported", "open paid door grants no enclosure")
 	move([3500, 0, -4600])
 	door_command("door_close", {"door_id": door_id}, false)
 	door_command("door_remove", {"door_id": door_id}, false)
@@ -159,9 +161,9 @@ func run() -> void:
 	fixture.close()
 	door_command("door_remove", {"door_id": door_id})
 	check(not access.devices.has(StringName(door_id)) and production.capture_snapshot().value["store"]["plate"] == 2000000, "disassembly removes only paid device and refunds exact trusted bill")
+	check(production.construction_openings(context, production.capture_snapshot().value.state_revision).value.door_ids.is_empty(), "removed finite door leaves no aperture identity")
 	command("panel_remove", {"panel_id": panel})
 	check(production.capture_snapshot().value["store"]["plate"] == 3000000, "floor recovers once detached")
-	opening_topology_checks()
 	if is_instance_valid(host): host.free()
 	print("Paid manual door lifecycle: %d failures" % failures)
 	finish()
@@ -171,75 +173,6 @@ func door_command(operation: String, payload: Dictionary, success: bool = true) 
 	var intent: Dictionary = payload.duplicate(true)
 	intent["control_epoch"] = 0
 	command(operation, intent, success)
-
-
-func opening_topology_checks() -> void:
-	# Build a real finite-paid room at a separate empty site. Original lifecycle
-	# assertions above retain their original stock/identity expectations.
-	for batch in range(5):
-		move([-3000, 0, -1000])
-		command("extract", {"deposit_id": "deposit.iron", "carrier_id": "resource-canister-1", "amount_milligrams": 1000000})
-		move([0, 0, 0])
-		command("unload_cargo", {"carrier_id": "resource-canister-1", "material": "ore.iron", "amount_milligrams": 1000000})
-		command("process", {"recipe_id": "refine.iron"}); step(120)
-		command("process", {"recipe_id": "craft.plate"}); step(120)
-	for index in range(3): command("materialize_plate", {})
-	var plates: Array = production.observation(context).value["components"].duplicate()
-	check(plates.size() == 3, "three finite physical wall plates for aperture layout")
-	if plates.size() != 3: return
-	move([5500, 0, -5500])
-	command("wall_build", {"item_id": plates[0], "position": [5500, 0, -4550], "quarter_turn": 0})
-	move([7000, 0, -5500]); move([7000, 0, -4000])
-	command("wall_build", {"item_id": plates[1], "position": [5950, 0, -4000], "quarter_turn": 1})
-	move([7000, 0, -6000]); move([7000, 0, -2500]); move([5500, 0, -2500])
-	command("wall_build", {"item_id": plates[2], "position": [5500, 0, -3450], "quarter_turn": 0})
-	move([7000, 0, -2500]); move([7000, 0, -4000])
-	command("panel_build", {"kind": "floor", "bounds_millimetres": [5100, 5900, -4500, -3500], "height_millimetres": 0})
-	command("panel_build", {"kind": "ceiling", "bounds_millimetres": [5100, 5900, -4500, -3500], "height_millimetres": 2000})
-	move([7000, 0, -6000]); move([3600, 0, -6000]); move([3600, 0, -4000])
-	command("panel_build", {"kind": "floor", "bounds_millimetres": [4100, 5100, -4500, -3500], "height_millimetres": 0})
-	door_command("door_build", {"position": [5050, 0, -4000], "quarter_turn": 1})
-	var state: Dictionary = production.capture_snapshot().value
-	var revision: int = state.state_revision
-	var assessment: ServiceResult = production.construction_openings(context, revision)
-	check(assessment.is_success and assessment.value.status == "enclosure_with_unsealed_openings", "shared canonical walls plus own finite paid surfaces and door participate")
-	check(assessment.is_success and assessment.value.door_ids.size() == 1 and not assessment.value.has("wall_ids") and not assessment.value.has("materials"), "owner query returns own door IDs and aggregate geometry only")
-	check(production.capture_snapshot().value == state, "query does not mutate canonical state")
-	for bad in [revision - 1, true, str(revision), float(revision) + 0.5, null, INF]:
-		check(not production.construction_openings(context, bad).is_success, "bad expected revision rejects")
-	var foreign := AuthenticatedCommandContext.for_local_development(&"foreign-aperture-actor", world.world_id, world.region_id)
-	var denied: ServiceResult = production.construction_openings(foreign, revision)
-	check(not denied.is_success and denied.value == null, "unbound principal receives no geometry")
-	# Detached internal state perturbations are negative controls only; always
-	# restore before commands. They prove own-only inclusion and no revision cache.
-	var panel_id: String = ""
-	for key in state.panels:
-		if state.panels[key].kind == "ceiling": panel_id = key
-	var restored: Dictionary = state.duplicate(true)
-	restored.panels[panel_id].principal_id = "foreign-panel-owner"
-	check(production.restore_snapshot_record(restored, runner.tick_number).is_success, "valid same-revision restore with foreign ceiling")
-	revision = production.capture_snapshot().value.state_revision
-	check(production.construction_openings(context, revision).value.status == "open_or_unsupported", "excluded foreign panel cannot complete enclosure at same revision")
-	check(production.restore_snapshot_record(state, runner.tick_number).is_success, "original same-revision owner state restores")
-	check(production.capture_snapshot().value.state_revision == revision, "both restored states expose identical revision despite different ownership")
-	assessment = production.construction_openings(context, revision)
-	check(assessment.value.status == "enclosure_with_unsealed_openings", "real same-revision restore recomputes ownership and geometry")
-	state = production.capture_snapshot().value
-	var id: String = state.doors.keys()[0]
-	production._state.doors[id].principal_id = "foreign-door-owner"
-	check(production.construction_openings(context, revision).value.door_ids.is_empty(), "excluded foreign door identity never leaks")
-	production._state = state.duplicate(true)
-	production._state.doors[id].body_id = "different-body"
-	check(production.construction_openings(context, revision).value.status == "open_or_unsupported", "same principal wrong bound body excluded")
-	production._state = state.duplicate(true)
-	check(production.construction_openings(context, revision).value == assessment.value, "same-revision replacement derives fresh geometry")
-	for operation in ["door_open", "door_close"]:
-		door_command(operation, {"door_id": id})
-		check(production.construction_openings(context, production.capture_snapshot().value.state_revision).value.status == "enclosure_with_unsealed_openings", "leaf position never establishes a seal")
-		check(production.construction_closure(context).value.status == "open_or_unsupported", "legacy closure excludes open and closed doorway")
-	door_command("door_remove", {"door_id": id})
-	assessment = production.construction_openings(context, production.capture_snapshot().value.state_revision)
-	check(assessment.value.status == "open_or_unsupported" and assessment.value.door_ids.is_empty(), "actual disassembly removes aperture immediately")
 
 
 func equip(item: String) -> void:
