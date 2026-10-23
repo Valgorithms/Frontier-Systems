@@ -179,16 +179,18 @@ func physical_transit() -> void:
 	check(preview._paid_worksite_legacy_collider.disabled and not preview._paid_worksite_legacy_wall.visible, "production focus removes only exact obsolete worksite obstruction")
 	var doors := PaidDoorContactScene.new(); root.add_child(doors); doors.bind(transit_remote); doors.set_physics_process(false)
 	var panels := PaidPanelContactScene.new(); root.add_child(panels); panels.bind(transit_remote); panels.set_physics_process(false)
+	var cleanup := func() -> void:
+		panels.free(); doors.free(); transit_remote.free(); preview.free(); host.free()
 	transit_remote._receive(publish_door(1))
 	var actor: LocalHabitatCharacter = preview.character
 	actor.position = ProceduralWorldInventoryPreview.DISPLAY_ORIGIN + Vector3(float(original_spawn[0]), maxf(950.0, float(original_spawn[1])), float(original_spawn[2])) / 1000.0
 	actor.rotation.y = 0.0; actor.read_local_keyboard = false; actor.set_navigation_enabled(true); actor.set_physics_process(false)
 	await walk_to(actor, Vector2(-2.4, -3.5))
-	if failures: return
+	if failures: cleanup.call(); return
 	await walk_to(actor, Vector2(-1.5, -3.5))
-	if failures: return
+	if failures: cleanup.call(); return
 	await walk_to(actor, Vector2(-1.5, -2.0))
-	if failures: return
+	if failures: cleanup.call(); return
 	check(actor.is_on_floor(), "actual spawn-to-inner-approach route remains grounded")
 	var closed_start: Vector3 = actor.position
 	actor.set_motion_intent(Vector2.RIGHT, false)
@@ -197,44 +199,48 @@ func physical_transit() -> void:
 	actor.set_motion_intent(Vector2.ZERO, false)
 	# Submit observed reached positions, never reposition the body after spawn.
 	await walk_to(actor, Vector2(-1.5, -3.0))
-	if failures: return
-	await walk_to(actor, Vector2(-0.95, -3.0)); bridge_body(actor)
-	if failures: return
+	if failures: cleanup.call(); return
+	await walk_to(actor, Vector2(-0.95, -3.0))
+	if failures: cleanup.call(); return
 	door_id = inner_id; chamber_ui(1)
 	transit_remote._receive(publish_door(1)); await physics_frame
 	# The opened q1 leaf occupies x[-1.85,-0.95], z[-2.45,-2.4].
 	# Walk around its free end, retaining clearance for the whole body.
 	await walk_to(actor, Vector2(-2.4, -3.0))
-	if failures: return
+	if failures: cleanup.call(); return
 	await walk_to(actor, Vector2(-2.4, -2.0))
-	if failures: return
-	await walk_to(actor, Vector2(-0.45, -2.0)); bridge_body(actor); chamber_ui(2)
-	if failures: return
+	if failures: cleanup.call(); return
+	await walk_to(actor, Vector2(-0.45, -2.0))
+	if failures: cleanup.call(); return
+	chamber_ui(2)
 	check(actor.position.distance_to(closed_start) > 0.5 and actor.is_on_floor(), "actual600mm body crosses inner aperture onto chamber floor")
 	door_id = outer_id; chamber_ui(9); step(600); chamber_ui(10); chamber_ui(1)
 	transit_remote._receive(publish_door(1)); await physics_frame
-	await walk_to(actor, Vector2(1.5, -2.0)); bridge_body(actor); chamber_ui(2)
-	if failures: return
+	await walk_to(actor, Vector2(1.5, -2.0))
+	if failures: cleanup.call(); return
+	chamber_ui(2)
 	check(actor.is_on_floor(), "actual body fully crosses outer aperture onto extended paid floor")
 	# Return in the opposite direction with the same finite hardware/gas.
 	chamber_ui(1); transit_remote._receive(publish_door(1)); await physics_frame
-	await walk_to(actor, Vector2(-0.45, -2.0)); bridge_body(actor); chamber_ui(2)
-	if failures: return
+	await walk_to(actor, Vector2(-0.45, -2.0))
+	if failures: cleanup.call(); return
+	chamber_ui(2)
 	door_id = inner_id; chamber_ui(9); step(600); chamber_ui(10); chamber_ui(1)
 	transit_remote._receive(publish_door(1)); await physics_frame
 	await walk_to(actor, Vector2(-2.4, -2.0))
-	if failures: return
+	if failures: cleanup.call(); return
 	await walk_to(actor, Vector2(-2.4, -3.0))
-	if failures: return
-	await walk_to(actor, Vector2(-0.95, -3.0)); bridge_body(actor); chamber_ui(2)
-	if failures: return
+	if failures: cleanup.call(); return
+	await walk_to(actor, Vector2(-0.95, -3.0))
+	if failures: cleanup.call(); return
+	chamber_ui(2)
 	check(actor.is_on_floor(), "actual body returns through both supported apertures")
 	# Move outside both sweeps for later isolated pressure cycles.
-	await walk_to(actor, Vector2(-1.5, -3.5)); bridge_body(actor)
-	if failures: return
-	await walk_to(actor, Vector2(0.0, -3.0)); bridge_body(actor)
-	if failures: return
-	panels.free(); doors.free(); transit_remote.free(); preview.free(); host.free()
+	await walk_to(actor, Vector2(-1.5, -3.5))
+	if failures: cleanup.call(); return
+	await walk_to(actor, Vector2(0.0, -3.0))
+	if failures: cleanup.call(); return
+	cleanup.call()
 
 
 func walk_to(actor: LocalHabitatCharacter, destination: Vector2) -> void:
