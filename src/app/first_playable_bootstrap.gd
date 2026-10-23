@@ -717,8 +717,9 @@ func _drop_first_definition(definition_id: String) -> void:
 
 
 ## Shared fresh-world commissioning; callers own attachment and transport startup.
-static func create_playable_world() -> WorldRuntime:
+static func create_playable_world(reinforcement_ore: bool = true) -> WorldRuntime:
 	var world := WorldRuntime.new()
 	world.resource_carriers_enabled = true
 	world.new_world_ore_outcrop_enabled = true
+	world.new_world_reinforcement_ore_enabled = reinforcement_ore
 	return world

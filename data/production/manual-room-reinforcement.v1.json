@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "blueprint_id": "room.reinforcement.prototype",
+  "revision": 1,
+  "materials": {
+    "plate": 4000000
+  },
+  "assembly_energy_joules": 0,
+  "retention_kpa": 110.0,
+  "provenance": "First-party MIT prototype game tuning; supported Access actuator and seal condition only; no physical certification."
+}

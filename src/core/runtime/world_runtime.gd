@@ -15,8 +15,10 @@ const DEFAULT_REGION_ID: StringName = &"local-habitat"
 @export var resource_carriers_enabled: bool = false
 ## Only fresh playable commissioning; snapshot recovery never grants this source.
 @export var new_world_ore_outcrop_enabled: bool = false
+@export var new_world_reinforcement_ore_enabled: bool = false
 var _simulation_runner: SimulationRunner
 var _local_request_sequence: int = 0
+var _local_request_nonce: String = Crypto.new().generate_random_bytes(8).hex_encode()
 var _control_setup_result: ServiceResult
 var _inventory_setup_result: ServiceResult
 var _health_setup_result: ServiceResult
@@ -59,7 +61,7 @@ func _ready() -> void:
 	_simulation_runner.add_child(tool_system)
 	var production_system := ProductionSimulationSystem.new()
 	production_system.name = "ProductionSimulationSystem"
-	_production_setup_result = production_system.configure(inventory_system, tool_system, new_world_ore_outcrop_enabled)
+	_production_setup_result = production_system.configure(inventory_system, tool_system, new_world_ore_outcrop_enabled, new_world_reinforcement_ore_enabled)
 	if _production_setup_result.is_success: _production_setup_result = production_system.bind_door_access(access_control_system)
 	if _production_setup_result.is_success: _production_setup_result = production_system.bind_room_pressure(pressure_system, world_id, region_id)
 	_simulation_runner.add_child(production_system)
@@ -113,7 +115,8 @@ func enqueue_command(command: SimulationCommand) -> ServiceResult:
 
 func next_local_request_id() -> StringName:
 	_local_request_sequence += 1
-	return StringName("local-%d" % _local_request_sequence)
+	# Saved receipts outlive this runtime; a fresh session must not reuse their IDs.
+	return StringName("local-%s-%d" % [_local_request_nonce, _local_request_sequence])
 
 
 func current_tick_number() -> int:

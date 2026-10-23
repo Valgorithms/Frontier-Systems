@@ -40,9 +40,9 @@ func configure(world: WorldRuntime, local_principal: StringName = &"local-invent
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.text = "Requires a paid floor under the full swing. Stand outside the swing within 1.5 m, with a usable crowbar. Seal: 0.2 kg plate. Commission one complete habitat enclosure for finite pressure service; open before decommissioning."
 	_details.add_child(_status)
-	for operation in ["door_build", "door_open", "door_close", "door_remove", "door_seal_install", "door_seal_remove", "door_room_commission", "door_room_decommission"] + PaidRoomBypass.OPERATIONS:
+	for operation in ["door_build", "door_open", "door_close", "door_remove", "door_seal_install", "door_seal_remove", "door_room_commission", "door_room_decommission"] + PaidRoomBypass.OPERATIONS + PaidRoomReinforcement.OPERATIONS:
 		var button := Button.new()
-		button.text = {"door_bypass_install": "Fit manual bypass: 0.2 kg plate", "door_bypass_open": "Open bypass to surroundings", "door_bypass_close": "Close bypass", "door_bypass_recover": "Recover bypass: decommission first", "door_room_commission": "Commission habitat compartment", "door_room_decommission": "Decommission open compartment", "door_seal_install": "Fit/rework seal: 0.2 kg plate", "door_seal_remove": "Remove seal: recover 0.2 kg plate", "door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
+		button.text = {"door_reinforcement_install": "Fit 110 kPa prototype kit: 4 kg plate", "door_reinforcement_recover": "Recover kit: decommission first", "door_bypass_install": "Fit manual bypass: 0.2 kg plate", "door_bypass_open": "Open bypass to surroundings", "door_bypass_close": "Close bypass", "door_bypass_recover": "Recover bypass: decommission first", "door_room_commission": "Commission habitat compartment", "door_room_decommission": "Decommission open compartment", "door_seal_install": "Fit/rework seal: 0.2 kg plate", "door_seal_remove": "Remove seal: recover 0.2 kg plate", "door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
 		button.disabled = true
 		button.pressed.connect(_send.bind(operation))
 		_details.add_child(button)
@@ -66,7 +66,7 @@ func _process(delta: float) -> void:
 	var context := AuthenticatedCommandContext.for_local_development(_local_principal, _world.world_id, _world.region_id)
 	var observed: ServiceResult = _world.production_observation(context)
 	_record.clear()
-	if observed.is_success and ControlContractValidation.is_integer(observed.value.get("schema_version"), 12, 15) and WorkstationResourceView.valid(observed.value): _record = observed.value
+	if observed.is_success and ControlContractValidation.is_integer(observed.value.get("schema_version"), 12, 16) and WorkstationResourceView.valid(observed.value): _record = observed.value
 	_doors.clear()
 	for door in _record.get("paid_doors", {}).get("doors", []):
 		_doors.add_item("%s: %s; %s" % [String(door.door_id).right(8), "open" if door.opened else "closed", seal_text(door)])
@@ -97,7 +97,8 @@ static func seal_text(door: Dictionary) -> String:
 		var room: Dictionary = door.pressure_room
 		var difference: float = absf(float(room.pressure_kpa) - float(room.ambient_pressure_kpa))
 		var force: float = difference * 1000.0 * ConstructedRoomPressure.AREA
-		return "%.2f m3, %.3f kPa (surroundings %.3f); difference %.3f kPa, load %.0f / 1000 N; %s; bypass %s" % [room.volume_m3, room.pressure_kpa, room.ambient_pressure_kpa, difference, force, "boundary leaking" if room.leaking else "boundary retaining", "open: passive exchange" if door.get("bypass_open", false) else ("closed" if door.get("bypass_installed", false) else "absent")]
+		return ("110 kPa prototype kit (%s); " % ("intact" if door.get("reinforcement_intact", false) else "degraded: rating lost") if door.get("reinforcement_installed", false) else "Base 0.5 kPa boundary; ") + "%.2f m3, %.3f kPa (surroundings %.3f); difference %.3f kPa, load %.0f / 1000 N; %s; bypass %s" % [room.volume_m3, room.pressure_kpa, room.ambient_pressure_kpa, difference, force, "boundary leaking" if room.leaking else "boundary retaining", "open: passive exchange" if door.get("bypass_open", false) else ("closed" if door.get("bypass_installed", false) else "absent")]
+	if door.get("reinforcement_installed", false): return "reinforcement retained; compartment decommissioned; recovery available"
 	if door.get("bypass_installed", false): return "bypass installed, closed; compartment decommissioned"
 	if not door.seal_installed: return "seal absent"
 	if door.seal_condition == 0.0: return "seal failed (0%)"

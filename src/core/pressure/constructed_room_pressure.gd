@@ -40,7 +40,7 @@ static func assess(value: Dictionary) -> ServiceResult:
 
 static func valid_room(value: Variant) -> bool:
 	if typeof(value) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value, PackedStringArray(["schema_version", "policy_id", "volume_id", "sensor_id", "principal_id", "body_id", "world_id", "region_id", "door_id", "geometry"])): return false
-	if not ControlContractValidation.is_integer(value.schema_version, 1, 1) or value.policy_id != POLICY or value.region_id != "local-habitat": return false
+	if not ControlContractValidation.is_integer(value.schema_version, 1, 2) or value.policy_id != (PaidRoomReinforcement.POLICY if int(value.schema_version) == 2 else POLICY) or value.region_id != "local-habitat": return false
 	for field in ["volume_id", "sensor_id", "principal_id", "body_id", "world_id", "door_id"]:
 		if not ControlContractValidation.is_id(value[field]): return false
 	if not String(value.volume_id).begins_with("constructed-room-") or value.sensor_id != "%s-sensor" % value.volume_id or typeof(value.geometry) != TYPE_DICTIONARY: return false
@@ -50,15 +50,17 @@ static func valid_room(value: Variant) -> bool:
 	return door.principal_id == value.principal_id and door.body_id == value.body_id and not door.seal.is_empty()
 
 
-static func retained(actuator: ActuatorState, difference: float) -> bool:
-	return actuator != null and actuator.position == 0.0 and actuator.integrity == 1.0 and actuator.mode == &"manual" and actuator.latch_state == &"released" and actuator.seal_condition == 1.0 and difference <= RETENTION_KPA + TOLERANCE_KPA
+static func retained(actuator: ActuatorState, difference: float, reinforced: bool = false) -> bool:
+	return actuator != null and actuator.position == 0.0 and actuator.integrity == 1.0 and actuator.mode == &"manual" and actuator.latch_state == &"released" and actuator.seal_condition == 1.0 and difference <= (PaidRoomReinforcement.RETENTION_KPA if reinforced else RETENTION_KPA) + TOLERANCE_KPA
 
 
 static func validate_links(rooms: Dictionary, production: Dictionary, access: Dictionary, inventory: Dictionary = {}) -> ServiceResult:
+	if not PaidRoomReinforcement.valid(production.get("room_reinforcements", {}), production.get("doors", {})): return denied()
 	var areas: Dictionary = {}
 	if rooms.size() > 1: return denied()
 	for room in rooms.values():
 		if not valid_room(room) or geometry(production, room.principal_id, room.body_id) != room.geometry: return denied()
+		if (room.policy_id == PaidRoomReinforcement.POLICY) != production.get("room_reinforcements", {}).has(room.door_id): return denied()
 		areas[room.door_id] = AREA
 	return PaidDoorConstruction.links(production, access, inventory, areas)
 
