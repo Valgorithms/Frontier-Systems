@@ -50,6 +50,7 @@ var _group := OptionButton.new()
 var _assembly_controls: Array[Control] = []
 var _operation_controls: Array[Control] = []
 var _request_identity := Label.new()
+var _timed_canister := TimedCanisterControls.new()
 
 
 func configure(world: WorldRuntime) -> void:
@@ -67,6 +68,10 @@ func configure(world: WorldRuntime) -> void:
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		scroll.follow_focus = true
 	_world = world
+	add_child(_timed_canister)
+	_timed_canister.configure(world)
+	_machine_controls.append(_timed_canister)
+	_assembly_controls.append(_timed_canister)
 	var guide := Label.new()
 	guide.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	guide.text = "Hand-build a frame, controller, power connector and work head from refined iron at the workbench. Fit sockets and canisters. Deploy a solar frame and wire machines directly or through a router. Equipment printing needs an expander; hand assembly needs only materials. Expanders also add sockets. Removing parts pauses work; restart requires Resume."
@@ -256,6 +261,7 @@ func observe(record: Dictionary) -> void:
 			previous_owned_plate = item["item_id"]
 	if not _operation_feedback.observe(record.get("production", {})): record = {}
 	_record = record
+	_timed_canister.observe(record.get("production", {}))
 	if record.is_empty():
 		if not _selected(_wall).is_empty(): _wall_selection_lost = true
 		_status.text = _operation_feedback.grid_text

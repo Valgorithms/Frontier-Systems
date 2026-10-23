@@ -259,8 +259,9 @@ func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 		if _state["structures"].has(item["item_id"]):
 			observed["structures"][item["item_id"]] = _state["structures"][item["item_id"]].duplicate(true)
 	observed["machinery"] = machinery_observation(context)
-	# Observation version is independent of the v7 persistence record.
-	observed["schema_version"] = 8
+	observed["timed_canister"] = TimedCanisterConstruction.observation(_state, _inventory, context, _timed_blueprints.get_definition(ConstructionReservationPlan.BLUEPRINT).value["fingerprint"])
+	# Observation version is independent of the v8 persistence record.
+	observed["schema_version"] = 9
 	observed["recipes"] = _catalog["recipes"].keys()
 	observed["recipe_requirements"] = {}
 	for id in _catalog["recipes"]:
