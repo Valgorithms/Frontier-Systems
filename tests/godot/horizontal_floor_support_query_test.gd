@@ -26,6 +26,9 @@ func _initialize() -> void:
 	check(adjacent == before and request == request_before, "caller inputs unchanged")
 	var restored: Array = JSON.parse_string(JSON.stringify(adjacent))
 	check(first.value == HorizontalFloorSupportQuery.query(request, restored, 7).value, "restored equivalent descriptors")
+	first.value.candidate_surface_ids.clear()
+	check(HorizontalFloorSupportQuery.query(request, adjacent, 7).value.candidate_surface_ids.size() == 2, "mutating detached result cannot alter next query")
+	first = HorizontalFloorSupportQuery.query(request, adjacent, 7)
 	check(not support([panel("floor.a", [0, 450, 0, 1000]), panel("floor.b", [500, 1000, 0, 1000])]), "50mm thin interior gap rejects despite covered corners")
 	check(not support([panel("floor.a", [0, 1000, 0, 450]), panel("floor.b", [0, 1000, 500, 1000])]), "Z gap rejects")
 	check(not HorizontalFloorSupportQuery.query(request, [floor_panel, panel("floor.b", [500, 1000, 0, 1000])], 7).is_success, "overlap fails closed")
@@ -56,6 +59,10 @@ func _initialize() -> void:
 		check(not HorizontalFloorSupportQuery.query(bad, surfaces, 7).is_success, "bad tolerance rejected")
 	for revision in [6, 8, -1, true, NAN, INF]:
 		check(not HorizontalFloorSupportQuery.query(request, surfaces, revision).is_success, "bad/stale revision rejected")
+	var stale: Dictionary = request.duplicate(true)
+	stale.expected_production_revision = 6
+	check(not HorizontalFloorSupportQuery.query(stale, surfaces, 7).is_success, "stale expected revision rejected")
+	check(not HorizontalFloorSupportQuery.query(request, {"can_operate": true, "surfaces": surfaces}, 7).is_success, "UI projection cannot replace complete descriptor array")
 	for change in [{"kind": "wall"}, {"height_millimetres": 2000}, {"bounds_millimetres": [0, 1050, 0, 1000]}, {"bounds_millimetres": [0, 999, 0, 1000]}, {"bounds_millimetres": [0, NAN, 0, 1000]}, {"extra": true}]:
 		var bad: Dictionary = floor_panel.duplicate(true)
 		bad.merge(change, true)
@@ -66,6 +73,7 @@ func _initialize() -> void:
 	many.pop_back()
 	var bounded: ServiceResult = HorizontalFloorSupportQuery.query(request, many, 7)
 	check(bounded.is_success and bounded.value.profiling.inspected_surfaces == 64 and bounded.value.profiling.sweep_strips <= 129, "maximum budget valid and bounded")
+	check(request == request_before and surfaces == [floor_panel], "failure paths preserve inputs")
 	var fixture := {"request": request, "supported": first.value, "unsupported": HorizontalFloorSupportQuery.query(request, [], 7).value}
 	var file: FileAccess = FileAccess.open("res://var/horizontal-floor-support-fixture.json", FileAccess.WRITE)
 	file.store_string(JSON.stringify(fixture))
