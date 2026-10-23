@@ -56,8 +56,7 @@ func _resolve_runtime_mode() -> RuntimeMode:
 
 
 func _start_world_runtime() -> void:
-	_world_runtime = WorldRuntime.new()
-	_world_runtime.resource_carriers_enabled = true
+	_world_runtime = FirstPlayableBootstrap.create_playable_world()
 	_world_runtime.name = "WorldRuntime"
 	_world_runtime.command_completed.connect(_on_command_completed)
 	add_child(_world_runtime)

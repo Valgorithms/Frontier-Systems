@@ -52,8 +52,7 @@ func _ready() -> void:
 
 func _start_host() -> void:
 	Engine.max_fps = 60
-	_world = WorldRuntime.new()
-	_world.resource_carriers_enabled = true
+	_world = create_playable_world()
 	add_child(_world)
 	_store = WorldPersistenceAdapter.new()
 	add_child(_store)
@@ -715,3 +714,11 @@ func _drop_first_definition(definition_id: String) -> void:
 			command.payload = {"operation": "drop", "item_id": item["item_id"], "world_container_id": "world.tray-1", "destination_container_id": "", "slot_id": "", "expected_revision": _latest["world_items"].get("inventory_revision", 0)}
 			_remote.enqueue_command(command)
 			return
+
+
+## Shared fresh-world commissioning; callers own attachment and transport startup.
+static func create_playable_world() -> WorldRuntime:
+	var world := WorldRuntime.new()
+	world.resource_carriers_enabled = true
+	world.new_world_ore_outcrop_enabled = true
+	return world

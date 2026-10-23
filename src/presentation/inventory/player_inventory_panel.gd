@@ -140,8 +140,8 @@ func configure(remote: RemoteWorldRuntime) -> void:
 	_label("Hand-tool extraction · uses host-observed active equipment")
 	_active_tool.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_active_tool)
-	for id in ["deposit.iron", "deposit.ice", "deposit.regolith"]:
-		_deposit.add_item({"deposit.iron": "Iron ore", "deposit.ice": "Ice", "deposit.regolith": "Regolith"}[id])
+	for id in ["deposit.iron", "deposit.ice", "deposit.regolith", "deposit.iron.outcrop"]:
+		_deposit.add_item({"deposit.iron": "Iron ore", "deposit.ice": "Ice", "deposit.regolith": "Regolith", "deposit.iron.outcrop": "Finite iron outcrop"}[id])
 		_deposit.set_item_metadata(_deposit.item_count - 1, id)
 	add_child(_deposit)
 	add_child(_carrier)

@@ -18,9 +18,11 @@ var _room_pressure: PressureRoomOwner
 var _checkpoint_door_links: Dictionary = {}
 const STATIONS: Array[String] = ["drill", "refinery", "chemical", "printer", "recycler", "dispenser", "construction"]
 ## Stable fixture sites, relative to the inventory display origin in millimetres.
-const SOURCE_POSITIONS: Dictionary = {"deposit.iron": [-3000, 0, -1000], "deposit.ice": [-6000, 0, -1000], "deposit.regolith": [-9000, 0, -1000]}
+const SOURCE_POSITIONS: Dictionary = {"deposit.iron": [-3000, 0, -1000], "deposit.ice": [-6000, 0, -1000], "deposit.regolith": [-9000, 0, -1000], "deposit.iron.outcrop": [-3000, 0, -1000]}
 var _catalog: Dictionary = {}
 var _catalog_fingerprint: String = ""
+var _legacy_catalog: Dictionary = {}
+var _legacy_fingerprint: String = ""
 var _state: Dictionary = {}
 var _inventory: InventorySimulationSystem
 var _blueprints := EquipmentBlueprintCatalog.new()
@@ -35,15 +37,18 @@ func _init() -> void:
 	tick_priority = 300
 
 
-func configure(inventory: InventorySimulationSystem, tools: ToolSimulationSystem = null) -> ServiceResult:
+func configure(inventory: InventorySimulationSystem, tools: ToolSimulationSystem = null, new_world_outcrop: bool = false) -> ServiceResult:
 	if not _state.is_empty() or inventory == null or MachineryWorkshop.KINDS.is_empty():
 		return _failure("Configure one inventory capability provider.")
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/production/catalog.v1.json"))
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/production/catalog.v2.json"))
 	if typeof(raw) != TYPE_DICTIONARY:
 		return _failure("A trusted production catalog is required.")
 	var valid: ServiceResult = _validate_catalog(raw)
 	if not valid.is_success:
 		return valid
+	_legacy_catalog = JSON.parse_string(FileAccess.get_file_as_string("res://data/production/catalog.v1.json"))
+	if not _validate_catalog(_legacy_catalog).is_success: return _failure("Historical production catalog is invalid.")
+	_legacy_fingerprint = JSON.stringify(_legacy_catalog, "", true, true).sha256_text()
 	_catalog = raw.duplicate(true)
 	_catalog_fingerprint = JSON.stringify(_catalog, "", true, true).sha256_text()
 	_inventory = inventory
@@ -53,18 +58,18 @@ func configure(inventory: InventorySimulationSystem, tools: ToolSimulationSystem
 		return blueprints
 	var timed: ServiceResult = _timed_blueprints.configure(JSON.parse_string(FileAccess.get_file_as_string("res://data/production/timed-canister-blueprint.v1.json")), inventory, _catalog["materials"])
 	if not timed.is_success: return timed
-	_state = initial_record(0)
+	_state = initial_record(0, new_world_outcrop)
 	var motion: ServiceResult = inventory.bind_motion_validator(func(from: Array, to: Array) -> bool: return SpatialWallConstruction.motion_clear(_state["walls"], from, to) and door_motion_clear(from, to))
 	if not motion.is_success: return motion
 	return inventory.bind_payload_mass_provider(payload_mass)
 
 
-func initial_record(tick: int) -> Dictionary:
+func initial_record(tick: int, new_world_outcrop: bool = false) -> Dictionary:
 	var powered: Dictionary = {}
 	for station in STATIONS:
 		powered[station] = true
-	return {"schema_version": 11, "doors": {}, "panels": {}, "construction": ConstructionReservationPlan.initial(), "construction_bindings": {}, "construction_commands": {}, "walls": {}, "machinery": MachineryWorkshop.initial(), "loose_parts": {}, "structures": {}, "catalog_revision": 1, "catalog_fingerprint": _catalog_fingerprint, "timebase_hz": Engine.physics_ticks_per_second,
-		"last_tick": tick, "state_revision": 0, "deposits": _initial_deposits(), "store": _empty_stock(),
+	return {"schema_version": 12 if new_world_outcrop else 11, "doors": {}, "panels": {}, "construction": ConstructionReservationPlan.initial(), "construction_bindings": {}, "construction_commands": {}, "walls": {}, "machinery": MachineryWorkshop.initial(), "loose_parts": {}, "structures": {}, "catalog_revision": 2 if new_world_outcrop else 1, "catalog_fingerprint": _catalog_fingerprint if new_world_outcrop else _legacy_fingerprint, "timebase_hz": Engine.physics_ticks_per_second,
+		"last_tick": tick, "state_revision": 0, "deposits": _initial_deposits(new_world_outcrop), "store": _empty_stock(),
 		"vessel": _empty_stock(), "wall_mass_milligrams": 0, "energy_joules": 100000,
 		"powered": powered, "job": {}, "receipts": [], "cargo": {}}
 
@@ -167,10 +172,11 @@ func validate_inventory_links(record: Dictionary, inventory_record: Dictionary) 
 	return ServiceResult.success()
 
 
-func _initial_deposits() -> Dictionary:
+func _initial_deposits(new_world_outcrop: bool = false) -> Dictionary:
 	var result: Dictionary = {}
-	for id in _catalog["deposits"]:
-		result[id] = int(_catalog["deposits"][id]["mass_milligrams"])
+	var catalog: Dictionary = _catalog if new_world_outcrop else _legacy_catalog
+	for id in catalog["deposits"]:
+		result[id] = int(catalog["deposits"][id]["mass_milligrams"])
 	return result
 
 
@@ -216,6 +222,8 @@ func authorize_operation(context: AuthenticatedCommandContext, operation: String
 				return actor if receipt["fingerprint"] == fingerprint else _failure("Retained request ID identifies different intent.")
 		if not _state["job"].has("extraction"): return _failure("No sustained extraction is reserved.")
 		return _inventory.production_capability(context, true, SOURCE_POSITIONS[_state["job"]["deposit_id"]])
+	if operation in ["mine", "extract", "tool_extract", "start_tool_extract"] and not _state["deposits"].has(payload.get("deposit_id")):
+		return _failure("This world has no commissioned source with that identity.")
 	if operation not in ["extract", "tool_extract", "start_tool_extract"]:
 		return authorize(context)
 	if _inventory == null or not SOURCE_POSITIONS.has(payload.get("deposit_id")):
@@ -328,7 +336,7 @@ func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 	observed["machinery"] = machinery_observation(context)
 	observed["timed_canister"] = TimedCanisterConstruction.observation(_state, _inventory, context, _timed_blueprints.get_definition(ConstructionReservationPlan.BLUEPRINT).value["fingerprint"])
 	# Observation version is independent of the v9 persistence record.
-	observed["schema_version"] = 13
+	observed["schema_version"] = 14 if int(_state["catalog_revision"]) == 2 else 13
 	observed["paid_doors"] = door_observation(context)
 	observed["horizontal_panels"] = HorizontalPanelObservation.project(_state, context, construction_closure(context), _inventory.production_capability(context, true, []).is_success)
 	observed["recipes"] = _catalog["recipes"].keys()
@@ -340,7 +348,7 @@ func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 	observed["can_operate"] = authorize(context).is_success
 	observed["vessel_pressure_kpa"] = _vessel_pressure(_state["vessel"])
 	observed["extractable_sources"] = []
-	for id in SOURCE_POSITIONS:
+	for id in _state["deposits"]:
 		if _inventory.production_capability(context, true, SOURCE_POSITIONS[id]).is_success:
 			observed["extractable_sources"].append(id)
 	return ServiceResult.success(observed)
@@ -962,7 +970,7 @@ func _simulate_machinery() -> void:
 		if job["paused"]: continue
 		var recipe: Dictionary = machine_recipe(job["recipe"])
 		if not MachineryWorkshop.operational(workshop, owner, id, recipe["capability"]): continue
-		if not recipe["deposit"].is_empty() and int(_state["deposits"][recipe["deposit"]]) < 1000000: continue
+		if not recipe["deposit"].is_empty() and int(_state["deposits"].get(recipe["deposit"], 0)) < 1000000: continue
 		var transfer: ServiceResult = MachineryConstruction.transfer_plan(_state, owner, id, recipe["inputs"], recipe["outputs"])
 		if not transfer.is_success: continue
 		var target_energy: int = (int(job["progress"]) + 1) * int(recipe["energy_joules"]) / int(recipe["duration_ticks"])
@@ -1020,21 +1028,23 @@ func restore_snapshot_record(record: Dictionary, tick: int) -> ServiceResult:
 
 func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	var fields: Array = ["schema_version", "catalog_revision", "catalog_fingerprint", "timebase_hz", "last_tick", "state_revision", "deposits", "store", "vessel", "wall_mass_milligrams", "energy_joules", "powered", "job", "receipts"]
-	if ControlContractValidation.is_integer(record.get("schema_version"), 2, 11):
+	if ControlContractValidation.is_integer(record.get("schema_version"), 2, 12):
 		fields.append("cargo")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 3, 11):
+	if ControlContractValidation.is_integer(record.get("schema_version"), 3, 12):
 		fields.append("structures")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 4, 11): fields.append("loose_parts")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 6, 11): fields.append("machinery")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 7, 11): fields.append("walls")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 8, 11): fields.append_array(["construction", "construction_bindings", "construction_commands"])
-	if ControlContractValidation.is_integer(record.get("schema_version"), 9, 11): fields.append("panels")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 10, 11): fields.append("doors")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 4, 12): fields.append("loose_parts")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 6, 12): fields.append("machinery")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 7, 12): fields.append("walls")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 8, 12): fields.append_array(["construction", "construction_bindings", "construction_commands"])
+	if ControlContractValidation.is_integer(record.get("schema_version"), 9, 12): fields.append("panels")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 10, 12): fields.append("doors")
 	if _catalog.is_empty() or not _fields(record, fields):
 		return _failure("An exact configured production snapshot is required.")
-	if record["catalog_fingerprint"] != _catalog_fingerprint:
+	var expanded: bool = ControlContractValidation.is_integer(record.get("schema_version"), 12, 12)
+	var saved_catalog: Dictionary = _catalog if expanded else _legacy_catalog
+	if record["catalog_fingerprint"] != (_catalog_fingerprint if expanded else _legacy_fingerprint):
 		return _failure("The saved catalog differs; an explicit production migration is required.")
-	if not ControlContractValidation.is_integer(record["schema_version"], 1, 11) or not ControlContractValidation.is_integer(record["catalog_revision"], 1, 1):
+	if not ControlContractValidation.is_integer(record["schema_version"], 1, 12) or not ControlContractValidation.is_integer(record["catalog_revision"], 2 if expanded else 1, 2 if expanded else 1):
 		return _failure("Unsupported production/catalog version.")
 	if not ControlContractValidation.is_integer(record["last_tick"], tick, tick) or not ControlContractValidation.is_integer(record["timebase_hz"], Engine.physics_ticks_per_second, Engine.physics_ticks_per_second) or not [60, 72, 90].has(Engine.physics_ticks_per_second):
 		return _failure("Production tick and supported timebase must match the world.")
@@ -1049,7 +1059,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	normalized["loose_parts"] = record.get("loose_parts", {}).duplicate(true)
 	for field in ["schema_version", "catalog_revision", "timebase_hz", "last_tick", "state_revision", "wall_mass_milligrams", "energy_joules"]:
 		normalized[field] = int(record[field])
-	normalized["schema_version"] = 11
+	normalized["schema_version"] = 12 if expanded else 11
 	for field in ["construction", "construction_bindings", "construction_commands"]:
 		var fallback: Dictionary = ConstructionReservationPlan.initial() if field == "construction" else {}
 		if typeof(record.get(field, fallback)) != TYPE_DICTIONARY: return _failure("Construction fragments must be objects.")
@@ -1128,10 +1138,10 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	for material in _catalog["materials"]:
 		if not _catalog["dispensable"].has(material) and int(normalized["vessel"][material]) != 0:
 			return _failure("The chemical vessel cannot contain non-dispensable solids.")
-	if typeof(record["deposits"]) != TYPE_DICTIONARY or not _fields(record["deposits"], _catalog["deposits"].keys()) or typeof(record["powered"]) != TYPE_DICTIONARY or not _fields(record["powered"], STATIONS):
+	if typeof(record["deposits"]) != TYPE_DICTIONARY or not _fields(record["deposits"], saved_catalog["deposits"].keys()) or typeof(record["powered"]) != TYPE_DICTIONARY or not _fields(record["powered"], STATIONS):
 		return _failure("Deposits and stations must match their trusted registry.")
 	for id in record["deposits"]:
-		if not ControlContractValidation.is_integer(record["deposits"][id], 0, int(_catalog["deposits"][id]["mass_milligrams"])):
+		if not ControlContractValidation.is_integer(record["deposits"][id], 0, int(saved_catalog["deposits"][id]["mass_milligrams"])):
 			return _failure("Deposit mass is invalid.")
 		normalized["deposits"][id] = int(record["deposits"][id])
 	for id in STATIONS:
@@ -1148,7 +1158,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 		if not _fields(job, job_fields) or not _stock_valid(job["inputs"]) or not _stock_valid(job["outputs"]):
 			return _failure("A bounded reserved batch is required.")
 		var expected: Dictionary
-		if typeof(job["deposit_id"]) == TYPE_STRING and _catalog["deposits"].has(job["deposit_id"]) and job["recipe_id"] == "":
+		if typeof(job["deposit_id"]) == TYPE_STRING and saved_catalog["deposits"].has(job["deposit_id"]) and job["recipe_id"] == "":
 			var material: String = _catalog["deposits"][job["deposit_id"]]["material"]
 			var mass: int = int(job["extraction"]["remaining_cycles"]) * ToolExtractionWork.CYCLE_MASS if job.has("extraction") else 1000000
 			expected = {"station": "drill", "inputs": {material: mass}, "outputs": {material: mass}, "duration_ticks": 60}
@@ -1165,7 +1175,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	if _mass(normalized["store"]) + _reserved_mass(normalized) > MAX_MASS or _mass(normalized["vessel"]) > VESSEL_CAPACITY or _vessel_pressure(normalized["vessel"]) > MAX_VESSEL_PRESSURE_KPA:
 		return _failure("Reserved output or vessel exceeds capacity.")
 	var total: int = _mass(normalized["deposits"]) + _mass(normalized["store"]) + _mass(normalized["vessel"]) + int(normalized["wall_mass_milligrams"]) + _reserved_mass(normalized) + carried_mass + structural_mass
-	if total != _mass(_initial_deposits()):
+	if total != _mass(_initial_deposits(expanded)):
 		return _failure("Closed fixture material mass must be conserved, including reserved batches.")
 	if typeof(record["receipts"]) != TYPE_ARRAY or record["receipts"].size() > MAX_RECEIPTS:
 		return _failure("Receipt history exceeds its bound.")
@@ -1183,7 +1193,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 		receipt["tick_number"] = previous_tick
 		ids[receipt["request_id"]] = true
 	if int(normalized["state_revision"]) == 0:
-		var initial: Dictionary = initial_record(tick)
+		var initial: Dictionary = initial_record(tick, expanded)
 		if normalized != initial:
 			return _failure("Revision-zero production must retain its initial finite fixture state.")
 	elif normalized["receipts"].is_empty():
