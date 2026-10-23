@@ -47,6 +47,8 @@ static func matches_blueprint(value: Variant) -> bool:
 static func _matches_pinned(value: Variant, expected: Variant) -> bool:
 	if typeof(expected) == TYPE_INT:
 		return ControlContractValidation.is_integer(value, expected, expected)
+	if typeof(expected) == TYPE_FLOAT:
+		return typeof(value) in [TYPE_INT, TYPE_FLOAT] and is_finite(float(value)) and is_finite(expected) and float(value) == expected
 	if typeof(value) != typeof(expected): return false
 	if typeof(expected) == TYPE_DICTIONARY:
 		if value.size() != expected.size(): return false
@@ -103,7 +105,7 @@ static func integer(value: Variant, minimum: int = 0, maximum: int = LIMIT) -> b
 
 
 static func summary(job: Dictionary) -> Dictionary:
-	return {"job_id": job.job_id, "assembly_id": job.assembly_id, "returned_moles": job.returned_moles, "paid_joules": job.spent_joules}
+	return {"job_id": job.job_id, "assembly_id": job.assembly_id, "returned_moles": float(job.returned_moles), "paid_joules": int(job.spent_joules)}
 
 
 static func valid_accounting(value: Variant, tick: int) -> bool:
@@ -135,7 +137,7 @@ static func valid(value: Variant, bank: int, tick: int) -> bool:
 		var assembly: Variant = value.assemblies[index]
 		if not fields(assembly, ["schema_version", "assembly_id", "item_id", "definition_id", "definition_revision", "blueprint_id", "blueprint_fingerprint", "materials", "principal_id", "body_id", "world_id", "region_id", "chamber_id", "original_condition_permille", "assembly_spent_joules", "state"]): return false
 		if not integer(assembly.schema_version, 1, 1) or assembly.assembly_id != "chamber-recovery-assembly-%d" % (index + 1) or assembly.item_id != "item-%s" % assembly.assembly_id: return false
-		if assembly.definition_id != DEFINITION or not integer(assembly.definition_revision, 1, 1) or assembly.blueprint_id != BLUEPRINT or assembly.blueprint_fingerprint != fingerprint() or assembly.materials != BILL: return false
+		if assembly.definition_id != DEFINITION or not integer(assembly.definition_revision, 1, 1) or assembly.blueprint_id != BLUEPRINT or assembly.blueprint_fingerprint != fingerprint() or not _matches_pinned(assembly.materials, BILL): return false
 		if not integer(assembly.original_condition_permille, 1000, 1000) or not integer(assembly.assembly_spent_joules, ASSEMBLY_JOULES, ASSEMBLY_JOULES) or assembly.state not in ["carried", "mounted", "salvaged"]: return false
 		for key in ["principal_id", "body_id", "world_id", "region_id", "chamber_id"]:
 			if not ControlContractValidation.is_id(assembly[key]): return false
@@ -157,7 +159,9 @@ static func valid(value: Variant, bank: int, tick: int) -> bool:
 		if job.state in ["running", "paused"]:
 			active += 1
 			if assembly.state != "mounted" or int(job.next_eligible_tick) < int(job.last_batch_tick) + 60: return false
-		if value.accounting.jobs[index] != summary(job): return false
+		# Both records were validated above. Normalize their numeric representation,
+		# retaining exact joules and exact finite moles, not Dictionary type identity.
+		if not _matches_pinned(value.accounting.jobs[index], summary(job)): return false
 	return active <= 1
 
 
@@ -209,11 +213,11 @@ static func inventory_links(state: Dictionary, inventory: Dictionary) -> bool:
 	var locations_found: int = 0
 	for container in owner.get("ledger", {}).get("containers", []):
 		if not String(container.container_id).begins_with("world.chamber-pump-"): continue
-		if container.container_id != expected or container.owner_item_id != "" or container.capacity != capacity() or container.get("is_open", true) != true: return false
+		if container.container_id != expected or container.owner_item_id != "" or not _matches_pinned(container.capacity, capacity()) or container.get("is_open", true) != true: return false
 		roots_found += 1
 	for location in inventory.get("world_storage", []):
 		if not String(location.container_id).begins_with("world.chamber-pump-"): continue
-		if location.container_id != expected or location.position_millimetres != ANCHOR or location.accessible != false: return false
+		if location.container_id != expected or not _matches_pinned(location.position_millimetres, ANCHOR) or location.accessible != false: return false
 		locations_found += 1
 	return roots_found == (1 if expected != "" else 0) and locations_found == roots_found
 

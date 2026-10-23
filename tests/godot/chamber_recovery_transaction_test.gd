@@ -74,6 +74,7 @@ func verify_chamber_extension() -> void:
 	var original_item: Dictionary = MachineryWorkshop.item(before_mount.owner, assembly.item_id).duplicate(true)
 	original_item.container_id = ChamberRecoveryRecords.root_id(assembly.assembly_id)
 	check(mounted_item == original_item, "mount changes only location of the original paid physical item")
+	pinned_restore_controls(production.capture_snapshot().value, mounted_inventory, "mounted")
 	var picked_up: ServiceResult = inventory.apply_local(context, "generic-pump-pickup", "world", {"operation": "pickup", "item_id": assembly.item_id, "world_container_id": ChamberRecoveryRecords.root_id(assembly.assembly_id), "destination_container_id": "body.human-1", "slot_id": "", "expected_revision": mounted_inventory.owner.state_revision}, int(mounted_inventory.last_tick) + 1)
 	check(not picked_up.is_success and inventory.capture_snapshot().value == mounted_inventory, "mounted item cannot escape through generic pickup")
 	var mounted_snapshot: String = world.capture_world_snapshot_json().value
@@ -84,6 +85,7 @@ func verify_chamber_extension() -> void:
 	check(prepared.value.commit(production, pressure_owner(), inventory, access).is_success, "publish reciprocal job admission")
 	var job: Dictionary = ChamberRecoveryRecords.active_job(production.capture_snapshot().value.chamber_recovery)
 	check(job.max_joules == 25000 and job.spent_joules == 0 and job.returned_moles == 0.0 and job.target_moles == job.initial_moles * 0.2, "client supplies no budget or target")
+	pinned_restore_controls(production.capture_snapshot().value, inventory.capture_snapshot().value, "admitted")
 	var baseline: String = world.capture_world_snapshot_json().value
 	var fixture := FileAccess.open("res://var/chamber-recovery-fixture.json", FileAccess.WRITE)
 	fixture.store_string(baseline); fixture.close()
@@ -180,6 +182,7 @@ func transaction_case(baseline: String, mutation: String) -> void:
 
 
 func charged_reload_case(charged_world: WorldRuntime, charged: Array) -> void:
+	pinned_restore_controls(charged[0], charged[2], "charged")
 	var saved: ServiceResult = charged_world.capture_world_snapshot_json()
 	check(saved.is_success, "whole-world capture accepts genuinely charged reciprocal batch")
 	if not saved.is_success: return
@@ -198,7 +201,9 @@ func charged_reload_case(charged_world: WorldRuntime, charged: Array) -> void:
 	var expected_job: Dictionary = ChamberRecoveryRecords.active_job(expected[0].chamber_recovery)
 	expected_job.state = "paused"
 	expected[0].state_revision += 1
-	check(owner_records(owners) == expected, "charged reload changes only running-to-paused state and its Production revision; gas, J, audit and physical identity persist")
+	# Compare complete JSON values after the same lossless JSON numeric decode;
+	# each owner may normalize its own integral runtime fields independently.
+	check(json_values(owner_records(owners)) == json_values(expected), "charged reload changes only running-to-paused state and its Production revision; gas, J, audit and physical identity persist")
 	var parked: Dictionary = ChamberRecoveryRecords.active_job(p.capture_snapshot().value.chamber_recovery)
 	check(parked.spent_joules > 0 and parked.returned_moles == 0.1 and p.capture_snapshot().value.energy_joules < 27250, "charged finite budget and returned quantity survive reload")
 	check(p.capture_snapshot().value.chamber_recovery.accounting == g.capture_snapshot().value.pump_accounting, "charged reciprocal audit remains identical after load")
@@ -223,6 +228,79 @@ func charged_reload_case(charged_world: WorldRuntime, charged: Array) -> void:
 	clock._physics_process(1.0 / 60.0)
 	check(p.prepare_chamber_recovery_step(clock.tick_number).is_success, "charged resumed job becomes eligible after exactly sixty fresh ticks")
 	target.free()
+
+
+func json_values(value: Variant) -> Variant:
+	return JSON.parse_string(JSON.stringify(value, "", true, true))
+
+
+func wrong_pinned_quantities(expected: Variant) -> Array:
+	return [float(expected) + 0.25, float(expected) + 1.0, str(expected), true, null, INF, NAN]
+
+
+## Detached validation controls copied only from the real paid/mounted/charged
+## route. They grant no resources, items or initialized owner fixtures.
+func pinned_restore_controls(state: Dictionary, physical: Dictionary, stage: String) -> void:
+	var decoded: Dictionary = json_values(state)
+	var inventory_record: Dictionary = json_values(physical)
+	var bank: int = int(decoded.energy_joules)
+	var tick: int = int(decoded.last_tick)
+	check(ChamberRecoveryRecords.valid(decoded.chamber_recovery, bank, tick), "complete recovery JSON roundtrip preserves exact bill/accounting: " + stage)
+	check(ChamberRecoveryRecords.inventory_links(decoded, inventory_record), "real mounted identity, capacity and anchor survive JSON roundtrip: " + stage)
+	for field in ["plate", "iron"]:
+		for wrong in wrong_pinned_quantities(decoded.chamber_recovery.assemblies[0].materials[field]):
+			var changed: Dictionary = decoded.chamber_recovery.duplicate(true)
+			changed.assemblies[0].materials[field] = wrong
+			check(not ChamberRecoveryRecords.valid(changed, bank, tick), "restore rejects altered/fractional/wrong-type paid bill: " + field)
+	for shape in [[], {"plate": 400000}, {"plate": 400000, "iron": 200000, "extra": 0}]:
+		var changed: Dictionary = decoded.chamber_recovery.duplicate(true)
+		changed.assemblies[0].materials = shape
+		check(not ChamberRecoveryRecords.valid(changed, bank, tick), "restore rejects wrong bill shape")
+	var assembly: Dictionary = ChamberRecoveryRecords.current(decoded.chamber_recovery)
+	for container in inventory_record.owner.ledger.containers:
+		if container.container_id != ChamberRecoveryRecords.root_id(assembly.assembly_id): continue
+		for field in ["max_mass_milligrams", "max_volume_millilitres", "max_items"]:
+			for wrong in wrong_pinned_quantities(container.capacity[field]):
+				var original: Variant = container.capacity[field]
+				container.capacity[field] = wrong
+				check(not ChamberRecoveryRecords.inventory_links(decoded, inventory_record), "restore rejects changed/fractional/wrong-type mount capacity: " + field)
+				container.capacity[field] = original
+		var capacity: Dictionary = container.capacity.duplicate(true)
+		for shape in [[], {}, {"max_mass_milligrams": 600000, "max_volume_millilitres": 6000, "max_items": 1, "accepted_tags": ["wrong"]}, capacity.merged({"extra": 0})]:
+			container.capacity = shape
+			check(not ChamberRecoveryRecords.inventory_links(decoded, inventory_record), "restore rejects wrong capacity shape/tags")
+		container.capacity = capacity
+	for location in inventory_record.world_storage:
+		if location.container_id != ChamberRecoveryRecords.root_id(assembly.assembly_id): continue
+		var position: Array = location.position_millimetres.duplicate()
+		for index in range(3):
+			for wrong in wrong_pinned_quantities(position[index]):
+				location.position_millimetres[index] = wrong
+				check(not ChamberRecoveryRecords.inventory_links(decoded, inventory_record), "restore rejects changed/fractional/wrong-type anchor coordinate")
+				location.position_millimetres[index] = position[index]
+		for shape in [[], [5600, 0], [5600, 0, -4400, 0], {"x": 5600, "y": 0, "z": -4400}]:
+			location.position_millimetres = shape
+			check(not ChamberRecoveryRecords.inventory_links(decoded, inventory_record), "restore rejects wrong anchor shape")
+		location.position_millimetres = position
+	if decoded.chamber_recovery.jobs.is_empty(): return
+	var job: Dictionary = decoded.chamber_recovery.jobs[0]
+	job.spent_joules = int(job.spent_joules)
+	check(ChamberRecoveryRecords.valid(decoded.chamber_recovery, bank, tick), "validated float audit matches integral job spend exactly")
+	job.spent_joules = float(job.spent_joules)
+	decoded.chamber_recovery.accounting.jobs[0].paid_joules = int(job.spent_joules)
+	if float(job.returned_moles) == 0.0: decoded.chamber_recovery.accounting.jobs[0].returned_moles = 0
+	check(ChamberRecoveryRecords.valid(decoded.chamber_recovery, bank, tick), "validated integer audit quantities match decoded job numbers exactly")
+	for field in ["paid_joules", "returned_moles"]:
+		for wrong in wrong_pinned_quantities(decoded.chamber_recovery.accounting.jobs[0][field]):
+			var changed: Dictionary = decoded.chamber_recovery.duplicate(true)
+			changed.accounting.jobs[0][field] = wrong
+			# Preserve the corresponding aggregate so an otherwise valid changed
+			# quantity must still agree with the immutable job's own summary.
+			if typeof(wrong) in [TYPE_INT, TYPE_FLOAT] and is_finite(float(wrong)): changed.accounting[field] = wrong
+			check(not ChamberRecoveryRecords.valid(changed, bank, tick), "summary rejects changed or wrong-type numeric accounting: " + field)
+	var extra: Dictionary = decoded.chamber_recovery.duplicate(true)
+	extra.accounting.jobs[0]["extra"] = 0
+	check(not ChamberRecoveryRecords.valid(extra, bank, tick), "summary shape remains exact")
 
 
 ## Damage is installed through the real Inventory restore before preparing any

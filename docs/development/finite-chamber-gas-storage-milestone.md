@@ -505,6 +505,19 @@ support from candidate preparation, preserve ledger version, and check that the
 original paid item's sole change is location. This correction is source-only
 until a new exact-head review/lease.
 
+The pinned restore audit extends exact numeric comparison to assembly bills,
+mounted capacity and anchor coordinates. Validated job summaries normalize
+joules to integers and moles to finite exact numeric values before comparison;
+no fractional joules, wrong types, shape changes or tolerance are accepted.
+Transaction controls JSON-roundtrip actual mounted, admitted and charged route
+records and reject changed/fractional/wrong-type fields and shapes. The charged
+whole-world reload remains required; its complete-record comparison now decodes
+both sides through full-precision JSON to compare JSON values independently of
+each owner's integral runtime normalization. Four-owner CAS snapshots and
+reciprocal audit copies retain strict equality: they compare the same live
+representation or paired decoded records, never integer-literal catalogs.
+These source corrections and additional controls await runtime verification.
+
 Local checks: `git diff --check` and
 `tests/schema/chamber_recovery_schema_test.py --syntax-only` passed. The local
 Python environments lack `jsonschema`; metaschema and genuine emitted-fixture
