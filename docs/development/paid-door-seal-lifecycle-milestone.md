@@ -38,8 +38,12 @@ Installed condition1 is freshly fitted; any value below1 is degraded and0 is
 failed while retaining its paid mass. Opening leaves installation and condition
 intact. Opening, degraded integrity, damaged latch or degraded seal never implies
 an effective pressure boundary. Removing any condition refunds the exact retained
-200,000mg plate once and sets Access condition0. Removal performs no repair;
-refitting requires paying the retained bill again. Door disassembly requires seal
+200,000mg plate once and sets Access condition0. Refitting explicitly reworks and
+repairs this prototype metal gasket to condition1 using the real held crowbar;
+the recovered plate can pay that bill, so repair has zero net material cost.
+There is no persistent gasket damage after this deliberate tool operation and
+no tick wear. It never heals actuator integrity, latch, mode or other hardware.
+Migration and restore never heal gasket condition. Door disassembly requires seal
 removal first, preventing implicit deletion/refund ambiguity. No new damage or
 repair command is part of this slice.
 

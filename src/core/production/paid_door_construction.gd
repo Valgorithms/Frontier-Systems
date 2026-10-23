@@ -31,7 +31,7 @@ static func valid_device(id: String, door: Dictionary, record: Dictionary) -> bo
 	var grant: Dictionary = policy.grants[0]
 	if not ControlContractValidation.has_exact_fields(grant, PackedStringArray(["subject_kind", "subject_id", "action_ids"])) or grant.subject_kind != "principal" or grant.subject_id != door.principal_id or grant.action_ids != ["door.manual_operate"]: return false
 	# Condition, latch and bypass history remain Access-owned. No hidden hardware.
-	return target.mode in [&"manual", &"disabled", &"jammed"] and target.position in [0.0, 1.0] and target.effective_pressure_area_m2 == 0.0 and target.maximum_force_newtons == 0.0 and target.seal_condition == 0.0 and target.manual_override_available
+	return target.mode in [&"manual", &"disabled", &"jammed"] and target.position in [0.0, 1.0] and target.effective_pressure_area_m2 == 0.0 and target.maximum_force_newtons == 0.0 and (target.seal_condition == 0.0 or not door.get("seal", {}).is_empty()) and target.manual_override_available
 
 
 static func links(state: Dictionary, access: Dictionary, inventory: Dictionary = {}) -> ServiceResult:
@@ -107,7 +107,7 @@ static func plan(state: Dictionary, inventory: InventorySimulationSystem, access
 	var door: Dictionary
 	if create:
 		if doors.size() >= PaidDoorGeometry.MAX_DOORS or doors.has(id) or access.devices.has(StringName(id)): return failure("Door identity/capacity is unavailable.")
-		door = {"position": payload["position"], "quarter_turn": payload["quarter_turn"], "principal_id": String(context.principal_id), "body_id": authorized.value, "blueprint_id": PaidDoorGeometry.BLUEPRINT, "blueprint_revision": 1, "materials": {"plate": PaidDoorGeometry.MASS}}
+		door = {"position": payload["position"], "quarter_turn": payload["quarter_turn"], "principal_id": String(context.principal_id), "body_id": authorized.value, "blueprint_id": PaidDoorGeometry.BLUEPRINT, "blueprint_revision": 1, "materials": {"plate": PaidDoorGeometry.MASS}, "seal": {}}
 		doors[id] = door
 		if not PaidDoorGeometry.valid(doors, state["panels"]) or int(state["store"]["plate"]) < PaidDoorGeometry.MASS: return failure("A paid supported floor, clear grid pose and two kg processed plate are required.")
 		device = new_device(id, String(context.principal_id))
@@ -121,9 +121,13 @@ static func plan(state: Dictionary, inventory: InventorySimulationSystem, access
 		device = AccessControlledDeviceState.from_record(current.value).value
 		var actuator: ActuatorState = device.actuator(actuator_id(id))
 		if operation == "door_remove":
+			if not door["seal"].is_empty(): return failure("Remove the installed seal before disassembling the door.")
 			if actuator.position != 0.0 or not device.bypass_jobs.is_empty() or not device.tamper_events.is_empty() or actuator.override_actor_id != &"": return failure("Close the door and clear foreign work before recovery.")
 			if ProductionSimulationSystem._mass(state["store"]) + ProductionSimulationSystem._reserved_mass(state) + PaidDoorGeometry.MASS > ProductionSimulationSystem.MAX_MASS: return failure("Receiving stock capacity is unavailable.")
 			state["store"]["plate"] += PaidDoorGeometry.MASS
+		elif operation in ["door_seal_install", "door_seal_remove"]:
+			var seal_change: ServiceResult = PaidDoorSeal.plan(state, door, actuator, device, inventory, context, request, operation)
+			if not seal_change.is_success: return seal_change
 		else:
 			if operation not in ["door_open", "door_close"]: return failure("Unknown door operation.")
 			var tool: ServiceResult = inventory.active_tool(context, "tool.crowbar")

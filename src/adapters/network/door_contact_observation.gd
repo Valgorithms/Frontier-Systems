@@ -5,10 +5,15 @@ class_name DoorContactObservation
 static func valid_items(value: Variant) -> bool:
 	if typeof(value) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value, PackedStringArray(["schema_version", "control_epoch", "can_operate", "doors"])): return false
 	if typeof(value.can_operate) != TYPE_BOOL: return false
-	if not ControlContractValidation.is_integer(value.schema_version, 1, 1) or not ControlContractValidation.is_integer(value.control_epoch, -1, ProductionSimulationSystem.MAX_REVISION) or typeof(value.doors) != TYPE_ARRAY or value.doors.size() > PaidDoorGeometry.MAX_DOORS: return false
+	if not ControlContractValidation.is_integer(value.schema_version, 1, 2) or not ControlContractValidation.is_integer(value.control_epoch, -1, ProductionSimulationSystem.MAX_REVISION) or typeof(value.doors) != TYPE_ARRAY or value.doors.size() > PaidDoorGeometry.MAX_DOORS: return false
 	var previous: String = ""
 	for d in value.doors:
-		if typeof(d) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(d, PackedStringArray(["door_id", "position", "quarter_turn", "opened"])) or not ControlContractValidation.is_id(d.door_id) or not String(d.door_id).begins_with("door-") or typeof(d.opened) != TYPE_BOOL: return false
+		var fields := PackedStringArray(["door_id", "position", "quarter_turn", "opened"])
+		if int(value.schema_version) == 2: fields.append_array(["seal_installed", "seal_condition"])
+		if typeof(d) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(d, fields) or not ControlContractValidation.is_id(d.door_id) or not String(d.door_id).begins_with("door-") or typeof(d.opened) != TYPE_BOOL: return false
+		if int(value.schema_version) == 2:
+			if typeof(d.seal_installed) != TYPE_BOOL or typeof(d.seal_condition) not in [TYPE_INT, TYPE_FLOAT]: return false
+			if not is_finite(float(d.seal_condition)) or float(d.seal_condition) < 0.0 or float(d.seal_condition) > 1.0 or (not d.seal_installed and d.seal_condition != 0.0): return false
 		if String(d.door_id) <= previous or not SpatialWallConstruction.valid_pose({"position": d.position, "quarter_turn": d.quarter_turn}): return false
 		previous = d.door_id
 	return true

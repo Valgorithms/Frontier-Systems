@@ -36,11 +36,11 @@ func configure(world: WorldRuntime) -> void:
 	_details.add_child(_doors)
 	_doors.item_selected.connect(func(index: int) -> void: _selected = _doors.get_item_metadata(index))
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_status.text = "Requires a paid 1 m square floor under the full swing. Stand outside the swing, within 1.5 m of the frame. Equip a usable crowbar to move it. No pressure seal."
+	_status.text = "Requires a paid 1 m square floor under the full swing. Stand outside the swing, within 1.5 m of the frame. Equip a usable crowbar to move it. Fit/rework seal: 0.2 kg plate and usable crowbar. No pressure boundary."
 	_details.add_child(_status)
-	for operation in ["door_build", "door_open", "door_close", "door_remove"]:
+	for operation in ["door_build", "door_open", "door_close", "door_remove", "door_seal_install", "door_seal_remove"]:
 		var button := Button.new()
-		button.text = {"door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
+		button.text = {"door_seal_install": "Fit/rework seal · 0.2 kg plate", "door_seal_remove": "Remove seal · recover 0.2 kg plate", "door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
 		button.disabled = true
 		button.pressed.connect(_send.bind(operation))
 		_details.add_child(button)
@@ -64,7 +64,7 @@ func _process(delta: float) -> void:
 	var context := AuthenticatedCommandContext.for_local_development(&"local-inventory-actor", _world.world_id, _world.region_id)
 	var observed: ServiceResult = _world.production_observation(context)
 	_record.clear()
-	if observed.is_success and observed.value.get("schema_version") == 11 and WorkstationResourceView.valid(observed.value): _record = observed.value
+	if observed.is_success and observed.value.get("schema_version") == 12 and WorkstationResourceView.valid(observed.value): _record = observed.value
 	_doors.clear()
 	for door in _record.get("paid_doors", {}).get("doors", []):
 		_doors.add_item("%s Â· %s" % [String(door.door_id).right(8), "open" if door.opened else "closed"])

@@ -62,7 +62,7 @@ func initial_record(tick: int) -> Dictionary:
 	var powered: Dictionary = {}
 	for station in STATIONS:
 		powered[station] = true
-	return {"schema_version": 10, "doors": {}, "panels": {}, "construction": ConstructionReservationPlan.initial(), "construction_bindings": {}, "construction_commands": {}, "walls": {}, "machinery": MachineryWorkshop.initial(), "loose_parts": {}, "structures": {}, "catalog_revision": 1, "catalog_fingerprint": _catalog_fingerprint, "timebase_hz": Engine.physics_ticks_per_second,
+	return {"schema_version": 11, "doors": {}, "panels": {}, "construction": ConstructionReservationPlan.initial(), "construction_bindings": {}, "construction_commands": {}, "walls": {}, "machinery": MachineryWorkshop.initial(), "loose_parts": {}, "structures": {}, "catalog_revision": 1, "catalog_fingerprint": _catalog_fingerprint, "timebase_hz": Engine.physics_ticks_per_second,
 		"last_tick": tick, "state_revision": 0, "deposits": _initial_deposits(), "store": _empty_stock(),
 		"vessel": _empty_stock(), "wall_mass_milligrams": 0, "energy_joules": 100000,
 		"powered": powered, "job": {}, "receipts": [], "cargo": {}}
@@ -327,7 +327,7 @@ func observation(context: AuthenticatedCommandContext) -> ServiceResult:
 	observed["machinery"] = machinery_observation(context)
 	observed["timed_canister"] = TimedCanisterConstruction.observation(_state, _inventory, context, _timed_blueprints.get_definition(ConstructionReservationPlan.BLUEPRINT).value["fingerprint"])
 	# Observation version is independent of the v9 persistence record.
-	observed["schema_version"] = 11
+	observed["schema_version"] = 12
 	observed["paid_doors"] = door_observation(context)
 	observed["horizontal_panels"] = HorizontalPanelObservation.project(_state, context, construction_closure(context), _inventory.production_capability(context, true, []).is_success)
 	observed["recipes"] = _catalog["recipes"].keys()
@@ -1016,21 +1016,21 @@ func restore_snapshot_record(record: Dictionary, tick: int) -> ServiceResult:
 
 func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	var fields: Array = ["schema_version", "catalog_revision", "catalog_fingerprint", "timebase_hz", "last_tick", "state_revision", "deposits", "store", "vessel", "wall_mass_milligrams", "energy_joules", "powered", "job", "receipts"]
-	if ControlContractValidation.is_integer(record.get("schema_version"), 2, 10):
+	if ControlContractValidation.is_integer(record.get("schema_version"), 2, 11):
 		fields.append("cargo")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 3, 10):
+	if ControlContractValidation.is_integer(record.get("schema_version"), 3, 11):
 		fields.append("structures")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 4, 10): fields.append("loose_parts")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 6, 10): fields.append("machinery")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 7, 10): fields.append("walls")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 8, 10): fields.append_array(["construction", "construction_bindings", "construction_commands"])
-	if ControlContractValidation.is_integer(record.get("schema_version"), 9, 10): fields.append("panels")
-	if ControlContractValidation.is_integer(record.get("schema_version"), 10, 10): fields.append("doors")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 4, 11): fields.append("loose_parts")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 6, 11): fields.append("machinery")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 7, 11): fields.append("walls")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 8, 11): fields.append_array(["construction", "construction_bindings", "construction_commands"])
+	if ControlContractValidation.is_integer(record.get("schema_version"), 9, 11): fields.append("panels")
+	if ControlContractValidation.is_integer(record.get("schema_version"), 10, 11): fields.append("doors")
 	if _catalog.is_empty() or not _fields(record, fields):
 		return _failure("An exact configured production snapshot is required.")
 	if record["catalog_fingerprint"] != _catalog_fingerprint:
 		return _failure("The saved catalog differs; an explicit production migration is required.")
-	if not ControlContractValidation.is_integer(record["schema_version"], 1, 10) or not ControlContractValidation.is_integer(record["catalog_revision"], 1, 1):
+	if not ControlContractValidation.is_integer(record["schema_version"], 1, 11) or not ControlContractValidation.is_integer(record["catalog_revision"], 1, 1):
 		return _failure("Unsupported production/catalog version.")
 	if not ControlContractValidation.is_integer(record["last_tick"], tick, tick) or not ControlContractValidation.is_integer(record["timebase_hz"], Engine.physics_ticks_per_second, Engine.physics_ticks_per_second) or not [60, 72, 90].has(Engine.physics_ticks_per_second):
 		return _failure("Production tick and supported timebase must match the world.")
@@ -1045,7 +1045,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	normalized["loose_parts"] = record.get("loose_parts", {}).duplicate(true)
 	for field in ["schema_version", "catalog_revision", "timebase_hz", "last_tick", "state_revision", "wall_mass_milligrams", "energy_joules"]:
 		normalized[field] = int(record[field])
-	normalized["schema_version"] = 10
+	normalized["schema_version"] = 11
 	for field in ["construction", "construction_bindings", "construction_commands"]:
 		var fallback: Dictionary = ConstructionReservationPlan.initial() if field == "construction" else {}
 		if typeof(record.get(field, fallback)) != TYPE_DICTIONARY: return _failure("Construction fragments must be objects.")
@@ -1064,8 +1064,15 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	if not SpatialWallConstruction.valid(record.get("walls", {})): return _failure("Invalid spatial wall records.")
 	if not HorizontalPanelConstruction.valid(record.get("panels", {})): return _failure("Invalid paid horizontal panel records.")
 	normalized["panels"] = record.get("panels", {}).duplicate(true)
-	if not PaidDoorGeometry.valid(record.get("doors", {}), normalized["panels"]): return _failure("Invalid paid door support or registry.")
-	normalized["doors"] = record.get("doors", {}).duplicate(true)
+	var doors: Variant = record.get("doors", {})
+	if typeof(doors) != TYPE_DICTIONARY: return _failure("Paid doors require an object.")
+	doors = doors.duplicate(true)
+	if int(record["schema_version"]) < 11:
+		for door in doors.values():
+			if typeof(door) != TYPE_DICTIONARY or door.has("seal"): return _failure("Legacy paid doors cannot contain seal hardware.")
+			door["seal"] = {}
+	if not PaidDoorGeometry.valid(doors, normalized["panels"]): return _failure("Invalid paid door support or registry.")
+	normalized["doors"] = doors
 	normalized["walls"] = record.get("walls", {}).duplicate(true)
 	for wall in normalized["walls"].values():
 		wall["position"] = InventorySpatialMath.normalized(wall["position"])
@@ -1083,7 +1090,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 	if typeof(structures) != TYPE_DICTIONARY or structures.size() > 32:
 		return _failure("Structural equipment records must be bounded.")
 	normalized["structures"] = {}
-	var structural_mass: int = normalized["doors"].size() * PaidDoorGeometry.MASS + HorizontalPanelConstruction.mass(normalized["panels"]) + MachineryWorkshop.mass(normalized["machinery"]) + normalized["walls"].size() * SpatialWallConstruction.MASS
+	var structural_mass: int = normalized["doors"].size() * PaidDoorGeometry.MASS + PaidDoorSeal.mass(normalized["doors"]) + HorizontalPanelConstruction.mass(normalized["panels"]) + MachineryWorkshop.mass(normalized["machinery"]) + normalized["walls"].size() * SpatialWallConstruction.MASS
 	if typeof(record.get("loose_parts", {})) != TYPE_DICTIONARY or normalized["loose_parts"].size() > 128: return _failure("Loose parts must be a bounded material map.")
 	for id in normalized["loose_parts"]:
 		if not ControlContractValidation.is_id(id) or not _stock_valid(normalized["loose_parts"][id]): return _failure("Invalid loose part materials.")
@@ -1184,6 +1191,7 @@ func bind_door_access(access: AccessControlSystem) -> ServiceResult:
 	if _door_access != null or access == null: return _failure("Bind one commissioned door owner.")
 	var blueprint: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/production/manual-door.v1.json"))
 	if not PaidDoorGeometry.valid_blueprint(blueprint): return _failure("The pinned prototype door blueprint differs.")
+	if not PaidDoorSeal.valid_blueprint(JSON.parse_string(FileAccess.get_file_as_string("res://data/production/manual-door-seal.v1.json"))): return _failure("The pinned prototype seal blueprint differs.")
 	_door_access = access
 	return access.bind_door_restore_guard(validate_door_access_restore)
 
@@ -1225,7 +1233,7 @@ func with_checkpoint_door_links(production_record: Dictionary, access_record: Di
 	if not access_valid.is_success: return access_valid
 	var links: ServiceResult = PaidDoorConstruction.links(decoded.value, access_record)
 	if not links.is_success: return links
-	_checkpoint_door_links = {"production": production_record.duplicate(true), "access": access_record.duplicate(true)}
+	_checkpoint_door_links = {"production": production_record.duplicate(true), "access": access_record.duplicate(true), "normalized_production": decoded.value.duplicate(true)}
 	var result: ServiceResult = action.call()
 	_checkpoint_door_links.clear()
 	return result
@@ -1234,7 +1242,7 @@ func with_checkpoint_door_links(production_record: Dictionary, access_record: Di
 func validate_door_access_restore(record: Dictionary) -> ServiceResult:
 	if not _checkpoint_door_links.is_empty():
 		if record != _checkpoint_door_links["access"]: return _failure("Restore differs from the validated paired Access candidate.")
-		return PaidDoorConstruction.links(_checkpoint_door_links["production"], record)
+		return PaidDoorConstruction.links(_checkpoint_door_links["normalized_production"], record)
 	return PaidDoorConstruction.links(_state, record)
 
 
@@ -1251,8 +1259,8 @@ func door_observation(context: AuthenticatedCommandContext) -> Dictionary:
 		if d["principal_id"] != String(context.principal_id): continue
 		var device: AccessControlledDeviceState = _door_access.devices.get(StringName(id))
 		if device == null: continue
-		items.append({"door_id": id, "position": d["position"].duplicate(), "quarter_turn": d["quarter_turn"], "opened": device.actuator(PaidDoorConstruction.actuator_id(id)).position == 1.0})
-	return {"schema_version": 1, "control_epoch": epoch, "can_operate": authorize_door(context, {"control_epoch": epoch}).is_success, "doors": items}
+		items.append({"door_id": id, "position": d["position"].duplicate(), "quarter_turn": d["quarter_turn"], "opened": device.actuator(PaidDoorConstruction.actuator_id(id)).position == 1.0, "seal_installed": not d["seal"].is_empty(), "seal_condition": device.actuator(PaidDoorConstruction.actuator_id(id)).seal_condition})
+	return {"schema_version": 2, "control_epoch": epoch, "can_operate": authorize_door(context, {"control_epoch": epoch}).is_success, "doors": items}
 
 
 func door_solids() -> ServiceResult:

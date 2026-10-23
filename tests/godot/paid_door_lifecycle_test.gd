@@ -102,6 +102,8 @@ func run() -> void:
 	door_command("door_remove", {"door_id": door_id}, false)
 	move([3500, 0, -6000])
 	door_command("door_close", {"door_id": door_id})
+	seal_checks()
+	if failures: finish(); return
 	var expected_doors: Dictionary = production.capture_snapshot().value["doors"]
 	var captured: ServiceResult = world.capture_world_snapshot_json()
 	check(captured.is_success, "whole paid-door snapshot: %s" % captured.message)
@@ -167,6 +169,106 @@ func run() -> void:
 	if is_instance_valid(host): host.free()
 	print("Paid manual door lifecycle: %d failures" % failures)
 	finish()
+
+
+func seal_checks() -> void:
+	var intent: Dictionary = {"door_id": door_id}
+	seal_denied("door_seal_install", intent) # no free plate
+	move([0, 0, 0])
+	command("process", {"recipe_id": "craft.plate"}, false) # last iron is claimed
+	command("canister_cancel", {"job_id": "door-reservation", "expected_reservation_revision": production.capture_snapshot().value.construction.revision, "control_epoch": 0})
+	command("process", {"recipe_id": "craft.plate"}); step(120)
+	move([3500, 0, -6000])
+	seal_denied("door_seal_remove", intent)
+	var stale: Dictionary = operate_intent(); stale.control_epoch = 1
+	check(not door_route(3, "door_seal_install", stale).ok, "seal rejects stale epoch")
+	stale = operate_intent(); stale.expected_revision -= 1
+	check(not door_route(3, "door_seal_install", stale).ok, "seal rejects stale revision")
+	check(not door_route(2, "door_seal_install", operate_intent()).ok, "seal rejects foreign authenticated principal")
+	var forged: Dictionary = intent.duplicate(); forged.seal_id = "forged"
+	seal_denied("door_seal_install", forged)
+	for field in ["mode", "latch_state", "integrity"]:
+		var a: ActuatorState = access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id))
+		var old: Variant = a.get(field)
+		a.set(field, &"jammed" if field == "mode" else (&"damaged" if field == "latch_state" else 0.0))
+		seal_denied("door_seal_install", intent)
+		a.set(field, old)
+	door_command("door_open", intent)
+	seal_denied("door_seal_install", intent)
+	door_command("door_close", intent)
+	var before: Dictionary = production.capture_snapshot().value
+	var pressure: PressureSystem = world.get_simulation_system(PressureSystem.SYSTEM_ID)
+	var pressure_before: Dictionary = pressure.capture_snapshot().value
+	door_command("door_seal_install", intent)
+	var fitted: Dictionary = production.capture_snapshot().value
+	check(fitted.store.plate == before.store.plate - PaidDoorSeal.MASS and PaidDoorSeal.mass(fitted.doors) == PaidDoorSeal.MASS, "finite plate becomes retained gasket mass")
+	var a: ActuatorState = access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id))
+	check(a.seal_condition == 1.0 and a.effective_pressure_area_m2 == 0.0 and a.maximum_force_newtons == 0.0, "paid fitting grants no pressure hardware")
+	check(pressure.capture_snapshot().value == pressure_before, "seal lifecycle creates no Pressure state")
+	var replay: Dictionary = intent.duplicate(); replay.control_epoch = 0; replay.expected_revision = before.state_revision
+	check(production.apply_local(context, "machine-test-%d" % sequence, "door_seal_install", replay, runner.tick_number + 1).is_success and production.capture_snapshot().value == fitted, "install receipt replay never double spends")
+	seal_denied("door_seal_install", intent)
+	seal_denied("door_remove", intent)
+	a.seal_condition = 0.25; a.integrity = 0.5
+	var snapshot: Dictionary = JSON.parse_string(world.capture_world_snapshot_json().value)
+	var target := WorldRuntime.new(); target.resource_carriers_enabled = true; root.add_child(target)
+	check(target.restore_world_snapshot_json(JSON.stringify(snapshot)).is_success, "paired fitted degraded gasket save restores")
+	var restored_access: AccessControlSystem = target.get_simulation_system(AccessControlSystem.SYSTEM_ID)
+	check(restored_access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).seal_condition == 0.25, "restore never heals degraded gasket")
+	target.free()
+	for mutation in ["bill", "identity", "missing", "extra", "fraction", "boolean", "condition", "old-version"]:
+		var bad: Dictionary = snapshot.duplicate(true)
+		var seal: Dictionary = bad.systems.production.doors[door_id].seal
+		match mutation:
+			"bill": seal.materials.plate = 1
+			"identity": seal.blueprint_id = "forged"
+			"missing": bad.systems.production.doors[door_id].erase("seal")
+			"extra": seal.extra = 1
+			"fraction": seal.materials.plate = 200000.5
+			"boolean": seal.blueprint_revision = true
+			"condition": bad.systems.production.doors[door_id].seal = {}; bad.systems.production.store.plate += PaidDoorSeal.MASS
+			"old-version": bad.systems.production.schema_version = 10
+		target = WorldRuntime.new(); target.resource_carriers_enabled = true; root.add_child(target)
+		var unchanged: String = target.capture_world_snapshot_json().value
+		check(not target.restore_world_snapshot_json(JSON.stringify(bad)).is_success and target.capture_world_snapshot_json().value == unchanged, "malformed seal restore atomically rejects: " + mutation)
+		target.free()
+	var emitted := FileAccess.open("res://var/paid-door-seal-fixture.json", FileAccess.WRITE)
+	emitted.store_string(JSON.stringify({"persistent": production.capture_snapshot().value, "observation": production.observation(context).value})); emitted.close()
+	var legacy_observed: Dictionary = production.observation(context).value
+	legacy_observed.schema_version = 11; legacy_observed.paid_doors.schema_version = 1
+	for d in legacy_observed.paid_doors.doors: d.erase("seal_installed"); d.erase("seal_condition")
+	check(WorkstationResourceView.valid(legacy_observed), "legacy v11/v1 door observation still decodes")
+	for condition in [0.25, 0.0]:
+		a = access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)); a.seal_condition = condition
+		door_command("door_seal_remove", intent)
+		check(production.capture_snapshot().value.store.plate == before.store.plate, "degraded/failed removal refunds retained mass once")
+		check(access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id)).integrity == 0.5, "gasket removal preserves actuator damage")
+		seal_denied("door_seal_remove", intent)
+		door_command("door_seal_install", intent)
+		a = access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id))
+		check(a.seal_condition == 1.0 and a.integrity == 0.5 and production.capture_snapshot().value.store.plate == before.store.plate - PaidDoorSeal.MASS, "explicit crowbar rework repairs only gasket at zero net material cost")
+	# Actual player button removes the installed gasket through the queue.
+	var controls := PaidDoorControls.new(); root.add_child(controls); controls.configure(world); controls.set_process(false); controls._process(0.2)
+	controls._buttons[5].pressed.emit(); check(not controls._pending.is_empty(), "seal removal UI submits real intent")
+	step(); controls._process(0.2); controls.free()
+	a = access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id))
+	check(a.seal_condition == 0.0 and a.integrity == 0.5 and production.capture_snapshot().value.store.plate == before.store.plate, "UI removal retains unrelated damage and all plate")
+	a.integrity = 1.0 # explicit test damage cleanup, never a player repair
+	var legacy_save: Dictionary = production.capture_snapshot().value; legacy_save.schema_version = 10
+	for d in legacy_save.doors.values(): d.erase("seal")
+	check(production.restore_snapshot_record(legacy_save, runner.tick_number).is_success and production.capture_snapshot().value.doors[door_id].seal.is_empty(), "v10 populated door migrates to absent seal")
+	move([0, 0, 0]); command("process", {"recipe_id": "salvage.plate"}); step(60)
+	command("canister_reserve", {"job_id": "door-reservation-restored", "expected_reservation_revision": production.capture_snapshot().value.construction.revision, "control_epoch": 0})
+	move([3500, 0, -6000])
+
+
+func seal_denied(operation: String, payload: Dictionary) -> void:
+	var before: Dictionary = production.capture_snapshot().value
+	var access_before: Dictionary = access.capture_snapshot().value
+	var exact: Dictionary = payload.duplicate(true); exact.expected_revision = before.state_revision; exact.control_epoch = 0
+	sequence += 1
+	check(not production.apply_local(context, "seal-negative-%d" % sequence, operation, exact, runner.tick_number).is_success, operation + " rejects")
+	check(production.capture_snapshot().value == before and access.capture_snapshot().value == access_before, operation + " rejection preserves both owners")
 
 
 func door_command(operation: String, payload: Dictionary, success: bool = true) -> void:

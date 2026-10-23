@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:frontier-systems:schema:paid-door-observation:v2",
+  "title": "Own paid doors",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "control_epoch",
+    "doors",
+    "can_operate"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "control_epoch": {
+      "type": "integer",
+      "minimum": -1,
+      "maximum": 9007199254740000
+    },
+    "doors": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "door_id",
+          "position",
+          "quarter_turn",
+          "opened",
+          "seal_installed",
+          "seal_condition"
+        ],
+        "properties": {
+          "door_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^door-"
+          },
+          "position": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "prefixItems": [
+              {
+                "type": "integer",
+                "minimum": -100000,
+                "maximum": 100000,
+                "multipleOf": 50
+              },
+              {
+                "const": 0
+              },
+              {
+                "type": "integer",
+                "minimum": -100000,
+                "maximum": 100000,
+                "multipleOf": 50
+              }
+            ],
+            "items": false
+          },
+          "quarter_turn": {
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "opened": {
+            "type": "boolean"
+          },
+          "seal_installed": {
+            "type": "boolean"
+          },
+          "seal_condition": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "seal_installed": {
+                  "const": false
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "seal_condition": {
+                  "const": 0
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "can_operate": {
+      "type": "boolean"
+    }
+  }
+}
