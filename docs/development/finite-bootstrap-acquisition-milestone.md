@@ -115,3 +115,63 @@ Linux main and companion checks at the immutable final head, with artifact
 provenance verified by Coordinator. Screenshots only if tests leave material
 uncertainty. PR85, merges, deployment, publication and successor dispatch stay
 outside worker scope.
+
+## Coordinator-reviewed commissioning and bootstrap budget follow-up
+
+Coordinator approved the distinct depletable 7 kg new-world source in principle,
+with historical seam mass zero and no other grants. Implementation still awaits
+confirmation of this complete budget. This supersedes only the resource-content
+restriction for that source, not the runtime lease requirement.
+
+The real first-playable bootstrap sets `resource_carriers_enabled = true`
+(src/app/first_playable_bootstrap.gd:56); WorldRuntime forwards that flag to
+Inventory configure_defaults (src/core/runtime/world_runtime.gd:42). The loaded
+shared.production.v1.json already gives body.human-2 resource-canister-1 and an
+extractor-1 inside its accessible backpack; body.human-1 can collect canister-2
+from world.tray-1 and equip extractor-2 from its backpack. All four items start
+at condition 1000/1000. Use existing inventory equip/transfer commands and an
+unreserved spare hand. No new carrier/extractor fabrication or salvage credit is
+required. These are explicitly supplied prototype tools, not Production mass.
+Inventory active_tool checks the active hand and Tool capability provider;
+owned_resource_carriers checks identity and contents access. The integrated
+player_extraction_loopback_test.gd already exercises real equip of extractor-2.
+The positive new test must retain these real initialization paths and controls.
+
+Use 17 `tool_extract` operations of exactly 1 kg each, unloading the existing
+canister after every extraction before the next source trip. Extraction costs
+ceil(amount/4000) = 250 J per kg (Production _plan), requires drill power and
+source reach, and invokes Tools prepare_usage once per successful operation.
+Tool bindings v2 use space iron: wear 1 ppm/cycle, head scale1000, drive250,
+frame0. After17cycles head integrity999983, drive999996 with remainder250,
+frame1000000; all remain above50000. Repair and replacement cost zero for this
+route because neither is required. There is no separate tool battery debit;
+Production energy is the existing powered extraction abstraction.
+
+| Step | Count and debit | Energy |
+| --- | --- | ---: |
+| Extract ore into starter canister | 17 x 1 kg; finite source debit | 4250 J |
+| Unload cargo | 17 owned transfers | 0 J |
+| Refine iron | 17 x 1 kg ore ->10.2 kg iron +6.8 kg tailings | 17000 J |
+| Craft plate | 8 x 1 kg iron ->8 kg plate | 8000 J |
+| Fabricate crowbar | equipment.crowbar, 2 kg iron | 2000 J |
+| Place enclosure | 7.6 kg plate including paid door | 0 J |
+| Install seal | 0.2 kg plate | 0 J |
+| Commission room | existing paid/held-tool checks | 0 J |
+| Total | 17 kg acquired ore | 31250 J |
+
+Source: catalog.v1.json recipe energy; equipment-blueprints.v1.json crowbar;
+Production _prepare_fabrication and _plan; PaidDoorSeal and paid wall/panel/door
+planners have no energy debit. All fixture station power flags initially true;
+Production initial_record starts100000J. Final energy68750J, without generation
+or refills. Canonical final acquired mass:7.8kg installed plate (7.6 enclosure +
+0.2 seal),2kg crowbar iron,0.2kg leftover plate,0.2kg leftover iron,6.8kg tails
+=17kg. Existing5kgice+10kgregolith remain untouched, total32kg. At most17kg
+passes through the100kg depot, one1kg extraction occupies the2kg carrier, and
+there is one active batch. Empty the carrier between trips. Hand assembly could
+reduce crowbar energy but is unnecessary for this conservative valid route.
+
+Correction to the initial proposal: the seal consumes plate, not raw iron.
+The total9.8kg bill and17kgore minimum are unchanged. Residuals are specifically
+0.2kgplate plus0.2kgiron, not0.4kgplate. The full material and energy budget fits
+with already usable starter gear; no additional ore above the reviewed7kg is
+needed. These are source-backed calculations, pending runtime acceptance.
