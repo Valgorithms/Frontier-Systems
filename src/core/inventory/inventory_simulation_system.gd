@@ -56,7 +56,7 @@ func configure_defaults(include_resource_carriers: bool = false) -> ServiceResul
 	var registered_canister: ServiceResult = _catalog.register_definition(canister)
 	if not registered_canister.is_success: return registered_canister
 	var pump: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/inventory/chamber-recovery-pump.v1.json"))
-	if pump != ChamberRecoveryRecords.definition(): return _failure("The immutable chamber pump definition changed.")
+	if not ChamberRecoveryRecords.matches_definition(pump): return _failure("The immutable chamber pump definition changed.")
 	var registered_pump: ServiceResult = _catalog.register_definition(pump)
 	if not registered_pump.is_success: return registered_pump
 	for name in ["human", "cyborg", "station-ai"]:

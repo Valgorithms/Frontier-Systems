@@ -34,6 +34,33 @@ static func definition() -> Dictionary:
 	return {"schema_version": 1, "definition_id": DEFINITION, "revision": 1, "tags": ["item.handheld", "equipment.chamber-pump"], "mass_milligrams": 0, "volume_millilitres": 6000, "storage": null}
 
 
+static func matches_definition(value: Variant) -> bool:
+	return _matches_pinned(value, definition())
+
+
+static func matches_blueprint(value: Variant) -> bool:
+	return _matches_pinned(value, blueprint())
+
+
+## JSON numbers decode as floats; Dictionary equality distinguishes them from
+## integer literals. Validate exact quantities before conversion, never truncate.
+static func _matches_pinned(value: Variant, expected: Variant) -> bool:
+	if typeof(expected) == TYPE_INT:
+		return ControlContractValidation.is_integer(value, expected, expected)
+	if typeof(value) != typeof(expected): return false
+	if typeof(expected) == TYPE_DICTIONARY:
+		if value.size() != expected.size(): return false
+		for key in expected:
+			if not value.has(key) or not _matches_pinned(value[key], expected[key]): return false
+		return true
+	if typeof(expected) == TYPE_ARRAY:
+		if value.size() != expected.size(): return false
+		for index in range(expected.size()):
+			if not _matches_pinned(value[index], expected[index]): return false
+		return true
+	return value == expected
+
+
 static func root_id(assembly_id: String) -> String:
 	return "world.chamber-pump-%s" % assembly_id
 

@@ -70,7 +70,7 @@ func configure(inventory: InventorySimulationSystem, tools: ToolSimulationSystem
 		return blueprints
 	var timed: ServiceResult = _timed_blueprints.configure(JSON.parse_string(FileAccess.get_file_as_string("res://data/production/timed-canister-blueprint.v1.json")), inventory, _catalog["materials"])
 	if not timed.is_success: return timed
-	if JSON.parse_string(FileAccess.get_file_as_string("res://data/production/chamber-recovery-pump.v1.json")) != ChamberRecoveryRecords.blueprint(): return _failure("The immutable chamber recovery bill changed.")
+	if not ChamberRecoveryRecords.matches_blueprint(JSON.parse_string(FileAccess.get_file_as_string("res://data/production/chamber-recovery-pump.v1.json"))): return _failure("The immutable chamber recovery bill changed.")
 	_state = initial_record(0, new_world_outcrop, new_world_reinforcement, new_world_chamber)
 	var motion: ServiceResult = inventory.bind_motion_validator(func(from: Array, to: Array) -> bool: return SpatialWallConstruction.motion_clear(_state["walls"], from, to) and door_motion_clear(from, to))
 	if not motion.is_success: return motion

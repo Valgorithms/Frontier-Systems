@@ -484,6 +484,17 @@ gas/J and physical identity persist. Fresh resume retains identity, target, cap
 and spend, rejects at tick+59 and permits preparation at tick+60. These added
 regressions remain authored and unrun while local Godot execution is on hold.
 
+The first leased Windows run at `a111c31` imported successfully (17.27s) but
+startup failed (3.50s): the new direct Dictionary comparison rejected valid
+JSON float quantities against integer literals before Inventory created its
+owner. Dependent Tools then attempted to capture that absent owner. The same
+comparison affected the Production bill. Both checks now compare exact pinned
+shape and quantities, accepting integral JSON numbers without truncating
+fractions or coercing strings/bools. Initialization order and canonical owner
+creation remain unchanged. Transaction coverage adds actual default/production
+Inventory-to-Tools initialization and malformed/pinned catalog controls; these
+corrections await a fresh exact-head review and execution lease.
+
 Local checks: `git diff --check` and
 `tests/schema/chamber_recovery_schema_test.py --syntax-only` passed. The local
 Python environments lack `jsonschema`; metaschema and genuine emitted-fixture

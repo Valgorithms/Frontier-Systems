@@ -1,6 +1,44 @@
 extends "res://tests/godot/paid_chamber_test.gd"
 
 
+func run() -> void:
+	pinned_catalog_controls()
+	if failures: finish(); return
+	await super.run()
+
+
+func pinned_catalog_controls() -> void:
+	var definition: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/inventory/chamber-recovery-pump.v1.json"))
+	var blueprint: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/production/chamber-recovery-pump.v1.json"))
+	check(ChamberRecoveryRecords.matches_definition(definition) and ChamberRecoveryRecords.matches_definition(ChamberRecoveryRecords.definition()), "JSON and literal pump definitions both admit exact numeric values")
+	check(ChamberRecoveryRecords.matches_blueprint(blueprint) and ChamberRecoveryRecords.matches_blueprint(ChamberRecoveryRecords.blueprint()), "JSON and literal bills both admit exact nested numeric values")
+	for field in ["schema_version", "revision", "mass_milligrams", "volume_millilitres"]:
+		for wrong in [float(definition[field]) + 0.25, float(definition[field]) + 1.0, str(definition[field]), true, null, INF, NAN]:
+			var changed: Dictionary = definition.duplicate(true)
+			changed[field] = wrong
+			check(not ChamberRecoveryRecords.matches_definition(changed), "definition rejects changed or non-integral pinned quantity: " + field)
+	for field in ["plate", "iron"]:
+		for wrong in [float(blueprint.materials_milligrams[field]) + 0.25, 0, "400000", true, null]:
+			var changed: Dictionary = blueprint.duplicate(true)
+			changed.materials_milligrams[field] = wrong
+			check(not ChamberRecoveryRecords.matches_blueprint(changed), "bill rejects changed or non-integral nested quantity: " + field)
+	var extra: Dictionary = definition.duplicate(true); extra["unsupported"] = 1
+	var missing: Dictionary = blueprint.duplicate(true); missing.erase("assembly_joules")
+	var tags: Dictionary = definition.duplicate(true); tags.tags.reverse()
+	check(not ChamberRecoveryRecords.matches_definition(extra) and not ChamberRecoveryRecords.matches_blueprint(missing) and not ChamberRecoveryRecords.matches_definition(tags), "pinned fields and ordered tags remain exact")
+	check(not ChamberRecoveryRecords.matches_definition(null) and not ChamberRecoveryRecords.matches_blueprint([]), "malformed catalog shapes reject")
+	for carriers in [false, true]:
+		var fresh_inventory := InventorySimulationSystem.new()
+		var configured: ServiceResult = fresh_inventory.configure_defaults(carriers)
+		check(configured.is_success, "actual catalog creates canonical Inventory for both commissioning fixtures")
+		if configured.is_success:
+			check(fresh_inventory.capture_snapshot().is_success, "real configured Inventory owner captures before dependent Tools configure")
+			var fresh_tools := ToolSimulationSystem.new()
+			check(fresh_tools.configure(fresh_inventory).is_success, "dependent Tools initialize from real Inventory without reordered or fabricated owners")
+			fresh_tools.free()
+		fresh_inventory.free()
+
+
 ## Positive provenance comes entirely from the existing 39kg acquisition route
 ## and real detached Inventory/Production candidates. Direct owner mutations
 ## below are isolated rejection controls, never positive factory shortcuts.
