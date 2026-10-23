@@ -10,11 +10,11 @@ The supported subset is exactly one rectangular wall band at ground level, with 
 
 `closed_wall_perimeter` means only that the supplied ideal panel solids cover this wall band. `interior_bounds_millimetres` is `[min_x, max_x, min_z, max_z]` at the inner faces. The helper always reports `required_surfaces: [floor, ceiling]`. It accepts no floor or ceiling evidence and never claims a complete room, gas volume, physical seam quality, sealing, pressure, material health or gameplay functionality. Surface thickness/materials, doors, penetrations, damaged walls and connectivity to pressure volumes need separate authoritative contracts.
 
-## Current construction limit
+## Canonical corner placement
 
-PR128's adapter describes existing 1000 mm panels, 100 mm thick, placed on a 100 mm position grid with overlaps prohibited. Exact perpendicular butt contact needs a 50 mm relative offset that this grid cannot express. Canonical adapter fixtures therefore remain open/unsupported; the synthetic closed fixtures demonstrate mathematics only and are not playable construction evidence. Descriptor schema v1 permits variable spans and integer positions, so the helper can assess such detached inputs without asserting current production can create them. It does not loosen canonical placement validation.
+PR128's adapter describes existing 1000 mm panels, 100 mm thick, with overlaps prohibited. The original 100 mm position grid could not express the 50 mm relative offset required by exact perpendicular butt corners. [Canonical corner placement](wall-corner-placement-milestone.md) widens floor placement to 50 mm while retaining existing panel dimensions, payment and stable IDs. Descriptor schema v1 and this pure topology algorithm are unchanged. Existing 100 mm fixtures with corner gaps remain open/unsupported.
 
-A successor must explicitly decide whether to support a 50 mm placement grid or a dedicated corner/join component, then update canonical placement/collision validation, material ownership and persistence contracts together and test complete surface construction. Merely marking nearby centreline endpoints connected would create an unsupported enclosure claim. This change does not implement that successor.
+Exact canonical wall perimeters still require separate floor and ceiling contracts before any complete surface or pressure-volume claim. Nearby centreline endpoints do not count as connected; the helper continues to require exact wall-solid coverage.
 
 ## Verification and ownership
 

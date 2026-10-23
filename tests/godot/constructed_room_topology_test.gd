@@ -121,13 +121,13 @@ func _initialize() -> void:
 		"west": {"position": [-100, 0, 500], "quarter_turn": 1},
 		"east": {"position": [1100, 0, 500], "quarter_turn": 1}}
 	var described: ServiceResult = ConstructedWallBoundaries.describe(canonical, 12)
-	check(described.is_success and open_result(described.value), "canonical grid's 50 mm corner gaps grant no enclosure")
+	check(described.is_success and open_result(described.value), "legacy 100 mm layout's 50 mm corner gaps grant no enclosure")
 	print("Constructed room topology: %d failures" % failures)
 	quit(1 if failures else 0)
 
 
 func rectangle() -> Dictionary:
-	# Synthetic descriptor geometry, not constructible on current 100 mm grid.
+	# Synthetic variable-span descriptors; paid fixed-panel construction is tested separately.
 	return {"schema_version": 1, "production_revision": 42, "boundaries": [
 		panel("north", [0, 0, 0], [2000, 0, 0]), panel("south", [0, 0, 2100], [2000, 0, 2100]),
 		panel("west", [50, 0, 50], [50, 0, 2050]), panel("east", [1950, 0, 50], [1950, 0, 2050])]}

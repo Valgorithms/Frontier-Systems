@@ -167,7 +167,7 @@ func finish() -> void:
 	var selection_advice: Dictionary = WallPlacementFeedback.describe(selected_sample, "", "wall.advice", [0, 0, 0], 0, false, {})
 	check(selection_advice["text"].contains("along Z") and selection_advice["text"].contains("Outside estimated") and selection_advice["text"].contains("Selected X 0.00 / Y 0.00 / Z -2.00"), "clicked wall reach and orientation use its observed pose instead of unrelated target controls")
 	check(not WallPlacementFeedback.describe(sample, plate, "", [2000, 0, 0], 0, true, {})["advisory_ok"], "draft never claims placement readiness")
-	check(WallPlacementFeedback.describe(sample, plate, "", [1, 0, -1000], 0, true, {})["text"].contains("100 mm grid"), "off grid input has explicit advice")
+	check(WallPlacementFeedback.describe(sample, plate, "", [1, 0, -1000], 0, true, {})["text"].contains("50 mm grid"), "off grid input has explicit advice")
 	check(WallPlacementFeedback.describe(sample, "resource-canister-1", "", [0, 0, -1000], 0, true, {})["text"].contains("owned physical plate"), "nonplate selection has useful advice")
 	var unavailable: Dictionary = WallPlacementFeedback.describe({}, "", "", [], 0, false, held)
 	check(unavailable["selected_position"].is_empty() and not unavailable["ghost_visible"], "missing observation clears world decoration while retaining submitted metadata")
