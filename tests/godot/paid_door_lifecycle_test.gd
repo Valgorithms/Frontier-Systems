@@ -9,7 +9,9 @@ func run() -> void:
 	world.resource_carriers_enabled = true
 	root.add_child(world)
 	world.command_completed.connect(func(_command: SimulationCommand, result: ServiceResult) -> void: last = result)
-	check(world.start_simulation().is_success, "finite door world starts")
+	var started: ServiceResult = world.start_simulation()
+	check(started.is_success, "finite door world starts: %s" % started.message)
+	if not started.is_success: finish(); return
 	runner = world.get_node("SimulationRunner")
 	runner.set_physics_process(false)
 	production = world.get_simulation_system(ProductionSimulationSystem.SYSTEM_ID)

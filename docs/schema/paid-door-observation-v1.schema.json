@@ -7,7 +7,8 @@
   "required": [
     "schema_version",
     "control_epoch",
-    "doors"
+    "doors",
+    "can_operate"
   ],
   "properties": {
     "schema_version": {
@@ -71,6 +72,9 @@
           }
         }
       }
+    },
+    "can_operate": {
+      "type": "boolean"
     }
   }
 }

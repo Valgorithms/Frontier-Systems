@@ -79,7 +79,7 @@ func start_simulation() -> ServiceResult:
 	if _tool_setup_result == null or not _tool_setup_result.is_success:
 		return ServiceResult.failure(&"tools_setup_failed", "Tool component bindings must initialize before starting.")
 	if _production_setup_result == null or not _production_setup_result.is_success:
-		return ServiceResult.failure(&"production_setup_failed", "The production catalog and stores must initialize before starting.")
+		return ServiceResult.failure(&"production_setup_failed", "Production setup failed: %s" % (_production_setup_result.message if _production_setup_result != null else "not initialized"))
 	if _health_setup_result == null or not _health_setup_result.is_success:
 		return ServiceResult.failure(&"health_setup_failed", "Health body owners must initialize before starting.")
 	if _inventory_setup_result == null or not _inventory_setup_result.is_success:

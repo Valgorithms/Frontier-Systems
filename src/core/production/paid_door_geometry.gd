@@ -68,10 +68,19 @@ static func valid(doors: Variant, panels: Dictionary) -> bool:
 		if not ControlContractValidation.is_id(id) or not String(id).begins_with("door-") or typeof(d) != TYPE_DICTIONARY: return false
 		if not ControlContractValidation.has_exact_fields(d, PackedStringArray(["position", "quarter_turn", "principal_id", "body_id", "blueprint_id", "blueprint_revision", "materials"])): return false
 		if not SpatialWallConstruction.valid_pose({"position": d["position"], "quarter_turn": d["quarter_turn"]}): return false
-		if not ControlContractValidation.is_id(d["principal_id"]) or not ControlContractValidation.is_id(d["body_id"]) or d["blueprint_id"] != BLUEPRINT or not ControlContractValidation.is_integer(d["blueprint_revision"], 1, 1) or d["materials"] != {"plate": MASS}: return false
+		if not ControlContractValidation.is_id(d["principal_id"]) or not ControlContractValidation.is_id(d["body_id"]) or d["blueprint_id"] != BLUEPRINT or not ControlContractValidation.is_integer(d["blueprint_revision"], 1, 1) or not valid_bill(d["materials"]): return false
 		if not supported(d, panels): return false
 		var envelope: Dictionary = sweep(d)
 		for other in previous:
 			if intersects(envelope, other): return false
 		previous.append(envelope)
 	return true
+
+
+static func valid_bill(value: Variant) -> bool:
+	return typeof(value) == TYPE_DICTIONARY and ControlContractValidation.has_exact_fields(value, PackedStringArray(["plate"])) and ControlContractValidation.is_integer(value["plate"], MASS, MASS)
+
+
+static func valid_blueprint(value: Variant) -> bool:
+	if typeof(value) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value, PackedStringArray(["schema_version", "blueprint_id", "revision", "materials", "mode", "latch_state", "pressure_ports", "provenance"])): return false
+	return ControlContractValidation.is_integer(value.schema_version, 1, 1) and value.blueprint_id == BLUEPRINT and ControlContractValidation.is_integer(value.revision, 1, 1) and valid_bill(value.materials) and value.mode == "manual" and value.latch_state == "released" and typeof(value.pressure_ports) == TYPE_ARRAY and value.pressure_ports.is_empty() and value.provenance == "First-party MIT prototype frame and leaf bill; no density or pressure rating; no imported assets."

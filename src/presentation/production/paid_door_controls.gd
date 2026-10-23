@@ -71,7 +71,7 @@ func _process(delta: float) -> void:
 		_doors.set_item_metadata(_doors.item_count - 1, door.door_id)
 		if _selected == door.door_id: _doors.select(_doors.item_count - 1)
 	if _doors.item_count > 0 and _selected.is_empty(): _selected = _doors.get_item_metadata(0)
-	var enabled: bool = not _record.is_empty() and _pending.is_empty() and _record.get("can_operate", false) and _record.get("paid_doors", {}).get("control_epoch", -1) >= 0
+	var enabled: bool = not _record.is_empty() and _pending.is_empty() and _record.get("paid_doors", {}).get("can_operate", false) and _record.get("paid_doors", {}).get("control_epoch", -1) >= 0
 	for index in range(_buttons.size()): _buttons[index].disabled = not enabled or (index > 0 and not _record.paid_doors.doors.any(func(d: Dictionary) -> bool: return d.door_id == _selected)) if not _record.is_empty() else true
 
 

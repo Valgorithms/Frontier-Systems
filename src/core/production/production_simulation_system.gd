@@ -1161,7 +1161,7 @@ func _decode(record: Dictionary, tick: int) -> ServiceResult:
 func bind_door_access(access: AccessControlSystem) -> ServiceResult:
 	if _door_access != null or access == null: return _failure("Bind one commissioned door owner.")
 	var blueprint: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/production/manual-door.v1.json"))
-	if typeof(blueprint) != TYPE_DICTIONARY or blueprint.get("blueprint_id") != PaidDoorGeometry.BLUEPRINT or blueprint.get("revision") != 1 or blueprint.get("materials") != {"plate": PaidDoorGeometry.MASS} or blueprint.get("mode") != "manual" or blueprint.get("latch_state") != "released" or blueprint.get("pressure_ports") != []: return _failure("The pinned prototype door blueprint differs.")
+	if not PaidDoorGeometry.valid_blueprint(blueprint): return _failure("The pinned prototype door blueprint differs.")
 	_door_access = access
 	return access.bind_door_restore_guard(validate_door_access_restore)
 
@@ -1230,7 +1230,7 @@ func door_observation(context: AuthenticatedCommandContext) -> Dictionary:
 		var device: AccessControlledDeviceState = _door_access.devices.get(StringName(id))
 		if device == null: continue
 		items.append({"door_id": id, "position": d["position"].duplicate(), "quarter_turn": d["quarter_turn"], "opened": device.actuator(PaidDoorConstruction.actuator_id(id)).position == 1.0})
-	return {"schema_version": 1, "control_epoch": epoch, "doors": items}
+	return {"schema_version": 1, "control_epoch": epoch, "can_operate": authorize_door(context, {"control_epoch": epoch}).is_success, "doors": items}
 
 
 func door_solids() -> ServiceResult:

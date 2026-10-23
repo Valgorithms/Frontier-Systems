@@ -3,7 +3,8 @@ class_name DoorContactObservation
 
 
 static func valid_items(value: Variant) -> bool:
-	if typeof(value) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value, PackedStringArray(["schema_version", "control_epoch", "doors"])): return false
+	if typeof(value) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value, PackedStringArray(["schema_version", "control_epoch", "can_operate", "doors"])): return false
+	if typeof(value.can_operate) != TYPE_BOOL: return false
 	if not ControlContractValidation.is_integer(value.schema_version, 1, 1) or not ControlContractValidation.is_integer(value.control_epoch, -1, ProductionSimulationSystem.MAX_REVISION) or typeof(value.doors) != TYPE_ARRAY or value.doors.size() > PaidDoorGeometry.MAX_DOORS: return false
 	var previous: String = ""
 	for d in value.doors:
@@ -15,6 +16,7 @@ static func valid_items(value: Variant) -> bool:
 
 static func decode(value: Variant, world: StringName, region: StringName) -> ServiceResult:
 	if typeof(value) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value, PackedStringArray(["schema_version", "world_id", "region_id", "sequence", "inventory_restore", "production_restore", "production_revision", "production_tick", "inventory_tick", "boxes"])): return invalid()
+	if typeof(value.can_operate) != TYPE_BOOL: return false
 	if not ControlContractValidation.is_integer(value.schema_version, 1, 1) or value.world_id != String(world) or value.region_id != String(region): return invalid()
 	for field in ["sequence", "inventory_restore", "production_restore", "production_revision", "production_tick", "inventory_tick"]:
 		if not ControlContractValidation.is_integer(value[field], 1 if field == "sequence" else 0, PaidPanelContactObservation.MAX_INTEGER): return invalid()

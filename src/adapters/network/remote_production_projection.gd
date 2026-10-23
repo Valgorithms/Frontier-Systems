@@ -96,6 +96,7 @@ func accept_record(value: Dictionary) -> ServiceResult:
 	# A connection owns one immutable catalog identity, including projected costs.
 	if not record.is_empty():
 		if int(value["last_tick"]) < int(record["last_tick"]) or int(value["state_revision"]) < int(record["state_revision"]): return _invalid()
+		if record.has("paid_doors") and (not value.has("paid_doors") or int(value.paid_doors.control_epoch) < int(record.paid_doors.control_epoch)): return _invalid()
 		if record.has("horizontal_panels") and not value.has("horizontal_panels"): return _invalid()
 		if record.has("timed_canister"):
 			if not value.has("timed_canister") or int(value["timed_canister"]["revision"]) < int(record["timed_canister"]["revision"]) or int(value["timed_canister"]["control_epoch"]) < int(record["timed_canister"]["control_epoch"]): return _invalid()
