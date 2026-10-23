@@ -221,7 +221,8 @@ func seal_checks() -> void:
 	check(fitted.store.plate == before.store.plate - PaidDoorSeal.MASS and PaidDoorSeal.mass(fitted.doors) == PaidDoorSeal.MASS, "finite plate becomes retained gasket mass")
 	var a: ActuatorState = access.devices[StringName(door_id)].actuator(PaidDoorConstruction.actuator_id(door_id))
 	check(a.seal_condition == 1.0 and a.effective_pressure_area_m2 == 0.0 and a.maximum_force_newtons == 0.0, "paid fitting grants no pressure hardware")
-	check(pressure.capture_snapshot().value == pressure_before, "seal lifecycle creates no Pressure state")
+	var pressure_after: Dictionary = pressure.capture_snapshot().value
+	check(pressure_after.volumes == pressure_before.volumes and pressure_after.airlocks == pressure_before.airlocks and pressure_after.total_transferred_moles == pressure_before.total_transferred_moles and pressure_after.sensors.size() == pressure_before.sensors.size(), "seal lifecycle creates no pressure volume, boundary, sensor or flow (normal sensor sample ticks may advance)")
 	var replay: Dictionary = intent.duplicate(); replay.control_epoch = 0; replay.expected_revision = before.state_revision
 	check(production.apply_local(context, "machine-test-%d" % sequence, "door_seal_install", replay, runner.tick_number + 1).is_success and production.capture_snapshot().value == fitted, "install receipt replay never double spends")
 	seal_denied("door_seal_install", intent)

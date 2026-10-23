@@ -19,7 +19,7 @@ var _buttons: Array[Button] = []
 
 func configure(world: WorldRuntime) -> void:
 	_world = world
-	_toggle.text = "Manual doors Â· 2 kg plate and paid floor"
+	_toggle.text = "Manual doors: 2 kg plate and paid floor"
 	add_child(_toggle)
 	add_child(_details)
 	_details.visible = false
@@ -40,7 +40,7 @@ func configure(world: WorldRuntime) -> void:
 	_details.add_child(_status)
 	for operation in ["door_build", "door_open", "door_close", "door_remove", "door_seal_install", "door_seal_remove"]:
 		var button := Button.new()
-		button.text = {"door_seal_install": "Fit/rework seal · 0.2 kg plate", "door_seal_remove": "Remove seal · recover 0.2 kg plate", "door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
+		button.text = {"door_seal_install": "Fit/rework seal: 0.2 kg plate", "door_seal_remove": "Remove seal: recover 0.2 kg plate", "door_build": "Build manual door", "door_open": "Pry selected door open", "door_close": "Pry selected door closed", "door_remove": "Disassemble selected closed door"}[operation]
 		button.disabled = true
 		button.pressed.connect(_send.bind(operation))
 		_details.add_child(button)
