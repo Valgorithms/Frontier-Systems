@@ -1,10 +1,11 @@
-# Finite default-start enclosure acquisition: design review
+# Finite default-start enclosure acquisition
 
 Base: `5d57ed7d68c73018d2df42e069ebab85fc8af59c` (PR144 implementation merge
 `4e6b463fdd4d769c5c48c41bcfe3d735fde4eb34`).
 Owner: worker `01a16a3c-873a-7be2-987a-768ddd5d6a42`.
 Coordinator `01a1283c-45d6-7e61-bedd-905e8797f03d` owns design acceptance,
-leases and merges. Status: proposal only; no runtime/schema edits authorized.
+leases and merges. Status: scoped implementation authorized after design and
+full-budget review; local Godot execution awaits an exact-head lease.
 
 ## Outcome and verified prerequisites
 
@@ -39,19 +40,19 @@ All quantities below are integer milligrams; displayed kg are exact.
 | Refined iron | 6 kg | 10.2 kg |
 | Retained tailings | 4 kg | 6.8 kg |
 | Enclosure + crowbar + seal | 9.8 kg | 9.8 kg |
-| Remaining iron | deficit 3.8 kg | 0.4 kg |
+| Remaining material | deficit 3.8 kg | 0.2 kg iron + 0.2 kg plate |
 
 The algebraic deficit requires 6.333334 kg additional ore, but the existing 1 kg
 recipe consumes whole batches; seven additional batches are the smallest usable
 increment. Existing new-world Production matter is 25 kg; a distinct 7 kg seam
 would make that budget 32 kg. Terrain's separate 2 kg is unchanged. This is an
-explicit increase in finite world-resource commissioning, not an existing path
-or a permitted implementation under the current no-bootstrap-inflation scope.
+explicit increase in finite world-resource commissioning.
+The Coordinator explicitly authorized this narrow commissioning increase.
 No alternate recipe, replenishment, free depot credit or salvage relabeling is
 proposed. Crafting eight 1 kg plates for a 7.6 kg plate bill can leave 0.4 kg plate
 before the 0.2 kg plate seal debit; final residuals are 0.2 kg plate and 0.2 kg iron.
 
-## Proposed smallest complete acquisition slice, subject to review
+## Accepted acquisition slice
 
 Prefer a separately identified finite iron-ore outcrop using the existing
 Production acquisition/carrier/refinery transaction paths. Do not extend the
@@ -62,27 +63,32 @@ body/reach/hand authorization; Tools owns active extractor capability and wear.
 Keep acquisition at fixed-tick command ingress and Production at priority 300;
 use its existing bounded counters, exact-intent receipts and capacity claims.
 
-Before implementation Coordinator must explicitly accept or replace the 7 kg
-new-world commissioning policy and source placement/reach. A source near the
-existing iron location must be separately selectable and observed. Never silently
-change `deposit.iron`, catalog v1 or its historical 25 kg invariant. A versioned
-catalog plus save origin-budget/version policy must distinguish new 32 kg worlds
-from historical 25 kg worlds. Legacy restore gets zero new seam mass; it cannot
-upgrade an old world into a new 7 kg grant. Decode immutable historical catalogs
-and fingerprints explicitly, retain old schemas, reject unknown fingerprints,
-invalid budgets and depleted-source resets. Exact snapshot shape is deferred
-until review; no claim that adding a catalog row alone is sufficient.
+The accepted content adds `deposit.iron.outcrop`, a separately selectable finite
+7 kg source co-located at the existing iron reach anchor `[-3000, 0, -1000]`
+(millimetres). This prototype shares the existing site presentation; it is not a
+new terrain generator or artwork. Catalog v1 remains immutable. Catalog v2 adds
+only this source, retaining every recipe/yield/bill.
+
+Production persistence v12/catalog revision2 identifies a new 32 kg origin and
+requires exactly four deposit keys, their bounded initial amounts, the exact v2
+catalog fingerprint and total conservation. Historical versions1–11 require
+catalog revision1, exact v1 fingerprint, three original keys and 25 kg total;
+they normalize to v11 with the outcrop absent (semantic zero). Missing historical
+Production also commissions only the original 25 kg. Recovery never converts an
+old origin into a new grant. Unknown versions, fingerprints, missing/extra source
+keys and refill inflation reject atomically. Observation v14/catalog2 exposes the
+new source; historical worlds retain v13/catalog1.
+
+`FirstPlayableBootstrap.create_playable_world()` is the shared host/local-app
+composition factory. It enables the existing starter carrier inventory and the
+explicit fresh-world outcrop flag before attachment initializes owners. Bare
+WorldRuntime defaults remain historical for existing fixtures/recovery. The test
+uses the actual factory without invoking host networking.
 
 Bound scope: Production source/catalog/save validation, existing source selector
 observation/UI allowlists, focused integration/schema tests, architecture and
 this milestone contract. No pressure/access geometry changes, new owner, service,
 asset, dependency, environment variable or terrain material conversion.
-
-If new finite world matter remains prohibited, this task cannot deliver the full
-room under the current bills. The smallest truthful fallback is an acquisition
-budget regression and player-facing exhausted/insufficient-source guidance,
-with a negative control proving the default 6 kg ceiling. That fallback must be
-named as prerequisite evidence, never full default-start enclosure acceptance.
 
 ## Acceptance and proposed bounded checks
 
@@ -93,9 +99,9 @@ seal via current commands; retain all tails, leftovers, energy and source
 balances. Commission the supported room through the existing authenticated path.
 No direct owner snapshot seed or store edit in the positive acceptance flow.
 
-Negative controls: exhausted source, no working tool/owned carrier, foreign actor,
-stale revision, out of reach, full carrier, power/energy shortage, replay and
-changed-payload retry; each failure leaves material owners unchanged. Save/reload
+New route controls cover exhausted source, absent active tool, foreign carrier,
+stale revision, out of reach, drill power, exact replay and changed-payload retry.
+Existing extraction regressions retain capacity and energy-shortage controls; each failure leaves material owners unchanged. Save/reload
 partly depleted and exhausted sources; reject injected origin budgets, unknown
 catalog/version, duplicate source mass, forged receipts and legacy grant attempts.
 Keep reservation-spend guards and whole-world restore tests. Confirm old-world
@@ -105,7 +111,8 @@ No Godot run is currently authorized. After implementation review request an
 exact-head exclusive no-port lease using AST-extracted functions from the
 versioned tools/ci/run-godot-checks.ps1, not the full runner/import/startup path.
 Proposed initial set: a new finite_bootstrap_acquisition_test.gd plus existing
-player_extraction_loopback_test.gd and scratch_construction_runtime_test.gd;
+scratch_construction_runtime_test.gd; the listener-based player extraction
+loopback belongs in CI or a separately authorized listener lease;
 add only affected restore/schema companion checks after source review. Propose
 30 seconds per test, 120 seconds aggregate, no listeners/import/capture/export;
 Coordinator must grant exact commands/head/bounds before execution. Stop at the
@@ -118,9 +125,8 @@ outside worker scope.
 
 ## Coordinator-reviewed commissioning and bootstrap budget follow-up
 
-Coordinator approved the distinct depletable 7 kg new-world source in principle,
-with historical seam mass zero and no other grants. Implementation still awaits
-confirmation of this complete budget. This supersedes only the resource-content
+Coordinator approved the distinct depletable 7 kg new-world source and this
+complete budget, with historical seam mass zero and no other grants. This supersedes only the resource-content
 restriction for that source, not the runtime lease requirement.
 
 The real first-playable bootstrap sets `resource_carriers_enabled = true`

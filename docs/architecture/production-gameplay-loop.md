@@ -131,7 +131,7 @@ Every payload has exact fields; unknown operations, extra fields, negative/fract
 
 All mass is integer milligrams. The default closed fixture starts with 10 kg iron ore, 5 kg ice and 10 kg regolith, with empty storage, vessel and structures. Mining transfers matter from the deposit into a reserved batch, then into bulk storage. Processing reserves feedstock, then atomically replaces it with equal total output mass. Waste remains explicit tailings; it never vanishes. Cancellation recovers input chemistry, not unearned outputs.
 
-Snapshots validate that deposits + bulk stock + vessel + constructed wall mass + reserved batch mass + portable payload mass total exactly the initial 25 kg. A 100 kg bulk capacity includes reserved future outputs, and a 2 kg vessel capacity bounds all contained matter. Receivers are checked before transfer. The vessel may contain several registered chemicals, each retained separately; dispensing cannot create matter or change its identity.
+Snapshots validate that deposits + bulk stock + vessel + constructed wall mass + reserved batch mass + portable payload mass total exactly the origin budget: historical catalog1 worlds retain 25 kg; new playable catalog2 worlds retain 32 kg (see below). A 100 kg bulk capacity includes reserved future outputs, and a 2 kg vessel capacity bounds all contained matter. Receivers are checked before transfer. The vessel may contain several registered chemicals, each retained separately; dispensing cannot create matter or change its identity.
 
 The fixture battery starts with 100,000 J. Batch energy is charged atomically at acceptance; insufficient energy rejects. Turning off the active station pauses progress without losing its reserved materials. Power-on resumes it. Switching power on does not refill the battery. Power generation and real electrical network integration are future work. Dispensing and construction currently use powered fixtures without a quantified energy debit.
 
@@ -196,3 +196,30 @@ No pressure port, area, force, room, gas connection or airtightness is granted.
 PR142 topology always retains its unsealed-opening semantics, including fitted
 or failed gaskets and either leaf position. See the
 [design and acceptance checkpoint](../development/paid-door-seal-lifecycle-milestone.md).
+
+
+## Finite playable ore commissioning
+
+The shared playable-world factory enables `new_world_ore_outcrop_enabled` before
+WorldRuntime initializes Production. Catalog v2 adds only the separately selected
+7 kg `deposit.iron.outcrop`, sharing the original iron reach anchor at
+`[-3000, 0, -1000]` mm. Existing source content, recipes, yields, energy and tools
+are unchanged. The source depletes through the same fixed-tick transaction paths
+and has no refill path. Inventory owns pickup/equip/reach/carrier authorization;
+Tools owns completed-work wear; Production owns source, payload and refined mass.
+Existing bounded profiling counters and receipt bounds apply.
+
+Persistence v12/catalog2 pins v2's exact fingerprint and four source keys with
+32 kg closed conservation. Historical v1–v11 snapshots retain catalog1/v1
+fingerprint, three source keys and 25 kg; missing historical Production also gets
+only that original budget. Restore normalizes old records to v11 and never adds
+the outcrop. Unknown identities, shapes or mass reject before owner mutation.
+Observation v14/catalog2 and the existing player source selectors expose the
+outcrop; historical observation v13/catalog1 remains accepted. No environment
+variable or external service is added.
+
+The [finite acquisition contract](../development/finite-bootstrap-acquisition-milestone.md)
+records the exact 17 kg acquisition route, 31,250 J cost and remaining material.
+Its regression starts with the actual playable composition factory, uses real
+pickup/equip and command ingress, and commissions the existing enclosure through
+paid construction and seal commands without seeded Production stock.

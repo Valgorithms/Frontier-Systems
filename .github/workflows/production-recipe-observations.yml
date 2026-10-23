@@ -16,6 +16,9 @@ on:
       - 'docs/schema/door-contact*'
       - 'docs/schema/paid-door*'
       - 'tests/godot/paid_door*'
+      - 'tests/godot/finite_bootstrap*'
+      - 'tests/schema/finite_bootstrap*'
+      - 'data/production/catalog.v2.json'
       - 'tests/schema/paid_door*'
       - 'tests/godot/recipe_requirements*'
       - 'tests/godot/timed_canister_controls*'
@@ -76,7 +79,7 @@ jobs:
           include-templates: false
       - name: Run bounded recipe, resource and maintenance checks
         shell: pwsh
-        run: ./tools/ci/run-godot-checks.ps1 -TestNames 'recipe_requirements_test.gd','workstation_resource_view_test.gd','repair_usability_test.gd','first_playable_task_guide_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd','timed_canister_controls_test.gd','paid_horizontal_panels_test.gd','paid_door_lifecycle_test.gd','paid_door_pressure_room_test.gd','horizontal_panel_controls_test.gd','horizontal_floor_support_query_test.gd','paid_floor_support_adapter_test.gd','paid_panel_collision_descriptors_test.gd','paid_panel_contact_scene_test.gd'
+        run: ./tools/ci/run-godot-checks.ps1 -TestNames 'recipe_requirements_test.gd','workstation_resource_view_test.gd','repair_usability_test.gd','first_playable_task_guide_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd','timed_canister_controls_test.gd','paid_horizontal_panels_test.gd','paid_door_lifecycle_test.gd','paid_door_pressure_room_test.gd','finite_bootstrap_acquisition_test.gd','horizontal_panel_controls_test.gd','horizontal_floor_support_query_test.gd','paid_floor_support_adapter_test.gd','paid_panel_collision_descriptors_test.gd','paid_panel_contact_scene_test.gd'
       - name: Validate real emitted JSON against local versioned schemas
         shell: pwsh
         run: |
@@ -90,6 +93,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Recipe requirement schema checks failed.' }
           & $schemaPython tests/schema/timed_canister_controls_schema_test.py
           if ($LASTEXITCODE -ne 0) { throw 'Timed canister schema checks failed.' }
+          & $schemaPython tests/schema/finite_bootstrap_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Finite bootstrap schema checks failed.' }
           & $schemaPython tests/schema/paid_door_schema_test.py
           if ($LASTEXITCODE -ne 0) { throw 'Paid door schema checks failed.' }
           & $schemaPython tests/schema/paid_door_pressure_schema_test.py

@@ -10,7 +10,7 @@ Canisters have a 1 kg shell, 2.5 L external size and at most 2 kg payload. Their
 
 ## Ownership and atomic transfers
 
-Production owns each payload's exact material masses. Inventory owns the physical canister, parent storage, body equipment and movement receipts. These owners share stable item IDs; payloads are not also represented by duplicate inventory stacks. The closed 25 kg resource budget now includes all carrier payloads, including those in world storage or another body's inventory.
+Production owns each payload's exact material masses. Inventory owns the physical canister, parent storage, body equipment and movement receipts. These owners share stable item IDs; payloads are not also represented by duplicate inventory stacks. The closed origin resource budget (historical 25 kg; new playable catalog2 32 kg) now includes all carrier payloads, including those in world storage or another body's inventory.
 
 `load_cargo` and `unload_cargo` require `carrier_id`, `material`, `amount_milligrams` and `expected_revision`. Production command ingress still requires current world scope, a capable actor, logical workstation reach and an unreserved manipulator. Inventory derives the actor's accessible carriers from its owned containment graph. Another person's carrier, or one lying in the tray, must first be acquired through normal inventory interactions. A client cannot declare ownership.
 

@@ -64,7 +64,7 @@ func _process(delta: float) -> void:
 	var context := AuthenticatedCommandContext.for_local_development(&"local-inventory-actor", _world.world_id, _world.region_id)
 	var observed: ServiceResult = _world.production_observation(context)
 	_record.clear()
-	if observed.is_success and ControlContractValidation.is_integer(observed.value.get("schema_version"), 12, 13) and WorkstationResourceView.valid(observed.value): _record = observed.value
+	if observed.is_success and ControlContractValidation.is_integer(observed.value.get("schema_version"), 12, 14) and WorkstationResourceView.valid(observed.value): _record = observed.value
 	_doors.clear()
 	for door in _record.get("paid_doors", {}).get("doors", []):
 		_doors.add_item("%s: %s; %s" % [String(door.door_id).right(8), "open" if door.opened else "closed", seal_text(door)])
