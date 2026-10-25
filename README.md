@@ -25,6 +25,7 @@ Support initial development through the [Frontier Systems funding goal](https://
 - The first access-bypass runtime slice is documented in [`access-control-and-bypass.md`](docs/design/access-control-and-bypass.md); it uses synthetic debug tools until authoritative player inventory and equipment are implemented.
 - Modular machine control definitions, slot/port compatibility checks, and a trusted-handler catalog are implemented under `src/core/control/`. The [modular controls contract](docs/design/modular-controls-and-signals.md) specifies wired/radio pulses, machine actions, alarms, and messages; live installations and signal routing remain future work.
 - Control-board replacement plans retain fitted modules and check explicit relocations. Physical mounting and cable attachment allow dormant or unusual configurations; operability is diagnosed separately. The expanded door-board/igniter example is definition data, with construction execution and combustion still future work.
+- The [design and engineering research knowledgebase](docs/research/README.md) connects source-backed leads to bounded experiments, evidence limits and design decisions.
 - Foundation architecture and known limitations are documented in [`docs/architecture/foundations.md`](docs/architecture/foundations.md).
 - Non-fatal component integrity, gas/liquid pressure, docking, EVA, and remote-control invariants are documented in [`docs/design/survival-pressure-and-recovery.md`](docs/design/survival-pressure-and-recovery.md).
 
