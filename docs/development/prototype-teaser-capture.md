@@ -19,3 +19,9 @@ Review native keyframes before encoding. Use H.264/yuv420p MP4, 1280x720, 30 fps
 The capture branch now includes the current integration branch's improved assets, machinery activity, walker poses and contextual UI. Four deliberate cuts separate construction, printer relocation, head replacement and material recovery. Each shot holds its subject while a small eased dolly adds depth; the last shot reframes toward the rebuilt wall before its placement command. Captions remain at the edges and the normal HUD stays hidden. This is an automated workshop demonstration, not first-person player footage.
 
 Acceptance requires a new native render showing each commanded object clearly before and after the change, no subject hidden by captions or geometry, smooth within-shot motion, and the existing finite-material assertions passing. Native verification and rendering are deferred while the independently owned Gaia restore holds runtime capacity. The source change alone is not visual acceptance or a finished video.
+
+## Dependency integration, 2026-10-29
+
+Integrated `dev-master` at `5b75fa462f0bab133a3f820c8d8234fdfe4d2f0d` without conflicts. The four shots and genuine command sequence are unchanged. The updated habitat preview hides its obsolete worksite wall through the existing `focus_production()` call. `teaser_choreography_test.gd` exposes the capture script's existing headless path to the standard Windows/Linux CI runner, including inherited machinery assertions and final finite-world checks. It does not render or establish camera quality.
+
+The retained October 22 capture belongs to `539e78da3686e0b77deb7da5eb041863d5ce0a9a`; it is not visual evidence for this integrated revision. No new local native execution or capture is authorized. Source readiness and CI review are separate from owner motion acceptance and a finished trailer.
