@@ -77,6 +77,21 @@ func verify_chamber_extension() -> void:
 	pinned_restore_controls(production.capture_snapshot().value, mounted_inventory, "mounted")
 	var picked_up: ServiceResult = inventory.apply_local(context, "generic-pump-pickup", "world", {"operation": "pickup", "item_id": assembly.item_id, "world_container_id": ChamberRecoveryRecords.root_id(assembly.assembly_id), "destination_container_id": "body.human-1", "slot_id": "", "expected_revision": mounted_inventory.owner.state_revision}, int(mounted_inventory.last_tick) + 1)
 	check(not picked_up.is_success and inventory.capture_snapshot().value == mounted_inventory, "mounted item cannot escape through generic pickup")
+	# The inherited transit/cycle route ends vented. Retain that real state as
+	# a work-limit negative, then refill only through the paid inner bypass.
+	var gas_owner: PressureSystem = pressure_owner()
+	var chamber_id := StringName(gas_owner.paid_chamber.volume_id)
+	var vented_owners: Array = owner_records([production, gas_owner, inventory, access])
+	var vented: ServiceResult = ChamberRecoveryWork.prepare(gas_owner.volumes[chamber_id], gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID], 0.1)
+	check(not vented.is_success and vented.error_code == &"chamber_recovery_work_rejected", "authentic vented chamber rejects compression outside physical limits")
+	check(owner_records([production, gas_owner, inventory, access]) == vented_owners, "vented work rejection changes no owner")
+	var moles_before_refill: float = all_moles()
+	var habitat_before_refill: float = gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID].gas_moles
+	door_id = inner_id; chamber_ui(9); step(600); chamber_ui(10)
+	check(gas_conserved(moles_before_refill) and gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID].gas_moles < habitat_before_refill, "real inner bypass refills chamber from finite habitat gas without creating moles")
+	var refilled: ServiceResult = ChamberRecoveryWork.prepare(gas_owner.volumes[chamber_id], gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID], 0.1)
+	check(refilled.is_success, "authentic refilled chamber supports bounded compression: " + diagnostic(refilled))
+	if failures: return
 	var mounted_snapshot: String = world.capture_world_snapshot_json().value
 	for condition in [999, 1, 0]: damaged_admission_case(mounted_snapshot, "start", condition)
 	prepared = production.prepare_chamber_recovery_job(context)
@@ -130,8 +145,7 @@ func transaction_case(baseline: String, mutation: String) -> void:
 	var ineligible: Array = owner_records(owners)
 	check(not p.prepare_chamber_recovery_step(clock.tick_number).is_success and owner_records(owners) == ineligible, "resume cannot bypass sixty-tick eligibility")
 	for tick in range(60): clock._physics_process(1.0 / 60.0)
-	var step_candidate: ServiceResult = p.prepare_chamber_recovery_step(clock.tick_number)
-	check(step_candidate.is_success, "eligible real-owner batch prepares: " + mutation)
+	var step_candidate: ServiceResult = eligible_step(p, g, i, a, actor, clock, mutation)
 	if not step_candidate.is_success: target.free(); return
 	var valid_before: Array = owner_records(owners)
 	var initial_job: Dictionary = ChamberRecoveryRecords.active_job(valid_before[0].chamber_recovery)
@@ -325,7 +339,8 @@ func damaged_admission_case(baseline: String, stage: String, condition: int) -> 
 		if not resumed.is_success: target.free(); return
 		check(resumed.value.commit(p, g, i, a).is_success, "undamaged control admits running job")
 		for tick in range(60): clock._physics_process(1.0 / 60.0)
-		check(p.prepare_chamber_recovery_step(clock.tick_number).is_success, "undamaged eligible control can prepare before item damage")
+		var undamaged: ServiceResult = eligible_step(p, g, i, a, actor, clock, "undamaged condition%d" % condition)
+		if not undamaged.is_success: target.free(); return
 	var physical: Dictionary = i.capture_snapshot().value
 	var assembly: Dictionary = ChamberRecoveryRecords.current(p.capture_snapshot().value.chamber_recovery)
 	for item in physical.owner.ledger.items:
@@ -339,6 +354,31 @@ func damaged_admission_case(baseline: String, stage: String, condition: int) -> 
 	var retained: Dictionary = MachineryWorkshop.item(i.capture_snapshot().value.owner, assembly.item_id)
 	check(retained.condition_permille == condition and retained.item_id == assembly.item_id, "rejection retains the same damaged item and condition")
 	target.free()
+
+
+func diagnostic(result: ServiceResult) -> String:
+	return "[%s] %s" % [String(result.error_code), result.message]
+
+
+## Pin the eligibility stages before damage or stale-owner mutations so a
+## rejected positive cannot silently make the negative controls pass.
+func eligible_step(p: ProductionSimulationSystem, g: PressureSystem, i: InventorySimulationSystem, a: AccessControlSystem, actor: AuthenticatedCommandContext, clock: SimulationRunner, label: String) -> ServiceResult:
+	var state: Dictionary = p.capture_snapshot().value
+	var job: Dictionary = ChamberRecoveryRecords.active_job(state.chamber_recovery)
+	check(job.state == "running" and clock.tick_number == int(state.last_tick) and clock.tick_number == int(job.next_eligible_tick), "running job reaches exact sixty-tick eligibility: " + label)
+	var admission: ServiceResult = ChamberRecoveryPreparation.admit(p, actor, "step")
+	check(admission.is_success, "step authority, pose, tool, doors and item admit: %s %s" % [label, diagnostic(admission)])
+	var control: ServiceResult = i.controller_candidate()
+	check(control.is_success and control.value.has(job.body_id) and int(control.value[job.body_id].control_epoch) == int(job.control_epoch), "step retains admitted control epoch: " + label)
+	for owner in [p, g, i, a]:
+		var captured: ServiceResult = owner.capture_snapshot()
+		var validated: ServiceResult = owner.validate_snapshot_record(captured.value, clock.tick_number)
+		check(validated.is_success, "eligible owner validates: %s %s %s" % [label, String(owner.system_id), diagnostic(validated)])
+	var work: ServiceResult = g.prepare_chamber_recovery_transfer(job.assembly_id, job.job_id, minf(0.1, float(job.target_moles) - float(job.returned_moles)), clock.tick_number)
+	check(work.is_success, "eligible gas and bounded work prepare: %s %s" % [label, diagnostic(work)])
+	var candidate: ServiceResult = p.prepare_chamber_recovery_step(clock.tick_number)
+	check(candidate.is_success, "eligible real-owner batch prepares: %s %s" % [label, diagnostic(candidate)])
+	return candidate
 
 
 func restore_case(baseline: String, corruption: String) -> void:

@@ -518,6 +518,31 @@ reciprocal audit copies retain strict equality: they compare the same live
 representation or paired decoded records, never integer-literal catalogs.
 These source corrections and additional controls await runtime verification.
 
+At frozen `f3f509462d45735ee0e5ec504f8cb6434f7946a7`, the October 23 lease
+passed import (6.76s) and startup (3.68s), then failed the undamaged eligible
+step control (24.58s). Pressure stability was skipped and the lease released
+with empty process inventories. The retained authentic fixture ends the
+inherited paid-chamber cycles vented: chamber gas is 1.834981191161433 mol in
+3.6 cubic metres, with both bypasses closed. A 0.1 mol recovery batch would
+end at 1.17467 kPa against 100.59408 kPa, ratio 85.63594. The work preparation
+therefore rejects at the existing 16:1 ratio guard (and its uncapped formula
+would require 3101 J, above the 250 J batch cap). This is a source/fixture
+diagnosis; the old assertion did not record its actual ServiceResult, so it
+cannot establish whether an earlier admission guard also rejected.
+
+The transaction test now retains that vented state as a work-limit rejection
+control, then opens the actual paid inner bypass for 600 simulation ticks and
+closes it before job admission. Refill must consume finite habitat gas and
+conserve whole-world moles; no gas or successful fixture record is assigned.
+The undamaged positive and damaged 999/1/0 negatives remain. Both eligible-step
+paths assert exact tick eligibility, authority/pose/tool/door/item admission,
+control epoch, owner validation and gas/work preparation, and include actual
+ServiceResult error codes/messages in failed preparation assertions. A failed
+undamaged positive now stops its damage case before exercising negatives.
+Production guards, schemas and compression limits are unchanged. These test
+corrections are source-only pending exact-head CI/runtime verification; no
+native launch or runtime lease was used for the October 29 source amendment.
+
 Local checks: `git diff --check` and
 `tests/schema/chamber_recovery_schema_test.py --syntax-only` passed. The local
 Python environments lack `jsonschema`; metaschema and genuine emitted-fixture
