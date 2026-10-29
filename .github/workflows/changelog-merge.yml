@@ -1,0 +1,36 @@
+name: Discord merged PR changelog
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [dev-master]
+permissions:
+  contents: read
+concurrency:
+  group: discord-player-changelog
+  cancel-in-progress: false
+  queue: max
+jobs:
+  publish:
+    if: github.repository == 'Valgorithms/Frontier-Systems' && github.event.pull_request.merged == true && vars.DISCORD_MERGE_CHANGELOG_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      # pull_request_target github.sha is trusted base-branch code, never PR head.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DISCORD_MERGE_CHANGELOG_ENABLED: ${{ vars.DISCORD_MERGE_CHANGELOG_ENABLED }}
+          DISCORD_CHANGELOG_CHANNEL_ID: ${{ vars.DISCORD_CHANGELOG_CHANNEL_ID }}
+          DISCORD_CHANGELOG_WEBHOOK_URL: ${{ secrets.DISCORD_CHANGELOG_WEBHOOK_URL }}
+        run: |
+          & (Get-Command node -CommandType Application | Select-Object -First 1).Source tools/github/pr-changelog.mjs
