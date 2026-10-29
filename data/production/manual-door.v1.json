@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "blueprint_id": "door.manual.prototype",
+  "revision": 1,
+  "materials": {"plate": 2000000},
+  "mode": "manual",
+  "latch_state": "released",
+  "pressure_ports": [],
+  "provenance": "First-party MIT prototype frame and leaf bill; no density or pressure rating; no imported assets."
+}

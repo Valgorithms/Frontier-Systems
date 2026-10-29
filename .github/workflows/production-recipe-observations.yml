@@ -5,12 +5,66 @@ on:
     branches: [dev-master]
     paths:
       - 'src/core/production/**'
+      - 'src/core/pressure/**'
+      - 'src/core/access/prepared_door_change.gd'
+      - 'src/core/runtime/world_runtime.gd'
+      - 'docs/schema/pressure-system*'
+      - 'docs/schema/world-snapshot*'
       - 'src/adapters/network/**'
       - 'src/presentation/production/**'
       - 'docs/schema/production*'
+      - 'docs/schema/door-contact*'
+      - 'docs/schema/paid-door*'
+      - 'tests/godot/paid_door*'
+      - 'tests/godot/finite_bootstrap*'
+      - 'tests/godot/commissioned_room_equalization*'
+      - 'tests/schema/room_equalization*'
+      - 'data/production/manual-room-bypass*'
+      - 'tests/schema/finite_bootstrap*'
+      - 'data/production/catalog.v2.json'
+      - 'data/production/catalog.v3.json'
+      - 'data/production/catalog.v4.json'
+      - 'src/app/first_playable_bootstrap.gd'
+      - 'src/core/access/access_control_system.gd'
+      - 'src/presentation/habitat/procedural_habitat_preview.gd'
+      - 'tests/godot/paid_chamber*'
+      - 'tests/schema/paid_chamber*'
+      - 'tests/godot/chamber_recovery*'
+      - 'tests/schema/chamber_recovery*'
+      - 'docs/schema/chamber-recovery*'
+      - 'data/production/chamber-recovery*'
+      - 'data/inventory/chamber-recovery*'
+      - 'data/production/manual-room-reinforcement*'
+      - 'tests/godot/paid_room_reinforcement*'
+      - 'tests/schema/room_reinforcement*'
+      - 'tests/schema/paid_door*'
       - 'tests/godot/recipe_requirements*'
+      - 'tests/godot/timed_canister_controls*'
       - 'tests/godot/workstation_resource_view*'
       - 'tests/schema/recipe_requirements*'
+      - 'tests/schema/timed_canister_controls*'
+      - 'tests/schema/paid_horizontal_panels*'
+      - 'tests/godot/paid_horizontal_panels*'
+      - 'tests/godot/horizontal_panel_controls*'
+      - 'tests/schema/horizontal_panel_controls*'
+      - 'docs/schema/horizontal-panel-observation*'
+      - 'src/core/locomotion/horizontal_floor_support_query*'
+      - 'tests/godot/horizontal_floor_support_query*'
+      - 'tests/schema/horizontal_floor_support*'
+      - 'docs/schema/horizontal-floor-support*'
+      - 'src/core/inventory/inventory_simulation_system.gd'
+      - 'src/core/locomotion/paid_floor_support_adapter*'
+      - 'tests/godot/paid_floor_support_adapter*'
+      - 'tests/schema/paid_floor_locomotion*'
+      - 'docs/schema/paid-floor-locomotion*'
+      - 'tests/godot/paid_panel_collision_descriptors*'
+      - 'tests/schema/paid_panel_collision*'
+      - 'tests/godot/paid_panel_contact_scene*'
+      - 'tests/schema/paid_panel_contact*'
+      - 'docs/schema/paid-panel-contact*'
+      - 'tests/support/paid_panel_contact_fixture.gd'
+      - 'docs/schema/paid-panel-collision*'
+      - 'docs/schema/timed-canister-observation*'
       - '.github/workflows/production-recipe-observations.yml'
   push:
     branches: [codex/recipe-observations]
@@ -43,7 +97,7 @@ jobs:
           include-templates: false
       - name: Run bounded recipe, resource and maintenance checks
         shell: pwsh
-        run: ./tools/ci/run-godot-checks.ps1 -TestNames 'recipe_requirements_test.gd','workstation_resource_view_test.gd','repair_usability_test.gd','first_playable_task_guide_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd'
+        run: ./tools/ci/run-godot-checks.ps1 -TestNames 'recipe_requirements_test.gd','workstation_resource_view_test.gd','repair_usability_test.gd','first_playable_task_guide_test.gd','machinery_runtime_test.gd','checkpoint_recovery_test.gd','timed_canister_controls_test.gd','paid_horizontal_panels_test.gd','paid_door_lifecycle_test.gd','paid_door_pressure_room_test.gd','finite_bootstrap_acquisition_test.gd','commissioned_room_equalization_test.gd','paid_room_reinforcement_test.gd','paid_chamber_test.gd','chamber_recovery_work_test.gd','chamber_recovery_owner_fence_test.gd','chamber_recovery_transaction_test.gd','horizontal_panel_controls_test.gd','horizontal_floor_support_query_test.gd','paid_floor_support_adapter_test.gd','paid_panel_collision_descriptors_test.gd','paid_panel_contact_scene_test.gd'
       - name: Validate real emitted JSON against local versioned schemas
         shell: pwsh
         run: |
@@ -55,6 +109,34 @@ jobs:
           $env:PYTHONPATH = [IO.Path]::GetFullPath('var/ci/schema-python')
           & $schemaPython tests/schema/recipe_requirements_schema_test.py
           if ($LASTEXITCODE -ne 0) { throw 'Recipe requirement schema checks failed.' }
+          & $schemaPython tests/schema/timed_canister_controls_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Timed canister schema checks failed.' }
+          & $schemaPython tests/schema/finite_bootstrap_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Finite bootstrap schema checks failed.' }
+          & $schemaPython tests/schema/paid_door_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Paid door schema checks failed.' }
+          & $schemaPython tests/schema/paid_chamber_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Paid chamber schemas failed.' }
+          & $schemaPython tests/schema/chamber_recovery_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Chamber recovery backend schemas failed.' }
+          & $schemaPython tests/schema/room_reinforcement_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Room reinforcement schemas failed.' }
+          & $schemaPython tests/schema/room_equalization_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Room equalization schemas failed.' }
+          & $schemaPython tests/schema/paid_door_pressure_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Paid pressure-room schema checks failed.' }
+          & $schemaPython tests/schema/paid_horizontal_panels_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Paid panel schema checks failed.' }
+          & $schemaPython tests/schema/horizontal_panel_controls_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Panel controls schema checks failed.' }
+          & $schemaPython tests/schema/horizontal_floor_support_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Floor support schema checks failed.' }
+          & $schemaPython tests/schema/paid_floor_locomotion_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Paid floor locomotion schema checks failed.' }
+          & $schemaPython tests/schema/paid_panel_collision_schema_test.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $schemaPython tests/schema/paid_panel_contact_schema_test.py
+          if ($LASTEXITCODE -ne 0) { throw 'Paid panel collision schema checks failed.' }
       - name: Preserve bounded evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -63,5 +145,18 @@ jobs:
           path: |
             var/ci/godot/
             var/recipe-requirements-fixture.json
+            var/finite-bootstrap-fixture.json
+            var/timed-canister-controls-fixture.json
+            var/paid-panels-fixture.json
+            var/paid-door-fixture.json
+            var/paid-door-pressure-fixture.json
+            var/room-equalization-fixture.json
+            var/room-reinforcement-fixture.json
+            var/paid-chamber-fixture.json
+            var/chamber-recovery-fixture.json
+            var/horizontal-panel-controls-fixture.json
+            var/horizontal-floor-support-fixture.json
+            var/paid-floor-locomotion-fixture.json
+            var/paid-panel-collision-fixture.json
           retention-days: 3
           if-no-files-found: warn

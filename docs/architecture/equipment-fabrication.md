@@ -22,7 +22,7 @@ Commands have retained principal/intent fingerprints; identical retained retries
 
 ## Persistence and observations
 
-Snapshot v3 adds structures to the v2 record; v1/v2 migrate with empty structures. No new physical items are spawned by migration. Cross-system validation requires every structure to match an existing inventory item and definition, every manufactured item to have a structure, each blueprint fingerprint/material bill to match and the closed 25 kg resource budget to include shell matter, cargo, depot/vessel, deposits, walls and reserved batches. An edited pinned definition requires explicit migration for existing manufactured equipment.
+Snapshot v3 adds structures to the v2 record; v1/v2 migrate with empty structures. No new physical items are spawned by migration. Cross-system validation requires every structure to match an existing inventory item and definition, every manufactured item to have a structure, each blueprint fingerprint/material bill to match and the closed origin resource budget (historical 25 kg; new playable catalog2 32 kg) to include shell matter, cargo, depot/vessel, deposits, walls and reserved batches. An edited pinned definition requires explicit migration for existing manufactured equipment.
 
 The client observation v3 exposes only owned structure/cargo records and shared trusted blueprint metadata. A transferred item therefore changes which player can observe its construction/contents; possession does not reset mass. The read-only projection is not valid restore input. Legacy local inventory observation v2 remains available, with enriched v3 opted into by the network host.
 

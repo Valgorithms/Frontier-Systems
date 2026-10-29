@@ -48,6 +48,9 @@ func run() -> void:
 	var legacy_production: Dictionary = production.duplicate(true)
 	legacy_production["schema_version"] = 7
 	legacy_production.erase("recipe_requirements")
+	legacy_production.erase("timed_canister")
+	legacy_production.erase("horizontal_panels")
+	legacy_production.erase("paid_doors")
 	check(EquipmentPrerequisiteView.quote(legacy_production, legacy_production["blueprints"], legacy_production["blueprints"].keys()[0], "printer").contains("Blueprint:"), "legacy equipment observations retain existing blueprint costs")
 	var legacy: Dictionary = tools.duplicate(true)
 	legacy["schema_version"] = 2
@@ -73,7 +76,7 @@ func run() -> void:
 	root.add_child(remote)
 	remote.set_process(false)
 	remote._authenticated = true
-	remote._receive(JSON.parse_string(JSON.stringify({"type": "observation", "tools": tools, "production": production, "terrain": world.terrain_observation(context).value, "inventory": inventory.own_inventory_observation(context, true).value, "position": [0, 0, 0], "players": []})))
+	remote._receive(JSON.parse_string(JSON.stringify({"type": "observation", "panel_contact": preload("res://tests/support/paid_panel_contact_fixture.gd").envelope(world, context), "door_contact": preload("res://tests/support/paid_panel_contact_fixture.gd").door_envelope(world, context), "tools": tools, "production": production, "terrain": world.terrain_observation(context).value, "inventory": inventory.own_inventory_observation(context, true).value, "position": [0, 0, 0], "players": []})))
 	check(not remote._observation.is_empty(), "real receive accepts current frame")
 	if not remote._observation.is_empty():
 		check(EquipmentPrerequisiteView.part_text(remote._observation["tools"], remote._observation["production"], blueprint_id, "extractor-1", "head", "", false) == EquipmentPrerequisiteView.part_text(tools, production, blueprint_id, "extractor-1", "head", "", false), "local remote parity")

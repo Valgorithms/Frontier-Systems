@@ -89,8 +89,6 @@ func configure(world: WorldRuntime) -> ServiceResult:
 	_activity = _label()
 	_gather_details = _label()
 	_deposit = _picker()
-	for id in ["deposit.iron", "deposit.ice", "deposit.regolith"]:
-		_deposit.add_item(id)
 	_deposit.item_selected.connect(func(_index: int) -> void: refresh())
 	_extract_button = _button("Extract selected mass into canister (up to 1 kg)", _extract_action)
 	_recipe = _picker()
@@ -224,6 +222,7 @@ func refresh() -> void:
 	_guide_label.text = _guide.text()
 	var valid_observation: bool = observed.is_success and typeof(observed.value) == TYPE_DICTIONARY and WorkstationResourceView.valid(observed.value)
 	_record = observed.value if valid_observation else {}
+	_fill_cargo_picker(_deposit, _record.get("deposits", {}).keys())
 	_refresh_equipment()
 	_fill_recipes(_record.get("recipes", []))
 	if not _world is RemoteWorldRuntime:

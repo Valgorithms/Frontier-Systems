@@ -7,18 +7,28 @@ const MATERIALS: Array[String] = ["ore.iron", "ice", "regolith", "iron", "tailin
 
 
 func accept_record(value: Dictionary) -> ServiceResult:
+	if not ControlContractValidation.is_integer(value.get("schema_version"), 7, 17): return _invalid()
+	var version: int = int(value["schema_version"])
 	var fields := PackedStringArray(["schema_version", "catalog_revision", "catalog_fingerprint", "timebase_hz", "last_tick", "state_revision", "deposits", "store", "vessel", "wall_mass_milligrams", "energy_joules", "powered", "job", "cargo", "components", "recipes", "dispensable", "can_operate", "vessel_pressure_kpa", "extractable_sources"])
 	fields.append("machinery")
 	fields.append("walls")
 	fields.append_array(PackedStringArray(["structures", "blueprints", "loose_parts", "tool_extraction"]))
-	if value.get("schema_version") == 8: fields.append("recipe_requirements")
-	if not ControlContractValidation.has_exact_fields(value, fields) or not ControlContractValidation.is_integer(value.get("schema_version"), 7, 8) or not ControlContractValidation.is_integer(value.get("timebase_hz"), 60, 90) or not [60, 72, 90].has(int(value.get("timebase_hz"))) or typeof(value.get("can_operate")) != TYPE_BOOL:
+	if version >= 8: fields.append("recipe_requirements")
+	if version >= 9: fields.append("timed_canister")
+	if version >= 10: fields.append("horizontal_panels")
+	if version >= 11: fields.append("paid_doors")
+	if version >= 11 and (not DoorContactObservation.valid_items(value.get("paid_doors")) or int(value.paid_doors.schema_version) != (6 if version >= 17 else (5 if version >= 16 else (4 if version >= 15 else (3 if version >= 13 else (2 if version >= 12 else 1)))))): return _invalid()
+	if not ControlContractValidation.has_exact_fields(value, fields) or not ControlContractValidation.is_integer(value.get("schema_version"), 7, 17) or not ControlContractValidation.is_integer(value.get("timebase_hz"), 60, 90) or not [60, 72, 90].has(int(value.get("timebase_hz"))) or typeof(value.get("can_operate")) != TYPE_BOOL:
 		return _invalid()
 	if not SpatialWallConstruction.valid(value["walls"]): return _invalid()
+	if version >= 10 and not HorizontalPanelObservation.valid(value["horizontal_panels"], value.get("state_revision")): return _invalid()
+	if int(value["schema_version"]) >= 9 and not TimedCanisterConstruction.valid_observation(value["timed_canister"]): return _invalid()
 	for field in ["last_tick", "state_revision", "catalog_revision", "wall_mass_milligrams", "energy_joules"]:
 		if not ControlContractValidation.is_integer(value[field], 0, 9007199254740000):
 			return _invalid()
-	if not ControlContractValidation.is_integer(value["catalog_revision"], 1, 1) or not _fingerprint_valid(value["catalog_fingerprint"]):
+	if version >= 15 and not ControlContractValidation.is_integer(value["catalog_revision"], 1, 4 if version >= 17 else (3 if version == 16 else 2)): return _invalid()
+	var catalog: int = int(value["catalog_revision"]) if version >= 15 else (2 if version == 14 else 1)
+	if not ControlContractValidation.is_integer(value["catalog_revision"], catalog, catalog) or not _fingerprint_valid(value["catalog_fingerprint"]):
 		return _invalid()
 	if not _valid_stock(value["store"], true) or not _valid_stock(value["vessel"], true) or typeof(value["cargo"]) != TYPE_DICTIONARY or value["cargo"].size() > 32:
 		return _invalid()
@@ -39,6 +49,11 @@ func accept_record(value: Dictionary) -> ServiceResult:
 		if not ControlContractValidation.is_id(id) or not _valid_stock(value["loose_parts"][id]): return _invalid()
 	for id in value["structures"]:
 		var structure: Variant = value["structures"][id]
+		# The revision-2 timed canister coexists with unchanged revision-1 factories.
+		# This read-only definition identity grants no client output authority.
+		if typeof(structure) == TYPE_DICTIONARY and version >= 9 and structure.get("blueprint_id") == ConstructionReservationPlan.BLUEPRINT and structure.get("fingerprint") == value["timed_canister"]["blueprint_fingerprint"]:
+			if not ControlContractValidation.is_id(id) or not ControlContractValidation.has_exact_fields(structure, PackedStringArray(["blueprint_id", "fingerprint", "materials"])) or not _valid_stock(structure["materials"]) or not _same_stock(structure["materials"], {"iron": ConstructionReservationPlan.BILL}): return _invalid()
+			continue
 		if not ControlContractValidation.is_id(id) or typeof(structure) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(structure, PackedStringArray(["blueprint_id", "fingerprint", "materials"])) or typeof(structure["blueprint_id"]) != TYPE_STRING or not value["blueprints"].has(structure["blueprint_id"]) or structure["fingerprint"] != value["blueprints"][structure["blueprint_id"]]["fingerprint"] or not _valid_stock(structure["materials"]):
 			return _invalid()
 		if not value["blueprints"][structure["blueprint_id"]]["modular"] and not _same_stock(structure["materials"], value["blueprints"][structure["blueprint_id"]]["materials"]):
@@ -46,7 +61,7 @@ func accept_record(value: Dictionary) -> ServiceResult:
 	for field in ["components", "recipes", "dispensable", "extractable_sources"]:
 		if not ControlContractValidation.decode_ids(value[field], 0, 32).is_success:
 			return _invalid()
-	if typeof(value["deposits"]) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value["deposits"], PackedStringArray(SOURCE_POSITIONS.keys())):
+	if typeof(value["deposits"]) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value["deposits"], PackedStringArray(source_ids(int(value["catalog_revision"])))):
 		return _invalid()
 	for mass in value["deposits"].values():
 		if not ControlContractValidation.is_integer(mass, 0, MAX_MASS):
@@ -70,16 +85,24 @@ func accept_record(value: Dictionary) -> ServiceResult:
 	var machinery: Dictionary = value["machinery"].duplicate(true)
 	if typeof(machinery.get("inventory_items")) != TYPE_ARRAY or machinery["inventory_items"].size() > 512 or typeof(machinery.get("cargo")) != TYPE_DICTIONARY or machinery["cargo"].size() > 32: return _invalid()
 	for physical in machinery["inventory_items"]:
-		if typeof(physical) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(physical, PackedStringArray(["item_id", "definition_id", "definition_revision", "condition_permille", "container_id"])) or not ControlContractValidation.is_id(physical["item_id"]) or not ControlContractValidation.is_id(physical["definition_id"]) or not ControlContractValidation.is_id(physical["container_id"]) or not ControlContractValidation.is_integer(physical["definition_revision"], 1, 1) or not ControlContractValidation.is_integer(physical["condition_permille"], 0, 1000): return _invalid()
+		if typeof(physical) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(physical, PackedStringArray(["item_id", "definition_id", "definition_revision", "condition_permille", "container_id"])) or not ControlContractValidation.is_id(physical["item_id"]) or not ControlContractValidation.is_id(physical["definition_id"]) or not ControlContractValidation.is_id(physical["container_id"]) or not ControlContractValidation.is_integer(physical["condition_permille"], 0, 1000): return _invalid()
+		var timed_output: bool = version >= 9 and physical["definition_id"] == "item.resource-canister.fabricated" and ControlContractValidation.is_integer(physical["definition_revision"], 2, 2)
+		if not timed_output and not ControlContractValidation.is_integer(physical["definition_revision"], 1, 1): return _invalid()
 	for stock in machinery["cargo"].values():
 		if not _valid_stock(stock, true): return _invalid()
 	machinery.erase("inventory_items")
 	machinery.erase("cargo")
 	if not MachineryWorkshop.validate(machinery): return _invalid()
 	if not SpatialWallConstruction.scene_clear(value["walls"], machinery, {"bodies": []}): return _invalid()
-	if int(value["schema_version"]) == 8 and not _valid_requirements(value): return _invalid()
+	if int(value["schema_version"]) >= 8 and not _valid_requirements(value): return _invalid()
 	# A connection owns one immutable catalog identity, including projected costs.
 	if not record.is_empty():
+		if int(value["last_tick"]) < int(record["last_tick"]) or int(value["state_revision"]) < int(record["state_revision"]): return _invalid()
+		if record.has("paid_doors") and (not value.has("paid_doors") or int(value.paid_doors.control_epoch) < int(record.paid_doors.control_epoch)): return _invalid()
+		if record.has("horizontal_panels") and not value.has("horizontal_panels"): return _invalid()
+		if record.has("timed_canister"):
+			if not value.has("timed_canister") or int(value["timed_canister"]["revision"]) < int(record["timed_canister"]["revision"]) or int(value["timed_canister"]["control_epoch"]) < int(record["timed_canister"]["control_epoch"]): return _invalid()
+			if value["timed_canister"]["blueprint_fingerprint"] != record["timed_canister"]["blueprint_fingerprint"]: return _invalid()
 		if value["catalog_revision"] != record["catalog_revision"] or value["catalog_fingerprint"] != record["catalog_fingerprint"]: return _invalid()
 		if record.has("recipe_requirements") and (not value.has("recipe_requirements") or value["recipe_requirements"] != record["recipe_requirements"]): return _invalid()
 	record = value.duplicate(true)

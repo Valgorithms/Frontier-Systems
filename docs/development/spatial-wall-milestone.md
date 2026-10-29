@@ -4,7 +4,7 @@
 
 1. Extract and refine iron, run `craft.plate`, then materialize the printed plate into your inventory.
 2. Open Construction, select the physical plate in the module/canister selector, enter floor coordinates and choose Wall along X or Wall along Z.
-3. Build wall from selected physical plate. The entire owned plate becomes one 1 × 2 × 0.1 m panel at the selected floor position. Coordinates use the existing workbench-relative millimetre frame, snap to 100 mm and stay within ±100 m. Approach within the existing 1.5 m reach before submission.
+3. Build wall from selected physical plate. The entire owned plate becomes one 1 × 2 × 0.1 m panel at the selected floor position. Coordinates use the existing workbench-relative millimetre frame, snap to 50 mm and stay within ±100 m. Approach within the existing 1.5 m reach before submission. The half-thickness grid allows exact perpendicular butt corners; see [canonical corner placement](wall-corner-placement-milestone.md).
 4. Click the wall or select its stable ID in Construction. Remove selected wall and recover plate returns one physical plate to the acting crew's inventory. Either reachable conscious crew may dismantle shared panels. Recycle the recovered plate through the existing recycler for exactly 1 kg iron.
 
 The current one-kilogram wall bill is prototype tuning inherited from the existing wall recipe, not an engineering density claim. Legacy Build/Deconstruct workstation buttons still control the separate aggregate display row; saved aggregate walls are not silently converted into spatial panels.

@@ -20,6 +20,9 @@ func finish() -> void:
 	var legacy: Dictionary = observed.duplicate(true)
 	legacy["schema_version"] = 7
 	legacy.erase("recipe_requirements")
+	legacy.erase("timed_canister")
+	legacy.erase("horizontal_panels")
+	legacy.erase("paid_doors")
 	check(helper.observe(legacy) and helper.recipe_text(carrier_machine, "refine.iron").contains("quote unavailable"), "legacy recipe requirements remain unknown")
 	var malformed: Dictionary = observed.duplicate(true)
 	malformed["machinery"]["inventory_items"] = "invalid"

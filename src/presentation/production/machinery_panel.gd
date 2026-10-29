@@ -36,6 +36,8 @@ var _pending_wall: Dictionary = {}
 var _wall_result: String = ""
 var _wall_selection_lost: bool = false
 var _placement_kind := OptionButton.new()
+var _coordinate_wall_mode: bool = false
+var _saved_wall_coordinates: Array = []
 var _show_placement := CheckBox.new()
 var _placement_status := Label.new()
 var _action_buttons: Array[Button] = []
@@ -48,6 +50,8 @@ var _group := OptionButton.new()
 var _assembly_controls: Array[Control] = []
 var _operation_controls: Array[Control] = []
 var _request_identity := Label.new()
+var _timed_canister := TimedCanisterControls.new()
+var _horizontal_panels := HorizontalPanelControls.new()
 
 
 func configure(world: WorldRuntime) -> void:
@@ -65,6 +69,12 @@ func configure(world: WorldRuntime) -> void:
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		scroll.follow_focus = true
 	_world = world
+	add_child(_horizontal_panels)
+	_horizontal_panels.configure(world)
+	add_child(_timed_canister)
+	_timed_canister.configure(world)
+	_machine_controls.append(_timed_canister)
+	_assembly_controls.append(_timed_canister)
 	var guide := Label.new()
 	guide.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	guide.text = "Hand-build a frame, controller, power connector and work head from refined iron at the workbench. Fit sockets and canisters. Deploy a solar frame and wire machines directly or through a router. Equipment printing needs an expander; hand assembly needs only materials. Expanders also add sockets. Removing parts pauses work; restart requires Resume."
@@ -143,7 +153,7 @@ func configure(world: WorldRuntime) -> void:
 	visibility_changed.connect(_refresh_placement)
 	_button("Use current player position (floor)", "position")
 	_button("Deploy assembled frame", "machine_deploy")
-	_label("Walls: select an owned physical plate above. Floor panels are 1 × 2 × 0.1 m and snap to the 0.1 m coordinate grid.", true)
+	_label("Walls: select an owned physical plate above. Floor panels are 1 × 2 × 0.1 m and snap to the 0.05 m coordinate grid.", true)
 	_new_wall.text = "Place a new wall\n(keep draft coordinates)"
 	_new_wall.pressed.connect(_begin_wall_placement)
 	add_child(_new_wall)
@@ -205,6 +215,9 @@ func configure(world: WorldRuntime) -> void:
 	_operation_controls.append(_eject_amount)
 	_button("Eject iron into selected owned canister", "machine_autolathe_eject")
 	_button("Recycle empty owned part into workbench iron", "machine_recycle")
+	var doors := PaidDoorControls.new()
+	add_child(doors)
+	doors.configure(world)
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_status)
@@ -254,6 +267,8 @@ func observe(record: Dictionary) -> void:
 			previous_owned_plate = item["item_id"]
 	if not _operation_feedback.observe(record.get("production", {})): record = {}
 	_record = record
+	_timed_canister.observe(record.get("production", {}))
+	_horizontal_panels.observe(record.get("production", {}))
 	if record.is_empty():
 		if not _selected(_wall).is_empty(): _wall_selection_lost = true
 		_status.text = _operation_feedback.grid_text
@@ -505,6 +520,15 @@ func _populate_designs(blueprints: Dictionary) -> void:
 
 
 ## Explicit scene-owned binding; no global intent bus or canonical state mutation.
+func bind_horizontal_preview(preview: HorizontalPanelPreview) -> void:
+	_horizontal_panels.observation_changed.connect(preview.observe)
+	_horizontal_panels.preview_changed.connect(preview.present)
+
+
+func select_panel(id: String) -> void:
+	_horizontal_panels.select_panel(id)
+
+
 func bind_preview(preview: MachineryPreview) -> void:
 	_preview = preview
 	placement_feedback_changed.connect(preview.present_feedback)
@@ -530,6 +554,7 @@ func _refresh_placement() -> void:
 				if amount > 0: content.append("%s %.3f kg" % [material, float(amount) / 1000000.0])
 			if not content.is_empty(): _status.text += "\n%s: %s" % [id.right(8), ", ".join(content)]
 	var waiting: bool = not _pending.is_empty()
+	if not _pending_wall.is_empty(): _placement_kind.select(1)
 	var wall_mode: bool = _placement_kind.selected == 1 or not _pending_wall.is_empty()
 	for control in _machine_controls: control.visible = not wall_mode
 	for control in _wall_controls: control.visible = wall_mode
@@ -548,7 +573,16 @@ func _refresh_placement() -> void:
 	_new_wall.visible = wall_mode
 	_cancel_wall.visible = wall_mode
 	_reset_wall.visible = wall_mode
+	if _coordinate_wall_mode and not wall_mode:
+		_saved_wall_coordinates = [_axes[0].value, _axes[1].value, _axes[2].value]
+	var restore_wall_draft: bool = wall_mode and not _coordinate_wall_mode and not _saved_wall_coordinates.is_empty()
+	_coordinate_wall_mode = wall_mode
 	for index in range(_coordinate_labels.size()):
+		_axes[index].set_block_signals(true)
+		_axes[index].step = 0.05 if wall_mode else 0.1
+		if restore_wall_draft: _axes[index].value = _saved_wall_coordinates[index]
+		_axes[index].set_block_signals(false)
+		_axes[index].get_line_edit().tooltip_text = "%s coordinate in metres relative to workbench; %s m steps, ±100 m." % [["X", "Y", "Z"][index], "0.05" if wall_mode else "0.1"]
 		_coordinate_labels[index].text = ["X", "Y", "Z"][index] + (" (m)" if wall_mode else "")
 		_axes[index].custom_minimum_size.x = 140 if wall_mode else 0
 		_axes[index].size_flags_horizontal = Control.SIZE_EXPAND_FILL if wall_mode else Control.SIZE_FILL

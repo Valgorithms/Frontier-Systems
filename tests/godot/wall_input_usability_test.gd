@@ -36,6 +36,7 @@ func finish() -> void:
 	panel._new_wall.pressed.emit()
 	await process_frame
 	check(panel._coordinate_grid.columns == 2 and panel._coordinate_labels[0].text == "X (m)", "wall target is a labelled vertical metre grid")
+	check(is_equal_approx(panel._axes[0].step, 0.05), "wall coordinates use 50 mm steps")
 	check(panel._axes[0].get_line_edit().has_focus(), "explicit new wall transition focuses X")
 	key(KEY_TAB)
 	await process_frame
@@ -55,7 +56,7 @@ func finish() -> void:
 	check(is_equal_approx(panel._axes[2].value, -1.0), "Enter applies signed decimal metres")
 	panel._axes[0].get_line_edit().grab_focus()
 	panel._axes[0].get_line_edit().select_all()
-	for character in "0.1":
+	for character in "0.05":
 		var event := InputEventKey.new()
 		event.unicode = character.unicode_at(0)
 		event.keycode = character.unicode_at(0) as Key
@@ -66,7 +67,7 @@ func finish() -> void:
 	panel._wall_turn.item_selected.emit(1)
 	var before: String = JSON.stringify(world.capture_world_snapshot_json().value)
 	panel._send("wall_build")
-	check(panel._pending_wall.get("position") == [100, 0, -1000], "build applies active unsubmitted coordinate text before freezing target")
+	check(panel._pending_wall.get("position") == [50, 0, -1000], "build applies active unsubmitted 50 mm coordinate text before freezing target")
 	check(panel._pending_wall.get("quarter_turn") == 1, "build freezes dropdown orientation")
 	before = JSON.stringify(world.capture_world_snapshot_json().value)
 	var held: Dictionary = panel._pending_wall.duplicate(true)
@@ -95,6 +96,7 @@ func finish() -> void:
 	check(panel._selected(panel._wall).is_empty(), "observation refresh does not undo intentional new-wall transition")
 	panel._placement_kind.item_selected.emit(0)
 	check(panel._kind.visible and not panel._recipe.visible and not panel._wall.visible and not panel._wall_turn.visible, "machinery mode restores assembly and hides wall-only controls")
+	check(is_equal_approx(panel._axes[0].step, 0.1), "machinery retains 100 mm steps")
 	panel._placement_kind.item_selected.emit(1)
 	check([panel._axes[0].value, panel._axes[1].value, panel._axes[2].value] == draft, "mode roundtrip retains draft pose")
 	var saved_turn: int = panel._wall_turn.selected

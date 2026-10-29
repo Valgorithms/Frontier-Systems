@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "definition_id": "item.resource-canister.fabricated",
+  "tags": [
+    "item.handheld",
+    "resource.carrier",
+    "equipment.fabricated"
+  ],
+  "mass_milligrams": 0,
+  "storage": {
+    "max_mass_milligrams": 2000000,
+    "max_volume_millilitres": 2000,
+    "max_items": 0,
+    "accepted_tags": ["resource.payload"]
+  },
+  "volume_millilitres": 2500,
+  "revision": 2
+}

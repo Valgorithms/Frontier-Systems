@@ -52,8 +52,7 @@ func _ready() -> void:
 
 func _start_host() -> void:
 	Engine.max_fps = 60
-	_world = WorldRuntime.new()
-	_world.resource_carriers_enabled = true
+	_world = create_playable_world()
 	add_child(_world)
 	_store = WorldPersistenceAdapter.new()
 	add_child(_store)
@@ -268,6 +267,19 @@ func _start_client() -> void:
 	_terrain_preview = TerrainCellPreview.new()
 	_habitat.add_child(_terrain_preview)
 	_machinery_panel.bind_preview(_machinery_preview)
+	var panel_preview := HorizontalPanelPreview.new()
+	_habitat.add_child(panel_preview)
+	var panel_contact := PaidPanelContactScene.new()
+	_habitat.add_child(panel_contact)
+	panel_contact.bind(_remote)
+	var door_contact := PaidDoorContactScene.new()
+	_habitat.add_child(door_contact)
+	door_contact.bind(_remote)
+	_machinery_panel.bind_horizontal_preview(panel_preview)
+	panel_preview.panel_selected.connect(func(id: String) -> void:
+		_open_panel(3)
+		_machinery_panel.select_panel(id)
+	)
 	_machinery_preview.machine_selected.connect(func(id: String) -> void:
 		_machinery_panel.select_machine(id)
 		_open_panel(3)
@@ -702,3 +714,13 @@ func _drop_first_definition(definition_id: String) -> void:
 			command.payload = {"operation": "drop", "item_id": item["item_id"], "world_container_id": "world.tray-1", "destination_container_id": "", "slot_id": "", "expected_revision": _latest["world_items"].get("inventory_revision", 0)}
 			_remote.enqueue_command(command)
 			return
+
+
+## Shared fresh-world commissioning; callers own attachment and transport startup.
+static func create_playable_world(reinforcement_ore: bool = true, chamber_ore: bool = true) -> WorldRuntime:
+	var world := WorldRuntime.new()
+	world.resource_carriers_enabled = true
+	world.new_world_ore_outcrop_enabled = true
+	world.new_world_reinforcement_ore_enabled = reinforcement_ore
+	world.new_world_chamber_ore_enabled = reinforcement_ore and chamber_ore
+	return world

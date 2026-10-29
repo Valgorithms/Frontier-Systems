@@ -13,8 +13,13 @@ const DEFAULT_REGION_ID: StringName = &"local-habitat"
 @export var world_id: StringName = DEFAULT_WORLD_ID
 @export var region_id: StringName = DEFAULT_REGION_ID
 @export var resource_carriers_enabled: bool = false
+## Only fresh playable commissioning; snapshot recovery never grants this source.
+@export var new_world_ore_outcrop_enabled: bool = false
+@export var new_world_reinforcement_ore_enabled: bool = false
+@export var new_world_chamber_ore_enabled: bool = false
 var _simulation_runner: SimulationRunner
 var _local_request_sequence: int = 0
+var _local_request_nonce: String = Crypto.new().generate_random_bytes(8).hex_encode()
 var _control_setup_result: ServiceResult
 var _inventory_setup_result: ServiceResult
 var _health_setup_result: ServiceResult
@@ -57,7 +62,9 @@ func _ready() -> void:
 	_simulation_runner.add_child(tool_system)
 	var production_system := ProductionSimulationSystem.new()
 	production_system.name = "ProductionSimulationSystem"
-	_production_setup_result = production_system.configure(inventory_system, tool_system)
+	_production_setup_result = production_system.configure(inventory_system, tool_system, new_world_ore_outcrop_enabled, new_world_reinforcement_ore_enabled, new_world_chamber_ore_enabled)
+	if _production_setup_result.is_success: _production_setup_result = production_system.bind_door_access(access_control_system)
+	if _production_setup_result.is_success: _production_setup_result = production_system.bind_room_pressure(pressure_system, world_id, region_id)
 	_simulation_runner.add_child(production_system)
 	var terrain_system := TerrainSimulationSystem.new()
 	terrain_system.name = "TerrainSimulationSystem"
@@ -78,7 +85,7 @@ func start_simulation() -> ServiceResult:
 	if _tool_setup_result == null or not _tool_setup_result.is_success:
 		return ServiceResult.failure(&"tools_setup_failed", "Tool component bindings must initialize before starting.")
 	if _production_setup_result == null or not _production_setup_result.is_success:
-		return ServiceResult.failure(&"production_setup_failed", "The production catalog and stores must initialize before starting.")
+		return ServiceResult.failure(&"production_setup_failed", "Production setup failed: %s" % (_production_setup_result.message if _production_setup_result != null else "not initialized"))
 	if _health_setup_result == null or not _health_setup_result.is_success:
 		return ServiceResult.failure(&"health_setup_failed", "Health body owners must initialize before starting.")
 	if _inventory_setup_result == null or not _inventory_setup_result.is_success:
@@ -109,7 +116,8 @@ func enqueue_command(command: SimulationCommand) -> ServiceResult:
 
 func next_local_request_id() -> StringName:
 	_local_request_sequence += 1
-	return StringName("local-%d" % _local_request_sequence)
+	# Saved receipts outlive this runtime; a fresh session must not reuse their IDs.
+	return StringName("local-%s-%d" % [_local_request_nonce, _local_request_sequence])
 
 
 func current_tick_number() -> int:
@@ -315,9 +323,10 @@ func restore_world_snapshot(snapshot: WorldSnapshot) -> ServiceResult:
 		if masses.has(id): return ServiceResult.failure(&"payload_owner_conflict", "A physical item cannot belong to two mass owners.")
 		masses[id] = extra[id]
 	return inventory.with_checkpoint_payload_masses(masses, func() -> ServiceResult:
-		var link_validation: ServiceResult = _validate_cross_system_state(system_records, normalized.tick_number)
-		if not link_validation.is_success: return link_validation
-		return _simulation_runner.restore_snapshot(normalized.tick_number, system_records))
+		return production.with_checkpoint_door_links(system_records["production"], system_records["access_control"], normalized.tick_number, func() -> ServiceResult:
+			var link_validation: ServiceResult = _validate_cross_system_state(system_records, normalized.tick_number)
+			if not link_validation.is_success: return link_validation
+			return _simulation_runner.restore_snapshot(normalized.tick_number, system_records), system_records["pressure"]))
 
 
 ## Decodes and restores a snapshot before the runner starts.
@@ -376,6 +385,9 @@ func _validate_cross_system_state(system_records: Dictionary, snapshot_tick_numb
 	var valid_production: ServiceResult = production.validate_snapshot_record(system_records["production"], snapshot_tick_number)
 	if not valid_production.is_success:
 		return valid_production
+	var pressure_owner := get_simulation_system(PressureSystem.SYSTEM_ID) as PressureSystem
+	var door_links: ServiceResult = pressure_owner.validate_room_links(valid_production.value, access_record, pressure_record, snapshot_tick_number, inventory_record)
+	if not door_links.is_success: return door_links
 	var production_links: ServiceResult = production.validate_inventory_links(valid_production.value, inventory_record)
 	if not production_links.is_success: return production_links
 	var tools := get_simulation_system(ToolSimulationSystem.SYSTEM_ID) as ToolSimulationSystem

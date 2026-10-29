@@ -128,7 +128,14 @@ func run() -> void:
 	panel.observe(older)
 	shown("Active hand/item: unavailable")
 	panel.observe(observed)
-	await create_timer(5.1).timeout
+	# Freshness uses monotonic wall time, not SceneTreeTimer's accumulated delta.
+	var freshness_deadline: int = Time.get_ticks_msec() + 10000
+	while Time.get_ticks_msec() - panel._equipment_observed_at <= panel.EQUIPMENT_OBSERVATION_TIMEOUT_MSEC and Time.get_ticks_msec() < freshness_deadline:
+		await process_frame
+	var observed_age: int = Time.get_ticks_msec() - panel._equipment_observed_at
+	check(observed_age > panel.EQUIPMENT_OBSERVATION_TIMEOUT_MSEC, "monotonic freshness deadline: age=%d ms, limit=%d ms" % [observed_age, panel.EQUIPMENT_OBSERVATION_TIMEOUT_MSEC])
+	panel._process(0.0)
+	print("Active equipment freshness: observed age %d ms, limit %d ms" % [observed_age, panel.EQUIPMENT_OBSERVATION_TIMEOUT_MSEC])
 	shown("Active hand/item: unavailable")
 	panel.observe(observed)
 	shown("Active hand/item: unavailable")

@@ -1,0 +1,16 @@
+# Paid floor locomotion adapter
+
+Owner: Production for installed paid panels, Inventory for authenticated body pose.
+Base: PR137 merge `1a7bfb328245a8b5ae82251defe1e7d79761ee71`.
+
+Implemented bounded outcome: an authenticated synchronous assessment uses complete current Production panels and the current Inventory body pose to derive horizontal floor contact, then feeds the existing locomotion environment policy. No retained contact, duplicate floor registry, client contact, UI projection, or caller position supplies authority. The new API is server-only; it returns aggregate support and owner revision/tick/action provenance, never panel or builder identities or a reusable movement grant.
+
+The newly explicit prototype human support mapping interprets the logical position as a capsule-center anchor: 1800 mm height, 600 mm diameter, feet 900 mm below the center. A conservative 600 mm square footprint must be fully covered within 10 mm vertical tolerance. This uses the optional local walker bridge's coordinate convention, without claiming historical logical fixtures already represented capsule centers. Legacy fixtures at Y=0 are not silently treated as feet at Y=0. Cyborg, station-AI and unregistered profiles fail closed. This profile is a bounded assessment contract, not physical collision or a migration of saved positions.
+
+Acceptance: actual owner tests create finite paid panels and assess interior, adjacency, gaps, overhang, ceiling exclusion, removal and restore. Foreign identities and forged support fields reject. Repeated calls read current owners. Gravity, equipment, reservations, fixture movement and constructed-wall motion checks remain governed by existing owners. No falling, floor-only movement enforcement, UI behavior, or physical collision is claimed.
+
+Coordinator accepted the named Inventory/Production owner scope and granted an exclusive no-port lease after a clean process inspection. Updated integration base is ledger-only `ef9dc7a1c56dabf3d11a429860ad8cdcbb9f9854`. The lease was released after focused checks and a fresh process query found no Godot processes. No ports, captures or Gaia1714 were used.
+
+Local Windows Godot 4.7.2 evidence: `var/ci/paid-floor-focused/junit.xml` has 9 checks, zero failures: import/startup and adapter, detached support, finite paid panels, Inventory spatial/grip, locomotion environment and spatial-wall regressions. The adapter test performs real finite extraction/refining/plate creation, area debits/refunds, live reservations, movement, support removal and whole-world restore into a fresh runner, plus explicit nonhuman-profile rejection. Three actual-output schema suites and the Windows PHP runtime policy passed. Earlier failed test setups remain in `var/ci/paid-floor-initial`, `paid-floor-second`, `paid-floor-third` and `paid-floor-profile-diagnostic`: insufficient reservation stock, unsupported restore into an already-started runner, and mismatched nonhuman carried-mass limits. Corrected fixtures passed; no failures were discarded from evidence.
+
+Windows/Linux exact-head CI remains required. Coordinator owns approval and merge; no deployment or publication is in scope. No local physical collision, falling, graphical, VR or controller claim is made; source and runtime tests establish the bounded on-demand assessment, so capture is unnecessary for this scope.

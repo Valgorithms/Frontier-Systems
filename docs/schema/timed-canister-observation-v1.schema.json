@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:frontier-systems:schema:timed-canister-observation:v1",
+  "title": "Bounded own-body timed canister observation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["blueprint_fingerprint", "revision", "control_epoch", "can_operate", "can_start", "jobs"],
+  "properties": {
+    "blueprint_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "integer", "minimum": 0, "maximum": 9007199254740000},
+    "control_epoch": {"type": "integer", "minimum": 0, "maximum": 9007199254740000},
+    "can_operate": {"type": "boolean"},
+    "can_start": {"type": "boolean"},
+    "jobs": {
+      "type": "object",
+      "maxProperties": 16,
+      "propertyNames": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "\\S"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["state", "progress_ticks"],
+        "properties": {
+          "state": {"enum": ["active", "paused", "ready", "cancelled", "completed"]},
+          "progress_ticks": {"type": "integer", "minimum": 0, "maximum": 120}
+        },
+        "allOf": [{"if": {"properties": {"state": {"enum": ["ready", "completed"]}}}, "then": {"properties": {"progress_ticks": {"const": 120}}}}]
+      }
+    }
+  },
+  "allOf": [{"if": {"properties": {"can_start": {"const": true}}}, "then": {"properties": {"can_operate": {"const": true}, "jobs": {"additionalProperties": {"properties": {"state": {"enum": ["cancelled", "completed"]}}}}}}}]
+}

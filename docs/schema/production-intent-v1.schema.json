@@ -54,7 +54,25 @@
         "machine_autolathe_make",
         "machine_autolathe_eject",
         "wall_build",
-        "wall_remove"
+        "wall_remove",
+        "door_build",
+        "door_open",
+        "door_close",
+        "door_remove",
+        "door_seal_install",
+        "door_seal_remove",
+        "door_room_commission",
+        "door_room_decommission",
+        "door_bypass_install",
+        "door_bypass_open",
+        "door_bypass_close",
+        "door_bypass_recover",
+        "door_reinforcement_install",
+        "door_reinforcement_recover",
+        "door_chamber_kit_install",
+        "door_chamber_kit_recover",
+        "door_chamber_commission",
+        "door_chamber_decommission"
       ]
     },
     "payload": {
@@ -1367,7 +1385,7 @@
                 "prefixItems": [
                   {
                     "type": "integer",
-                    "multipleOf": 100,
+                    "multipleOf": 50,
                     "minimum": -100000,
                     "maximum": 100000
                   },
@@ -1376,7 +1394,7 @@
                   },
                   {
                     "type": "integer",
-                    "multipleOf": 100,
+                    "multipleOf": 50,
                     "minimum": -100000,
                     "maximum": 100000
                   }
@@ -1434,6 +1452,804 @@
         "required": [
           "operation"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_build"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "position",
+              "quarter_turn"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "position": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "prefixItems": [
+                  {
+                    "type": "integer",
+                    "minimum": -100000,
+                    "maximum": 100000,
+                    "multipleOf": 50
+                  },
+                  {
+                    "const": 0
+                  },
+                  {
+                    "type": "integer",
+                    "minimum": -100000,
+                    "maximum": 100000,
+                    "multipleOf": 50
+                  }
+                ],
+                "items": false
+              },
+              "quarter_turn": {
+                "enum": [
+                  0,
+                  1
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_open"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_close"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_remove"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_seal_install"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_seal_remove"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_room_commission"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_room_decommission"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_bypass_install"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_bypass_open"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_bypass_close"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_bypass_recover"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_reinforcement_install"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_reinforcement_recover"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_chamber_kit_install"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_chamber_kit_recover"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_chamber_commission"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "door_chamber_decommission"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "expected_revision",
+              "control_epoch",
+              "door_id"
+            ],
+            "properties": {
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "control_epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740000
+              },
+              "door_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^door-"
+              }
+            }
+          }
+        }
       }
     }
   ],

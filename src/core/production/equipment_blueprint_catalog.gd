@@ -17,9 +17,9 @@ func configure(record: Variant, inventory: InventorySimulationSystem, materials:
 		var value: Variant = record["blueprints"][id]
 		if not ControlContractValidation.is_id(id) or typeof(value) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(value, PackedStringArray(["name", "definition_id", "definition_revision", "materials", "fabrication_energy_joules", "salvage_energy_joules"])):
 			return _failure()
-		if typeof(value["name"]) != TYPE_STRING or value["name"].is_empty() or value["name"].length() > 80 or not ControlContractValidation.is_id(value["definition_id"]) or not ControlContractValidation.is_integer(value["definition_revision"], 1, 1) or item_ids.has(value["definition_id"]):
+		if typeof(value["name"]) != TYPE_STRING or value["name"].is_empty() or value["name"].length() > 80 or not ControlContractValidation.is_id(value["definition_id"]) or not ControlContractValidation.is_integer(value["definition_revision"], 1, InventoryItemCatalog.MAX_EXACT_INTEGER) or item_ids.has(value["definition_id"]):
 			return _failure()
-		var definition: ServiceResult = inventory.factory_definition(value["definition_id"])
+		var definition: ServiceResult = inventory.factory_definition(value["definition_id"], int(value["definition_revision"]))
 		if not definition.is_success or int(definition.value["mass_milligrams"]) != 0 or not definition.value["tags"].has("equipment.fabricated"):
 			return _failure() # Structural mass belongs to production; Inventory validates child storage.
 		if typeof(value["materials"]) != TYPE_DICTIONARY or value["materials"].is_empty() or value["materials"].size() > 32:
@@ -37,7 +37,7 @@ func configure(record: Variant, inventory: InventorySimulationSystem, materials:
 			if not ControlContractValidation.is_integer(value[energy], 1, 100000):
 				return _failure()
 			normalized[energy] = int(value[energy])
-		normalized["definition_revision"] = 1
+		normalized["definition_revision"] = int(value["definition_revision"])
 		normalized["fingerprint"] = JSON.stringify(normalized, "", true, true).sha256_text()
 		definitions[id] = normalized
 		if modular_definitions.has(value["definition_id"]): modular_blueprints[id] = true

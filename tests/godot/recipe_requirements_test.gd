@@ -21,7 +21,7 @@ func run() -> void:
 	context = AuthenticatedCommandContext.from_authenticated_session(&"local-inventory-actor", &"recipe-test", world.world_id, world.region_id, PackedStringArray(["inventory.operate", "terrain.operate"]))
 	var snapshot: String = world.capture_world_snapshot_json().value
 	var observed: Dictionary = production.observation(context).value
-	check(observed["schema_version"] == 8 and JSON.parse_string(snapshot)["systems"]["production"]["schema_version"] == 7, "v8 observation and unchanged v7 persistence")
+	check(observed["schema_version"] == 13 and JSON.parse_string(snapshot)["systems"]["production"]["schema_version"] == 11, "v13 observation and v11 seal persistence")
 	var catalog: Dictionary = production._catalog.duplicate(true)
 	for id in observed["recipes"]:
 		var requirement: Dictionary = observed["recipe_requirements"][id]
@@ -37,7 +37,7 @@ func run() -> void:
 	remote._authenticated = true
 	check(TerrainObservationValidation.valid(JSON.parse_string(JSON.stringify(world.terrain_observation(context).value))), "test terrain frame valid")
 	check(ToolObservationValidation.valid(JSON.parse_string(JSON.stringify(world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID).observation(context).value))), "test tools frame valid")
-	remote._receive(JSON.parse_string(JSON.stringify({"type": "observation", "production": observed, "terrain": world.terrain_observation(context).value, "tools": world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID).observation(context).value, "inventory": inventory.own_inventory_observation(context, true).value, "position": [0, 0, 0], "players": []})))
+	remote._receive(JSON.parse_string(JSON.stringify({"type": "observation", "panel_contact": preload("res://tests/support/paid_panel_contact_fixture.gd").envelope(world, context), "door_contact": preload("res://tests/support/paid_panel_contact_fixture.gd").door_envelope(world, context), "production": observed, "terrain": world.terrain_observation(context).value, "tools": world.get_simulation_system(ToolSimulationSystem.SYSTEM_ID).observation(context).value, "inventory": inventory.own_inventory_observation(context, true).value, "position": [0, 0, 0], "players": []})))
 	check(remote.production_observation(context).is_success and remote.production_observation(context).value["recipe_requirements"] == wire["recipe_requirements"], "actual client receive adopts host requirements")
 	remote._connecting = true
 	remote._process(0.0)
@@ -45,12 +45,16 @@ func run() -> void:
 	var legacy: Dictionary = observed.duplicate(true)
 	legacy["schema_version"] = 7
 	legacy.erase("recipe_requirements")
+	legacy.erase("timed_canister")
+	legacy.erase("horizontal_panels")
+	legacy.erase("paid_doors")
 	var legacy_projection := RemoteProductionProjection.new()
 	check(legacy_projection.accept_record(legacy).is_success, "legacy v7 explicitly readable")
 	check(WorkstationResourceView.recipe_text(legacy, "craft.plate").contains("unavailable from legacy v7") and not WorkstationResourceView.recipe_text(legacy, "craft.plate").contains("short by"), "legacy costs never guessed")
 	var bad: Array[Dictionary] = []
 	var missing: Dictionary = observed.duplicate(true)
 	missing.erase("recipe_requirements")
+	missing.erase("timed_canister")
 	bad.append(missing)
 	for costs in [null, {}, {"craft.plate": {}}]:
 		var item: Dictionary = observed.duplicate(true)

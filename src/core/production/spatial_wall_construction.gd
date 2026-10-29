@@ -6,13 +6,15 @@ const MAX_WALLS: int = 32
 const MASS: int = 1000000
 const SIZE: Vector3 = Vector3(1.0, 2.0, 0.1)
 const BODY_HALF: Vector3 = Vector3(350, 900, 350)
+## Half-thickness offsets permit exact butt corners; old 100 mm poses remain valid.
+const POSITION_STEP_MILLIMETRES: int = 50
 
 
 static func valid_pose(record: Variant) -> bool:
 	if typeof(record) != TYPE_DICTIONARY or not ControlContractValidation.has_exact_fields(record, PackedStringArray(["position", "quarter_turn"])) or not InventorySpatialMath.is_position(record.get("position")) or not ControlContractValidation.is_integer(record.get("quarter_turn"), 0, 1): return false
 	if int(record["position"][1]) != 0: return false
 	for coordinate in record["position"]:
-		if abs(int(coordinate)) > 100000 or int(coordinate) % 100 != 0: return false
+		if abs(int(coordinate)) > 100000 or int(coordinate) % POSITION_STEP_MILLIMETRES != 0: return false
 	return true
 
 
@@ -107,7 +109,7 @@ static func plan(production: ProductionSimulationSystem, state: Dictionary, inve
 	var pose: Dictionary
 	if create:
 		pose = {"position": payload["position"], "quarter_turn": payload["quarter_turn"]}
-		if not valid_pose(pose) or walls.size() >= MAX_WALLS or walls.has(wall_id): return failure("Place a floor wall on the 0.1 m grid with a supported orientation and registry capacity.")
+		if not valid_pose(pose) or walls.size() >= MAX_WALLS or walls.has(wall_id): return failure("Place a floor wall on the 0.05 m grid with a supported orientation and registry capacity.")
 		if not state["cargo"].has(plate_id) or int(state["cargo"][plate_id]["plate"]) != MASS or ProductionSimulationSystem._mass(state["cargo"][plate_id]) != MASS: return failure("Construction consumes one owned physical kilogram plate.")
 	else:
 		if not walls.has(wall_id) or state["cargo"].size() >= 32: return failure("Select an existing wall; physical plate registry capacity is required for recovery.")

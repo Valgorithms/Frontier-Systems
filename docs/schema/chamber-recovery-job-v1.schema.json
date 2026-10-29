@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:frontier-systems:schema:chamber-recovery-job:v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "job_id",
+    "assembly_id",
+    "principal_id",
+    "body_id",
+    "control_epoch",
+    "initial_moles",
+    "target_moles",
+    "returned_moles",
+    "spent_joules",
+    "max_joules",
+    "state",
+    "last_batch_tick",
+    "next_eligible_tick"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "assembly_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "principal_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "body_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "control_epoch": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740000
+    },
+    "initial_moles": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "target_moles": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "returned_moles": {
+      "type": "number",
+      "minimum": 0
+    },
+    "spent_joules": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 25000
+    },
+    "max_joules": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 25000
+    },
+    "state": {
+      "enum": [
+        "running",
+        "paused",
+        "completed",
+        "cancelled"
+      ]
+    },
+    "last_batch_tick": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740000
+    },
+    "next_eligible_tick": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740000
+    }
+  }
+}
