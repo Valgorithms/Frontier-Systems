@@ -37,12 +37,12 @@ These are research questions, not approved runtime features. Prefer official eng
 
 ## Weekly pass and handoff
 
-The dedicated Frontier research task owns this index and its evidence updates. The parent coordinator owns scheduling; this document creates no automation. Each weekly pass:
+The dedicated Frontier research task owns this index and its evidence updates. The parent coordinator owns scheduling; this document creates no automation. This workflow does not authorize disclosure of additional unfinished/private engine research, logs or credentials. Each weekly pass:
 
 1. Read current AGENTS.md, this index, the manifest, affected contracts and open PRs through cloud tools. Pin the current integration commit; preserve desktop processes and working trees.
 2. Revisit changed evidence and unresolved source gaps first. Deduplicate by URL/video ID, stable entry ID and research question; do not append unsupported links merely to show activity.
 3. Investigate one bounded question using primary sources. Record access/version context, what was actually inspected, costs, limits and a reproduction/A/B proposal. An unrun experiment remains proposed.
-4. Update the existing entry and manifest, retaining prior failures or superseded conclusions with dates. Propose at most one consolidated docs-only draft PR for the pass. If an equivalent PR is already open, update that research branch after checking its head rather than opening a duplicate.
+4. Update the existing entry and manifest, retaining prior failures or superseded conclusions with dates. Propose at most one consolidated docs-only PR for the pass. Use a regular PR when the documentation slice is complete; reserve draft status for unfinished documentation or an actual unresolved blocker. If an equivalent PR is already open, update that research branch after checking its head rather than opening a duplicate.
 5. Report PR/head, exact files, source/diff checks, measurements actually run, missing evidence and the next decision. Runtime experiments need separately authorized execution; this research workflow does not launch local games, benchmarks, GPU workloads or paid services.
 
 Outcome vocabulary: **proposed** (hypothesis/plan), **tested** (bounded independent reproduction linked), **adopted** (decision accepted into a project contract), **rejected** (failed criterion or unsuitable tradeoff), **superseded** (replacement linked). Evidence can be source-checked while the outcome remains proposed. Record a decision date and scope for every transition.
