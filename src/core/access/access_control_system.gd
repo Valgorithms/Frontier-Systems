@@ -16,6 +16,7 @@ const PROTOTYPE_AIRLOCK_ID: StringName = &"habitat_airlock"
 
 var devices: Dictionary = {}
 var current_tick: int = 0
+var _restore_generation: int = 0
 var _door_restore_guard: Callable
 var _paid_open_guard: Callable
 
@@ -341,6 +342,7 @@ func capture_snapshot() -> ServiceResult:
 
 
 func validate_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> ServiceResult:
+	if _restore_generation >= 9007199254740000: return ServiceResult.failure(&"access_restore_generation_exhausted", "Access restore fence cannot wrap.")
 	var decoded: ServiceResult = _decode_snapshot_record(record, snapshot_tick_number)
 	return ServiceResult.success() if decoded.is_success else decoded
 
@@ -374,6 +376,7 @@ func validate_pressure_links(pressure_record: Dictionary, access_record: Diction
 
 
 func restore_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> ServiceResult:
+	if _restore_generation >= 9007199254740000: return ServiceResult.failure(&"access_restore_generation_exhausted", "Access restore fence cannot wrap.")
 	var decoded: ServiceResult = _decode_snapshot_record(record, snapshot_tick_number)
 	if not decoded.is_success:
 		return decoded
@@ -382,7 +385,12 @@ func restore_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> S
 		if not links.is_success: return links
 	devices = decoded.value
 	current_tick = snapshot_tick_number
+	_restore_generation += 1
 	return ServiceResult.success()
+
+
+func restore_generation() -> int:
+	return _restore_generation
 
 
 func _decode_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> ServiceResult:

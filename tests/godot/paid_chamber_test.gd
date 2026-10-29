@@ -113,7 +113,13 @@ func run() -> void:
 	chamber_ui(10)
 	var fixture := FileAccess.open("res://var/paid-chamber-fixture.json", FileAccess.WRITE)
 	fixture.store_string(JSON.stringify({"world": JSON.parse_string(snapshot), "observation": observation, "pristine": pristine})); fixture.close()
+	await verify_chamber_extension()
 	finish()
+
+
+## Test-only extension point reuses the authentic finite acquisition route.
+func verify_chamber_extension() -> void:
+	pass
 
 
 func build_chamber() -> void:

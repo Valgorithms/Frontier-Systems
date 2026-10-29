@@ -17,6 +17,8 @@ var total_transferred_moles: float = 0.0
 var constructed_rooms: Dictionary = {}
 var room_valves: Dictionary = {}
 var paid_chamber: Dictionary = {}
+var pump_accounting: Dictionary = {}
+var _room_restore_generation: int = 0
 var _room_production: ProductionSimulationSystem
 var _room_access: AccessControlSystem
 var _room_world: StringName
@@ -156,7 +158,7 @@ func capture_snapshot() -> ServiceResult:
 		sensor_records.append(sensor.to_record())
 
 	var result: Dictionary = {
-		"schema_version": 5 if not paid_chamber.is_empty() else _room_snapshot_version(constructed_rooms, room_valves),
+		"schema_version": 6 if not pump_accounting.is_empty() else (5 if not paid_chamber.is_empty() else _room_snapshot_version(constructed_rooms, room_valves)),
 		"volumes": volume_records,
 		"airlocks": airlock_records,
 		"sensors": sensor_records,
@@ -164,11 +166,13 @@ func capture_snapshot() -> ServiceResult:
 		"constructed_rooms": constructed_rooms.duplicate(true),
 	}
 	if int(result.schema_version) >= 3: result["room_valves"] = room_valves.duplicate(true)
-	if not paid_chamber.is_empty(): result.paid_chamber = paid_chamber.duplicate(true)
+	if int(result.schema_version) >= 5: result.paid_chamber = paid_chamber.duplicate(true)
+	if int(result.schema_version) == 6: result.pump_accounting = pump_accounting.duplicate(true)
 	return ServiceResult.success(result)
 
 
 func validate_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> ServiceResult:
+	if _room_restore_generation >= 9007199254740000: return ServiceResult.failure(&"pressure_restore_generation_exhausted", "Pressure restore fence cannot wrap.")
 	var decoded: ServiceResult = _decode_snapshot_record(record, snapshot_tick_number)
 	if not decoded.is_success:
 		return decoded
@@ -176,6 +180,7 @@ func validate_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> 
 
 
 func restore_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> ServiceResult:
+	if _room_restore_generation >= 9007199254740000: return ServiceResult.failure(&"pressure_restore_generation_exhausted", "Pressure restore fence cannot wrap.")
 	var decoded: ServiceResult = _decode_snapshot_record(record, snapshot_tick_number)
 	if not decoded.is_success:
 		return decoded
@@ -183,7 +188,12 @@ func restore_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> S
 		var links: ServiceResult = _room_production.validate_pressure_restore(record, snapshot_tick_number)
 		if not links.is_success: return links
 	install_prepared_room_state(decoded.value)
+	_room_restore_generation += 1
 	return ServiceResult.success()
+
+
+func room_restore_generation() -> int:
+	return _room_restore_generation
 
 
 ## Only decoded, prevalidated server candidates reach this non-yielding write.
@@ -194,7 +204,34 @@ func install_prepared_room_state(state: Dictionary) -> void:
 	total_transferred_moles = state["total_transferred_moles"]
 	constructed_rooms = state["constructed_rooms"]
 	room_valves = state["room_valves"]
-	paid_chamber = state.get("paid_chamber", {})
+	paid_chamber = state["paid_chamber"]
+	pump_accounting = state["pump_accounting"]
+
+
+func decode_chamber_recovery_candidate(record: Dictionary, tick: int) -> ServiceResult:
+	return _decode_snapshot_record(record, tick)
+
+
+func prepare_chamber_recovery_transfer(assembly_id: String, job_id: String, quantity_moles: float, tick: int) -> ServiceResult:
+	if _room_production == null or _room_access == null or paid_chamber.is_empty(): return ChamberRecoveryRecords.denied()
+	var production: Dictionary = _room_production.capture_snapshot().value
+	var job: Dictionary = ChamberRecoveryRecords.active_job(production.get("chamber_recovery", {}))
+	if job.is_empty() or job.state != "running" or job.job_id != job_id or job.assembly_id != assembly_id or tick != int(production.last_tick) or tick < int(job.next_eligible_tick) or quantity_moles != minf(0.1, float(job.target_moles) - float(job.returned_moles)): return ChamberRecoveryRecords.denied()
+	var access: ServiceResult = _room_access.capture_snapshot()
+	if not access.is_success or not validate_room_links(production, access.value).is_success: return ChamberRecoveryRecords.denied()
+	for id in [paid_chamber.inner_door_id, paid_chamber.outer_door_id]:
+		if room_valves[id] or not PaidChamber.closed_intact(PaidChamber.actuator(access.value, id)): return ChamberRecoveryRecords.denied()
+	var proposal: ServiceResult = ChamberRecoveryWork.prepare(volumes.get(StringName(paid_chamber.volume_id)), volumes.get(PROTOTYPE_HABITAT_ID), quantity_moles)
+	if not proposal.is_success: return proposal
+	var captured: ServiceResult = capture_snapshot()
+	if not captured.is_success: return captured
+	var record: Dictionary = captured.value.duplicate(true)
+	for index in range(record.volumes.size()):
+		if record.volumes[index].volume_id == paid_chamber.volume_id: record.volumes[index] = proposal.value.source_after.to_record()
+		elif record.volumes[index].volume_id == String(PROTOTYPE_HABITAT_ID): record.volumes[index] = proposal.value.receiver_after.to_record()
+	if not is_finite(float(record.total_transferred_moles) + quantity_moles): return ChamberRecoveryRecords.denied()
+	record.total_transferred_moles += quantity_moles
+	return ServiceResult.success({"after": record, "charged_joules": proposal.value.charged_joules})
 
 
 func _step_transfer(first_id: StringName, second_id: StringName, conductance: float, delta_seconds: float) -> void:
@@ -239,21 +276,24 @@ func _sample_sensors(tick_number: int) -> void:
 
 
 func _decode_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> ServiceResult:
-	if not ControlContractValidation.is_integer(record.get("schema_version"), 1, 5):
+	if not ControlContractValidation.is_integer(record.get("schema_version"), 1, 6):
 		return ServiceResult.failure(&"unsupported_pressure_system_version", "The pressure-system record version is not supported.")
 	var paid_record: Variant = record.get("paid_chamber", {})
 	if typeof(paid_record) != TYPE_DICTIONARY: return PaidChamber.denied()
-	if int(record.schema_version) == 5:
-		if not PaidChamber.valid_record(paid_record): return PaidChamber.denied()
+	if int(record.schema_version) >= 5:
+		if (int(record.schema_version) == 5 or not paid_record.is_empty()) and not PaidChamber.valid_record(paid_record): return PaidChamber.denied()
 	elif not paid_record.is_empty(): return PaidChamber.denied()
 	var rooms: Variant = record.get("constructed_rooms", {})
 	var fields := PackedStringArray(["schema_version", "volumes", "airlocks", "sensors", "total_transferred_moles"])
 	if int(record.schema_version) >= 2: fields.append("constructed_rooms")
 	if int(record.schema_version) >= 3: fields.append("room_valves")
-	if int(record.schema_version) == 5: fields.append("paid_chamber")
+	if int(record.schema_version) >= 5: fields.append("paid_chamber")
+	if int(record.schema_version) == 6:
+		fields.append("pump_accounting")
+		if not ChamberRecoveryRecords.valid_accounting(record.get("pump_accounting"), snapshot_tick_number): return ChamberRecoveryRecords.denied()
 	var valves: Variant = record.get("room_valves", {})
 	if typeof(rooms) != TYPE_DICTIONARY or rooms.size() > 1: return ConstructedRoomPressure.denied()
-	if typeof(valves) != TYPE_DICTIONARY or valves.size() > (2 if int(record.schema_version) == 5 else 1): return ConstructedRoomPressure.denied()
+	if typeof(valves) != TYPE_DICTIONARY or valves.size() > (2 if not paid_record.is_empty() else 1): return ConstructedRoomPressure.denied()
 	if int(record.schema_version) == 3 and valves.is_empty(): return ConstructedRoomPressure.denied()
 	if int(record.schema_version) == 4 and (rooms.size() != 1 or not rooms.values().all(func(r: Variant) -> bool: return typeof(r) == TYPE_DICTIONARY and r.get("policy_id") == PaidRoomReinforcement.POLICY)): return ConstructedRoomPressure.denied()
 	if not paid_record.is_empty() and (not rooms.is_empty() or not ControlContractValidation.has_exact_fields(valves, PackedStringArray([paid_record.inner_door_id, paid_record.outer_door_id]))): return PaidChamber.denied()
@@ -388,6 +428,7 @@ func _decode_snapshot_record(record: Dictionary, snapshot_tick_number: int) -> S
 		"constructed_rooms": rooms.duplicate(true),
 		"room_valves": valves.duplicate(true),
 		"paid_chamber": paid_record.duplicate(true),
+		"pump_accounting": record.get("pump_accounting", {}).duplicate(true),
 	})
 
 
@@ -424,12 +465,18 @@ func validate_room_links(production: Dictionary, access: Dictionary, pressure_re
 	var rooms: Dictionary = constructed_rooms
 	var valves: Dictionary = room_valves
 	var chamber: Dictionary = paid_chamber
+	var accounting: Dictionary = pump_accounting
 	if not pressure_record.is_empty():
 		var decoded: ServiceResult = _decode_snapshot_record(pressure_record, tick)
 		if not decoded.is_success: return decoded
 		rooms = decoded.value.constructed_rooms
 		valves = decoded.value.room_valves
 		chamber = decoded.value.paid_chamber
+		accounting = decoded.value.pump_accounting
+	if accounting != production.get("chamber_recovery", {}).get("accounting", {}): return ChamberRecoveryRecords.denied()
+	var assembly: Dictionary = ChamberRecoveryRecords.current(production.get("chamber_recovery", {}))
+	if not assembly.is_empty():
+		if chamber.is_empty() or assembly.chamber_id != chamber.volume_id or assembly.principal_id != chamber.principal_id or assembly.body_id != chamber.body_id or assembly.world_id != chamber.world_id or assembly.region_id != chamber.region_id: return ChamberRecoveryRecords.denied()
 	if not chamber.is_empty():
 		if not rooms.is_empty(): return PaidChamber.denied()
 		return PaidChamber.links(chamber, valves, production, access, inventory)
@@ -443,8 +490,9 @@ func validate_room_links(production: Dictionary, access: Dictionary, pressure_re
 
 func record_from_prepared(state: Dictionary) -> Dictionary:
 	var result: Dictionary = {"schema_version": 2, "volumes": [], "airlocks": [], "sensors": [], "total_transferred_moles": state.total_transferred_moles, "constructed_rooms": state.constructed_rooms.duplicate(true)}
-	result.schema_version = 5 if not state.get("paid_chamber", {}).is_empty() else _room_snapshot_version(state.constructed_rooms, state.room_valves)
-	if int(result.schema_version) == 5: result.paid_chamber = state.paid_chamber.duplicate(true)
+	result.schema_version = 6 if not state.get("pump_accounting", {}).is_empty() else (5 if not state.get("paid_chamber", {}).is_empty() else _room_snapshot_version(state.constructed_rooms, state.room_valves))
+	if int(result.schema_version) >= 5: result.paid_chamber = state.paid_chamber.duplicate(true)
+	if int(result.schema_version) == 6: result.pump_accounting = state.pump_accounting.duplicate(true)
 	if int(result.schema_version) >= 3: result["room_valves"] = state.room_valves.duplicate(true)
 	for field in ["volumes", "airlocks", "sensors"]:
 		for id in _sorted_ids(state[field]): result[field].append(state[field][id].to_record())
