@@ -1,6 +1,6 @@
 # Survival, pressure, docking, and salvage design contract
 
-This document turns the desired SS13 and Barotrauma-like mechanical direction into first-party rules. These are design references, not a request to copy their art, names, maps, code, or other protected content.
+[HELLION is the primary gameplay and mechanics baseline](hellion-baseline.md): aim for as faithful a remake as practical before layering mechanics from SS13, Barotrauma and other references. The independently authored rules below are Frontier design proposals and constraints; they do not establish HELLION behavior or completed parity. Where a rule may differ from the baseline, record the difference and seek an explicit design decision rather than assume equivalence. No reference grants rights to copy art, names, maps, code, or other protected content.
 
 ## Damage should create work, not erase play
 

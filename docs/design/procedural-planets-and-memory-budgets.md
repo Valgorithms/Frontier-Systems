@@ -2,7 +2,7 @@
 
 ## Direction and status
 
-A future expansion should support complete explorable procedural planets, with the scale and variety requested by the owner through the No Man's Sky reference. Use independently authored generators, definitions and assets. Mars and the Moon remain the initial destinations; later generated planets, moons, asteroids and orbital salvage regions share the same generation/streaming contracts.
+After the relevant [HELLION gameplay baseline](hellion-baseline.md) is established, a future extension should support complete explorable procedural planets, with the scale and variety requested by the owner through the No Man's Sky reference. Use independently authored generators, definitions and assets. Mars and the Moon remain the initial destinations; later generated planets, moons, asteroids and orbital salvage regions share the same generation/streaming contracts.
 
 **Planned, not implemented:** current procedural habitat meshes and homogeneous terrain material records do not generate planets, stream terrain or support voxel excavation. A complete planet must be representable without allocating its complete surface, caves, collision or entity population in memory. Larger universe scale increases catalog/storage requirements; resident memory should primarily depend on active regions and configured detail budgets.
 
