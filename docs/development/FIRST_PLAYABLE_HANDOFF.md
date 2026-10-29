@@ -2,7 +2,7 @@
 
 ## Status and owner decisions
 
-The **cooperative first playable source prototype is implemented and verified on Windows**. The owner explicitly requires shared multiplayer and restart persistence. The priority is environmental extraction → portable container → transport/unload → refine → physical component → recycle/reuse. Do not reopen this scope question. See [acceptance evidence](first-playable-acceptance.md) and [launch instructions](first-playable-running.md).
+The **cooperative first playable source prototype is implemented and verified on Windows**. The owner explicitly requires shared multiplayer and restart persistence. The completed route is environmental extraction → portable container → transport/unload → refine → physical component → recycle/reuse. Preserve that milestone's historical acceptance scope. The current project-wide direction is the [HELLION gameplay and mechanics baseline](../design/hellion-baseline.md), followed by additions from other games; the existing route is one bounded foundation and does not establish baseline parity. See [acceptance evidence](first-playable-acceptance.md) and [launch instructions](first-playable-running.md).
 
 This is a bounded development prototype, not the full long-term game or a Steam distribution release. Terrain excavation follows this loop. Civ13-informed civilization progression remains a later update.
 

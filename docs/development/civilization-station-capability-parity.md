@@ -2,6 +2,8 @@
 
 Owner direction (2026-10-11, America/New_York): almost everything a player can do in Civ13 and Space Station 13 should eventually be possible in Frontier Systems. This is a long-term gameplay capability milestone family, not a claim of current implementation or a single feature PR. Preserve the current basic-gameplay/tutorial priorities.
 
+The project-wide first priority is the [HELLION gameplay and mechanics baseline](../design/hellion-baseline.md), with as faithful a remake as practical before layering these broader Civ13/SS13 capabilities. This document remains a long-term extension roadmap; its matrix does not measure HELLION coverage or establish current parity.
+
 ## Target and coverage
 
 Track player capabilities and their outcomes, not identical controls, names, assets or internal code. Aim for broad coverage of both civilization progression and station life; record every gap and any proposed exclusion explicitly. Do not silently narrow this direction to engineering alone. Features may use Frontier's own design while preserving comparable player agency and emergent combinations.
@@ -25,7 +27,7 @@ The first bounded research slice is the [foundational capability matrix v1](foun
 
 ## Milestone sequence and acceptance
 
-1. Build the research matrix and coverage baseline, starting with Civ13 and a pinned owner-relevant SS13 variant. Prioritize ordinary basic actions and independently authored requirements.
+1. For this later extension, build the research matrix and coverage baseline, starting with Civ13 and a pinned owner-relevant SS13 variant. Prioritize ordinary basic actions and independently authored requirements.
 2. Map foundational owners and contracts; implement bounded basic capability gaps before their advanced dependents. Serialize shared authority/schema work and keep each milestone narrow.
 3. Deliver capability clusters with explicit scenarios: authorized success, unavailable prerequisites, stale/foreign rejection, conservation, partial damage/functionality, recovery and multiplayer effects where relevant.
 4. Verify cross-system combinations and emergent use, not only isolated happy paths. Reconcile the matrix against integrated evidence and propose remaining gaps/exclusions to the owner through Coordinator.

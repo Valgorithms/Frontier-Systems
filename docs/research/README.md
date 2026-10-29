@@ -23,7 +23,7 @@ The manifest remains the shared provenance registry required by AGENTS.md. An ex
 
 ## Scope and research queue
 
-Keep each pass bounded to one project decision and a practical way to disprove it.
+[HELLION is the primary gameplay and mechanics baseline](../design/hellion-baseline.md). Research its observable gameplay first, record exact versions and evidence limits, and map independently authored requirements and gaps before treating another game's mechanics as an extension. Keep each pass bounded to one project decision and a practical way to disprove it.
 
 | Topic | Bounded next question | Consult existing work first |
 | --- | --- | --- |

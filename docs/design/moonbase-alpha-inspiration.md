@@ -1,6 +1,6 @@
 # Moonbase Alpha gameplay inspiration
 
-Owner-requested reference, reviewed 2026-10-11 UTC. This means NASA's 2010 game, not the television setting. These are independently authored Frontier Systems proposals, not implemented features or release promises.
+Owner-requested reference, reviewed 2026-10-11 UTC. This means NASA's 2010 game, not the television setting. [HELLION is the primary gameplay and mechanics baseline](hellion-baseline.md); Moonbase Alpha contributes possible later additions on top of that baseline. The priority labels below order this extension's own candidates, not the project-wide baseline. These are independently authored Frontier Systems proposals, not implemented features or release promises.
 
 ## Reviewed evidence
 

@@ -4,7 +4,7 @@
 
 The project owner specified a later game mode/update where players start on a planet and develop a civilization through successive technological capabilities until reaching the space age. Civ13 is the primary reference for this milestone. The owner reports being one of its lead developers and explicitly authorizes consultation of any Civ13 code and assets as references.
 
-The first playable continues to prioritize environmental extraction, container storage, refining and recycling. Civilization progression builds on that resource loop after it is playable. No civilization runtime or technology unlocks are implemented by this document.
+The [HELLION gameplay baseline](hellion-baseline.md) is the primary project-wide direction. The already established extraction, container, refining and recycling prototype is an incremental foundation toward that direction; its completion does not establish HELLION parity. Civ13 remains the primary reference for this later planet-start extension, which layers onto the space-survival baseline. No civilization runtime or technology unlocks are implemented by this document.
 
 ## Gameplay direction
 

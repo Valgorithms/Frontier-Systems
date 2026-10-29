@@ -2,6 +2,8 @@
 
 Frontier Systems is a cooperative, persistent engineering simulation set across Moon and Mars colonies, spacecraft, and orbital infrastructure. First-party code and created assets are licensed under MIT; see `THIRD_PARTY_NOTICES.md` before adding external content.
 
+The long-term design target is an independently implemented gameplay and mechanics remake as faithful to [HELLION](https://steamcommunity.com/app/588210) as practical, followed by additions from other games. This is a target, not a claim of current parity or official affiliation. See the [design baseline and priorities](docs/design/hellion-baseline.md).
+
 Visit the [Frontier Systems website](https://frontier-systems.discordphp.org/) for the game overview, [fundraisers](https://frontier-systems.discordphp.org/support.html) and [release availability](https://frontier-systems.discordphp.org/buy.html). The game is in development; support is not a finished-game preorder.
 
 ## Current foundation
