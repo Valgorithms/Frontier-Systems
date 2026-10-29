@@ -43,9 +43,12 @@ func run() -> void:
 		# Isolated failure injection mutates real owners, without runtime fault hooks.
 		match mutation:
 			"bank":
-				var changed: Dictionary = baseline[0].duplicate(true)
-				changed.energy_joules -= 1
-				check(production.restore_snapshot_record(changed, int(changed.last_tick)).is_success, "real Production accepts lower finite bank")
+				# Revision-zero restore correctly requires the exact initial fixture.
+				# Inject stale bank state directly, like gas/valve/access below, so
+				# this isolates record comparison rather than the restore-generation seal.
+				var generation: int = production.collision_restore_generation()
+				production._state.energy_joules -= 1
+				check(production.capture_snapshot().value.energy_joules == baseline[0].energy_joules - 1 and production.collision_restore_generation() == generation, "bank injection changes canonical quantity without changing restore seal")
 			"gas":
 				(pressure.volumes[PressureSystem.PROTOTYPE_HABITAT_ID] as PressureVolumeState).gas_moles -= 0.1
 			"valve":

@@ -57,6 +57,23 @@ func verify_chamber_extension() -> void:
 	var dropped: ServiceResult = inventory.apply_local(context, "generic-pump-drop", "world", {"operation": "drop", "item_id": assembly.item_id, "world_container_id": "world.tray-1", "destination_container_id": "", "slot_id": "", "expected_revision": before_drop.owner.state_revision}, int(before_drop.last_tick) + 1)
 	check(not dropped.is_success and inventory.capture_snapshot().value == before_drop, "generic world movement cannot detach paid pump ownership or consume a receipt")
 	move([3600, 0, -5500]); move([5600, 0, -5000])
+	# The inherited transit/cycle route ends vented. Retain that real state as
+	# a work-limit negative, then refill only through the paid inner bypass.
+	# Do this while carried: mounted world roots intentionally remain unsupported
+	# by the legacy door swing classifier until the later physical device phase.
+	var gas_owner: PressureSystem = pressure_owner()
+	var chamber_id := StringName(gas_owner.paid_chamber.volume_id)
+	var vented_owners: Array = owner_records([production, gas_owner, inventory, access])
+	var vented: ServiceResult = ChamberRecoveryWork.prepare(gas_owner.volumes[chamber_id], gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID], 0.1)
+	check(not vented.is_success and vented.error_code == &"chamber_recovery_work_rejected", "authentic vented chamber rejects compression outside physical limits")
+	check(owner_records([production, gas_owner, inventory, access]) == vented_owners, "vented work rejection changes no owner")
+	var moles_before_refill: float = all_moles()
+	var habitat_before_refill: float = gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID].gas_moles
+	door_id = inner_id; chamber_ui(9); step(600); chamber_ui(10)
+	check(gas_conserved(moles_before_refill) and gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID].gas_moles < habitat_before_refill, "real inner bypass refills chamber from finite habitat gas without creating moles")
+	var refilled: ServiceResult = ChamberRecoveryWork.prepare(gas_owner.volumes[chamber_id], gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID], 0.1)
+	check(refilled.is_success, "authentic refilled chamber supports bounded compression: " + diagnostic(refilled))
+	if failures: return
 	var before_mount: Dictionary = inventory.capture_snapshot().value
 	check(ChamberRecoveryPreparation.admit(production, context, "mount").is_success, "actual paid-route actor pose, reach, tool and chamber authority admit mounting")
 	check(ChamberRecoveryPreparation.supported(production.capture_snapshot().value), "unchanged paid panels cover the exact mount support rectangle")
@@ -77,21 +94,6 @@ func verify_chamber_extension() -> void:
 	pinned_restore_controls(production.capture_snapshot().value, mounted_inventory, "mounted")
 	var picked_up: ServiceResult = inventory.apply_local(context, "generic-pump-pickup", "world", {"operation": "pickup", "item_id": assembly.item_id, "world_container_id": ChamberRecoveryRecords.root_id(assembly.assembly_id), "destination_container_id": "body.human-1", "slot_id": "", "expected_revision": mounted_inventory.owner.state_revision}, int(mounted_inventory.last_tick) + 1)
 	check(not picked_up.is_success and inventory.capture_snapshot().value == mounted_inventory, "mounted item cannot escape through generic pickup")
-	# The inherited transit/cycle route ends vented. Retain that real state as
-	# a work-limit negative, then refill only through the paid inner bypass.
-	var gas_owner: PressureSystem = pressure_owner()
-	var chamber_id := StringName(gas_owner.paid_chamber.volume_id)
-	var vented_owners: Array = owner_records([production, gas_owner, inventory, access])
-	var vented: ServiceResult = ChamberRecoveryWork.prepare(gas_owner.volumes[chamber_id], gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID], 0.1)
-	check(not vented.is_success and vented.error_code == &"chamber_recovery_work_rejected", "authentic vented chamber rejects compression outside physical limits")
-	check(owner_records([production, gas_owner, inventory, access]) == vented_owners, "vented work rejection changes no owner")
-	var moles_before_refill: float = all_moles()
-	var habitat_before_refill: float = gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID].gas_moles
-	door_id = inner_id; chamber_ui(9); step(600); chamber_ui(10)
-	check(gas_conserved(moles_before_refill) and gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID].gas_moles < habitat_before_refill, "real inner bypass refills chamber from finite habitat gas without creating moles")
-	var refilled: ServiceResult = ChamberRecoveryWork.prepare(gas_owner.volumes[chamber_id], gas_owner.volumes[PressureSystem.PROTOTYPE_HABITAT_ID], 0.1)
-	check(refilled.is_success, "authentic refilled chamber supports bounded compression: " + diagnostic(refilled))
-	if failures: return
 	var mounted_snapshot: String = world.capture_world_snapshot_json().value
 	for condition in [999, 1, 0]: damaged_admission_case(mounted_snapshot, "start", condition)
 	prepared = production.prepare_chamber_recovery_job(context)

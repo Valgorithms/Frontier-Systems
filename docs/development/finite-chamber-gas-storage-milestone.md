@@ -543,6 +543,25 @@ Production guards, schemas and compression limits are unchanged. These test
 corrections are source-only pending exact-head CI/runtime verification; no
 native launch or runtime lease was used for the October 29 source amendment.
 
+The exact-head GitHub CI runs 40837119737 and 40837119777 at `d11b1a1`
+failed on both Windows and Linux. Ordinary `gh run view --job ... --log-failed`
+logs identified two fixture failures. The owner-fence bank case attempted a
+modified revision-zero Production restore, which correctly rejects anything
+other than its initial fixture; no bank change occurred, so the captured fence
+correctly remained usable. The negative now directly changes the real bank,
+like the existing gas/valve/access injections, and asserts that its canonical
+quantity changes without advancing the restore seal. Separate restore/ABA and
+unchanged-owner positives remain.
+
+The transaction refill was attempted after mounting. The legacy paid-door
+occupancy classifier conservatively rejects unmapped world-storage roots,
+including the mounted pump root; both bypass commands therefore failed before
+any refill. Refill now happens while the paid pump is still carried, before
+mount preparation or job admission. The door occupancy guard remains unchanged;
+physical device/door coexistence belongs to the later device phase. All finite
+gas, payment, mount identity, damaged admission and owner checks remain. These
+source-only test fixes await new-head CI and do not imply runtime acceptance.
+
 Local checks: `git diff --check` and
 `tests/schema/chamber_recovery_schema_test.py --syntax-only` passed. The local
 Python environments lack `jsonschema`; metaschema and genuine emitted-fixture
