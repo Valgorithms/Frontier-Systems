@@ -52,3 +52,9 @@ Repeated resource construction offers a narrow presentation experiment while pre
 A future comparison should establish actual 1080p render targets and CPU/GPU/frame-tail timing, then change only resource sharing. Supported AA comparisons and room/shadow budgets follow separately. Dynamic geometry makes baked lighting/occlusion less straightforward; visibility must follow authoritative observations without becoming simulation authority.
 
 **No custom GI, deferred renderer, motion-blur or AA rewrite is justified by this entry.** First identify a measured project bottleneck and preserve motion readability. Runtime reproduction, target lower-end hardware, VR/stereo behavior, video publication date and the unreviewed outro remain open. See E-001 for falsifiable controls and acceptance limits.
+
+## Follow-up source review: 2026-10-30
+
+[GPU optimization](https://docs.godotengine.org/en/4.7/tutorials/performance/gpu_optimization.html), Godot documentation contributors, 4.7 documentation (publication date not stated; mutable page, accessed 2026-10-30), describes separate CPU/driver/GPU bottlenecks and notes that overlapping transparent surfaces and shadow/post-processing work can increase fragment cost. This is engine guidance, not a Frontier measurement; the page's API discussion includes older graphics APIs and is not evidence about a particular D3D12 driver.
+
+**Proposed diagnostic:** E-001 adds a separate render-resolution sensitivity comparison after establishing actual viewport sizes and frame pacing. A measurable GPU-time change with resolution is a clue about pixel-dependent work, not proof of a particular shader or whole-game gain. Validate any subsequent optimization with its own fixed-resolution comparison and motion/readability checks. Outcome remains **proposed**, with no run or adoption.
