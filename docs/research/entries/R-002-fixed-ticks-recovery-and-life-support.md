@@ -55,3 +55,39 @@ The user-designated [HELLION baseline](https://github.com/Valgorithms/Frontier-S
 ## Outcome and ownership
 
 All four experiments are **proposed**, not executed; no measured performance improvement, storage guarantee, network advantage, implemented gameplay or HELLION feature parity follows from these references. Reuse existing harnesses and coordinate with active implementation owners before testing. A future result must link exact commit/diff, inputs, OS/engine/transport, raw evidence where separately authorized, failed and not-run cases, and a decision rationale. Keep unpublished/private research, logs and credentials out of public updates.
+
+## Follow-up source review: 2026-11-06
+
+The following are new sources for existing research questions, reviewed 2026-11-06. All outcomes remain **proposed**; no experiments ran. Prior source and experiment records above are retained.
+
+### Camera interpolation and simulation authority
+
+**Source:** Godot documentation contributors, [Advanced physics interpolation](https://docs.godotengine.org/en/4.7/tutorials/physics/interpolation/advanced_physics_interpolation.html), 4.7; publication date not stated, mutable page, no documentation commit captured. It describes following an interpolated target for camera presentation, current physics transforms for gameplay, and the fact that an uninterpolated child can still inherit its moving parent's interpolated rendering transform.
+
+**Frontier evidence:** [Camera motion smoothing](https://github.com/Valgorithms/Frontier-Systems/blob/115f0e3c2fbf059819a4844ccdeffb64182af062/docs/development/camera-motion-smoothing-milestone.md) documents angular presentation smoothing while preserving body/collision behavior and existing selection-ray contracts. It reports historical checks, not evidence collected this week. It does not establish that Godot's optional physics interpolation is enabled or that a different hierarchy is warranted.
+
+**Proposed experiment:** After coordinating with existing owners and obtaining separate execution authorization, compare the current camera setup with a presentation-only interpolation fixture at fixed physics cadence and two recorded render cadences. Inspect first/third-person motion, parent/child inheritance, a discontinuity/reset and wall occlusion. Assert the same authoritative snapshots, movement/collision results, reach validation and selection/occlusion correctness. Record camera delay, visible discontinuities and any picking mismatch; establish acceptance thresholds beforehand. **Tradeoff:** smoothing can add visible/input latency and hierarchy complexity; the source does not prove that a change is needed in Frontier.
+
+### Network snapshot smoothing
+
+**Source:** Glenn Fiedler, [Snapshot Interpolation](https://gafferongames.com/post/snapshot_interpolation/), 2014-11-30, unversioned article, accessed 2026-11-06. Its illustrative snapshot buffering trades added display delay for smoother reconstruction under jitter; the example's UDP workload, loss and timing are not Frontier targets.
+
+**Frontier evidence:** [First-playable adapters](https://github.com/Valgorithms/Frontier-Systems/blob/115f0e3c2fbf059819a4844ccdeffb64182af062/docs/architecture/first-playable-adapters.md) describe authoritative host state, disposable client observations, bounded WebSocket/TCP transport and reconnect invalidation. This is not proof that a snapshot interpolation buffer currently exists or that network motion is jittery.
+
+**Proposed experiment:** With isolated, injected WebSocket observation delivery and fixed authoritative inputs, compare immediate presentation against a bounded visual-only snapshot buffer across recorded delay/jitter patterns. Include disconnect/reconnect, stale session generations, teleports and missing updates. Record display age, visible position error and buffer underruns; assert commands, collision, reach checks and persisted state are identical. Choose buffer size and acceptable latency before testing. **Tradeoff:** extra delay and stale visual information; a mock does not establish Internet performance or justify copying UDP loss/rate assumptions.
+
+### Storage mode and multi-owner boundaries
+
+**Source:** SQLite project, [Write-Ahead Logging](https://www.sqlite.org/wal.html), unversioned mutable documentation, publication date not stated, accessed 2026-11-06. It describes WAL's separate log/checkpoint behavior, same-host shared-memory requirement and lack of atomicity across a set of attached databases in WAL mode. These details are conditional on SQLite/WAL, not general guarantees for files or networks.
+
+**Frontier evidence:** [Local checkpoint recovery](https://github.com/Valgorithms/Frontier-Systems/blob/115f0e3c2fbf059819a4844ccdeffb64182af062/docs/development/checkpoint-recovery-milestone.md) describes two JSON slots and bounded recovery; [persistence design](https://github.com/Valgorithms/Frontier-Systems/blob/115f0e3c2fbf059819a4844ccdeffb64182af062/docs/design/persistence-and-command-boundary.md) describes a separate repository contract. Neither establishes SQLite as the current adapter or proves hardware power-loss durability.
+
+**Proposed experiment:** Only if a future SQLite adapter is separately considered and authorized, design isolated tests using one database transaction versus two attached databases, recording SQLite build, journal/synchronous modes, filesystem, storage failures and OS. Interrupt at transaction/checkpoint boundaries and compare restored owner revisions and invariant results; treat unsupported or uncertain outcomes as failures to establish the guarantee. Do not modify the present checkpoint protocol or imply WAL is a selected dependency. **Tradeoff:** WAL/checkpoint lifecycle and sidecar files complicate backup and operation; this source does not establish actual Frontier latency or atomicity.
+
+### Save compatibility versus behavioral compatibility
+
+**Source:** Factorio team / Wube Software, [Friday Facts #449: 2.1 Stable](https://www.factorio.com/blog/post/fff-449), 2026-10-23, accessed 2026-11-06. The authors state that 2.0 saves load in 2.1 but circuit input/output changes may break existing factory designs, and updated saves/blueprints cannot be downgraded to 2.0. This is Factorio's report, not an observation of Frontier or HELLION. The linked FFF-442 was not independently reviewed for this entry.
+
+**Frontier evidence:** [Control circuit runtime](https://github.com/Valgorithms/Frontier-Systems/blob/115f0e3c2fbf059819a4844ccdeffb64182af062/docs/architecture/control-circuit-runtime.md) documents versioned records and restoration of circuits, wires and queued pulses. A valid decoded record by itself does not show that a particular old factory retains equivalent behavior after migration; no migration test was run here.
+
+**Proposed experiment:** When a real control-schema change is proposed, preserve an isolated fixture of an old-version circuit with known inputs, outputs, power and pending pulse state. Compare an old-version replay with the migrated circuit under the same tick-indexed inputs; check outputs, sequence/order, retained resources and documented exceptions. Include unknown-version and incompatible-route rejection, and confirm the original fixture stays available for rollback. **Tradeoff:** semantic compatibility may require preserving older behavior or an explicit user-visible migration, not merely accepting serialized fields. Treat Factorio as a secondary engineering lesson; establish HELLION behavior independently before adopting gameplay differences.
