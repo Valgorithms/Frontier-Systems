@@ -29,6 +29,10 @@ Use a fixed camera path containing a stationary room, movement past thin wall de
 
 Measure end-to-end frame intervals (p50/p95/p99), render CPU and GPU timings with their boundaries, simulation/physics timing separately, wall creation/removal time, node/resource counts, draw calls/primitives and CPU/GPU memory gauges. Label unavailable measurements rather than infer them from FPS or engine counters. Engine gauges do not establish full process/driver memory or input-to-display latency. Investigate unexplained refresh-aligned waits before claiming a throughput difference.
 
+## Separate diagnostic: render-resolution sensitivity
+
+After Stage A, compare two explicitly recorded 3D render scales with the same window, camera path, wall count, renderer/API, AA and scene settings. Record the actual pixel dimensions of each viewport, including the habitat subviewport. Interleave at least five warmed pairs and retain per-run GPU/render CPU and end-to-end p50/p95/p99 frame intervals. Keep native-resolution Stage A as the baseline; resolution changes image quality and is not a wall-sharing A/B. Compare moving-edge readability and labels separately. If pacing masks a change, or GPU timings are unavailable/too noisy, mark the diagnosis inconclusive. A resolution-sensitive GPU result suggests pixel-dependent cost; it does not identify a specific pass. **Proposed; not run.**
+
 ## Stage B: single-variable A/B
 
 - **A/control:** existing wall presentation and fixed topology.
