@@ -8,6 +8,7 @@ This is Frontier Systems' version-controlled knowledgebase for design decisions 
 | --- | --- | --- | --- | --- |
 | [R-001: modern rendering optimization leads](entries/R-001-modern-rendering.md) | Rendering/performance | proposed | Official engine/vendor guidance and pinned source inspection; no reproduced rendering gains | [E-001: baseline and shared wall resources](experiments/E-001-rendering-baseline.md) |
 | [R-002: fixed ticks, recovery, transport and life support](entries/R-002-fixed-ticks-recovery-and-life-support.md) | Simulation, persistence, multiplayer and engineering design | proposed | Public primary-source review and pinned source inspection; 2026-11-06 follow-up; no experiments run | Select one bounded scenario after confirming current work |
+| [R-003: coordinate precision and replay determinism](entries/R-003-coordinate-precision-and-replay.md) | Rendering, simulation, persistence and multiplayer | proposed | Godot 4.7 guidance and pinned Jolt architecture; no runtime reproduction | Validate existing local-frame contract before considering precision/build changes |
 | [Reference manifest](reference-manifest.csv) | Cross-topic provenance | existing registry | Each row states its reviewed scope and rights limits | Append targeted sources; preserve the CSV contract |
 | [Foundational capability matrix v1](foundational-capability-matrix.v1.csv) | Engineering-game design | existing audit | Historical capability/gap statements have their own evidence dates | Revalidate a row before treating it as current implementation |
 
